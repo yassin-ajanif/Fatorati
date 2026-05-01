@@ -11,6 +11,9 @@
     <Color x:Key="CourseraPrimaryHoverColor">#1D4ED8</Color>
     <Color x:Key="CourseraDangerColor">#DC2626</Color>
     <Color x:Key="CourseraWarningColor">#D97706</Color>
+    <Color x:Key="CourseraStockAlertBgColor">#FEF2F2</Color>
+    <Color x:Key="CourseraStockAlertBorderColor">#FECACA</Color>
+    <Color x:Key="CourseraStockAlertDetailColor">#991B1B</Color>
 
     <SolidColorBrush x:Key="CourseraBgBrush" Color="{StaticResource CourseraBgColor}"/>
     <SolidColorBrush x:Key="CourseraSurfaceBrush" Color="{StaticResource CourseraSurfaceColor}"/>
@@ -22,6 +25,9 @@
     <SolidColorBrush x:Key="CourseraPrimaryHoverBrush" Color="{StaticResource CourseraPrimaryHoverColor}"/>
     <SolidColorBrush x:Key="CourseraDangerBrush" Color="{StaticResource CourseraDangerColor}"/>
     <SolidColorBrush x:Key="CourseraWarningBrush" Color="{StaticResource CourseraWarningColor}"/>
+    <SolidColorBrush x:Key="CourseraStockAlertBgBrush" Color="{StaticResource CourseraStockAlertBgColor}"/>
+    <SolidColorBrush x:Key="CourseraStockAlertBorderBrush" Color="{StaticResource CourseraStockAlertBorderColor}"/>
+    <SolidColorBrush x:Key="CourseraStockAlertDetailBrush" Color="{StaticResource CourseraStockAlertDetailColor}"/>
   </Styles.Resources>
 
   <Style Selector="Window">
@@ -99,5 +105,13 @@
   <Style Selector="DatePicker ComboBox">
     <Setter Property="MinWidth" Value="44"/>
     <Setter Property="MaxWidth" Value="100"/>
+  </Style>
+
+  <!-- Reporting / dashboard cards -->
+  <Style Selector="Border.report-shadow">
+    <Setter Property="BoxShadow" Value="0 2 14 0 #182563EB, 0 1 3 0 #12000000"/>
+  </Style>
+  <Style Selector="Border.report-shadow-soft">
+    <Setter Property="BoxShadow" Value="0 1 8 0 #14000000"/>
   </Style>
 </Styles>

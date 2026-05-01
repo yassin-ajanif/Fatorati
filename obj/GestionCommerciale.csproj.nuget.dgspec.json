@@ -1,17 +1,17 @@
 {
   "format": 1,
   "restore": {
-    "D:\\Fatorati\\GestionCommerciale\\GestionCommerciale.csproj": {}
+    "d:\\Fatorati\\GestionCommerciale\\GestionCommerciale.csproj": {}
   },
   "projects": {
-    "D:\\Fatorati\\GestionCommerciale\\GestionCommerciale.csproj": {
+    "d:\\Fatorati\\GestionCommerciale\\GestionCommerciale.csproj": {
       "version": "1.0.0",
       "restore": {
-        "projectUniqueName": "D:\\Fatorati\\GestionCommerciale\\GestionCommerciale.csproj",
+        "projectUniqueName": "d:\\Fatorati\\GestionCommerciale\\GestionCommerciale.csproj",
         "projectName": "GestionCommerciale",
-        "projectPath": "D:\\Fatorati\\GestionCommerciale\\GestionCommerciale.csproj",
+        "projectPath": "d:\\Fatorati\\GestionCommerciale\\GestionCommerciale.csproj",
         "packagesPath": "C:\\Users\\yassin\\.nuget\\packages\\",
-        "outputPath": "D:\\Fatorati\\GestionCommerciale\\obj\\",
+        "outputPath": "d:\\Fatorati\\GestionCommerciale\\obj\\",
         "projectStyle": "PackageReference",
         "configFilePaths": [
           "C:\\Users\\yassin\\AppData\\Roaming\\NuGet\\NuGet.Config"

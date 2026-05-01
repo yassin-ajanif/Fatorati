@@ -38,8 +38,6 @@ public partial class ReportingViewModel : BaseViewModel
         Title = _locale.T("Report_Title");
     }
 
-    [ObservableProperty] private string _btnRefresh = string.Empty;
-    [ObservableProperty] private string _btnExportStockCsv = string.Empty;
     [ObservableProperty] private string _lblCa = string.Empty;
     [ObservableProperty] private string _lblCaDelta = string.Empty;
     [ObservableProperty] private string _lblKpiStrip = string.Empty;
@@ -61,7 +59,6 @@ public partial class ReportingViewModel : BaseViewModel
     [ObservableProperty] private string _kpiBc = string.Empty;
     [ObservableProperty] private string _kpiBrMonth = string.Empty;
     [ObservableProperty] private string _kpiEncours = string.Empty;
-    [ObservableProperty] private string _kpiAvoirYtd = string.Empty;
     [ObservableProperty] private string _kpiStock = string.Empty;
 
     [ObservableProperty] private bool _showEmptyTopClients;
@@ -82,8 +79,6 @@ public partial class ReportingViewModel : BaseViewModel
     private void RefreshReportingUi()
     {
         Title = _locale.T("Report_Title");
-        BtnRefresh = _locale.T("Btn_Refresh");
-        BtnExportStockCsv = _locale.T("Btn_ExportStockCsv");
         LblLoading = _locale.T("Report_Loading");
         LblCa = _locale.T("Report_LblCa");
         LblCaDelta = _locale.T("Report_LblCaDelta");
@@ -122,7 +117,6 @@ public partial class ReportingViewModel : BaseViewModel
             var startPrev = startCur.AddMonths(-1);
             var endCur = startCur.AddMonths(1);
             var endPrev = startCur;
-            var yearStart = new DateTime(now.Year, 1, 1);
             var since30 = now.AddDays(-30);
             var expireUntil = now.AddDays(14);
 
@@ -312,13 +306,6 @@ public partial class ReportingViewModel : BaseViewModel
                 CurrencyHelper.Format(encoursTotal, dev),
                 encoursCount.ToString(CultureInfo.CurrentCulture));
 
-            var avoirsYtd = await db.Avoirs.AsNoTracking()
-                .Where(a => a.Date >= yearStart)
-                .Include(a => a.Lignes)
-                .ToListAsync(cancellationToken);
-            var avoirTtc = avoirsYtd.Sum(a => DocumentTotalsHelper.AvoirTotals(a.Lignes ?? []).ttc);
-            KpiAvoirYtd = _locale.Tf("Report_KpiAvoirYtd", CurrencyHelper.Format(avoirTtc, dev));
-
             ShowEmptyUnpaid = FacturesImpayees.Count == 0;
             }
             catch (Exception ex)
@@ -330,19 +317,5 @@ public partial class ReportingViewModel : BaseViewModel
         {
             IsBusy = false;
         }
-    }
-
-    [RelayCommand]
-    private async Task ExportStockCsvAsync(CancellationToken cancellationToken)
-    {
-        var path = await _dialog.PickSaveFileAsync(_locale.T("Report_ExportStockCsv"), "stock.csv", new[] { "*.csv" }, cancellationToken);
-        if (path == null) return;
-        await using var db = await _dbFactory.CreateDbContextAsync(cancellationToken);
-        var list = await db.Produits.AsNoTracking().SelectForListWithoutImageData().ToListAsync(cancellationToken);
-        await using var w = new StreamWriter(path);
-        await w.WriteLineAsync("Reference;Designation;StockActuel;StockMinimum");
-        foreach (var p in list)
-            await w.WriteLineAsync($"{p.Reference};{p.Designation};{p.StockActuel.ToString(CultureInfo.InvariantCulture)};{p.StockMinimum.ToString(CultureInfo.InvariantCulture)}");
-        await _dialog.ShowInfoAsync(_locale.T("Export_Csv"), _locale.T("Export_Done"), cancellationToken);
     }
 }
