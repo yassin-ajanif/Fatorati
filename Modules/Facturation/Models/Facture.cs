@@ -10,7 +10,7 @@ public class Facture : BaseEntity
     public int? DevisId { get; set; }
     public DateTime Date { get; set; }
     public DateTime DateEcheance { get; set; }
-    public StatutFacture Statut { get; set; }
+    public bool EstPayee { get; set; }
     public decimal RemiseGlobale { get; set; }
     public string Note { get; set; } = string.Empty;
     public List<FactureLigne> Lignes { get; set; } = [];

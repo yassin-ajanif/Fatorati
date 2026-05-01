@@ -58,8 +58,7 @@ public partial class LoginViewModel : BaseViewModel
         IsBusy = true;
         try
         {
-            var user = await _auth.LoginAsync(Email, Password, cancellationToken);
-            if (user == null)
+            if (!await _auth.LoginAsync(Email, Password, cancellationToken))
             {
                 await _dialog.ShowErrorAsync(_locale.T("Login_Title"), _locale.T("Login_ErrBadCreds"), cancellationToken);
                 return;

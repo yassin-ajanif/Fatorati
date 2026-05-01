@@ -61,7 +61,6 @@ public partial class AppShellViewModel : BaseViewModel
     [ObservableProperty] private string _navStockAdmin = string.Empty;
     [ObservableProperty] private string _navStock = string.Empty;
     [ObservableProperty] private string _navProduits = string.Empty;
-    [ObservableProperty] private string _navUsers = string.Empty;
     [ObservableProperty] private string _navSettings = string.Empty;
 
     [ObservableProperty] private bool _isNavHomeActive;
@@ -74,7 +73,6 @@ public partial class AppShellViewModel : BaseViewModel
     [ObservableProperty] private bool _isNavBrActive;
     [ObservableProperty] private bool _isNavStockActive;
     [ObservableProperty] private bool _isNavProduitsActive;
-    [ObservableProperty] private bool _isNavUsersActive;
     [ObservableProperty] private bool _isNavSettingsActive;
 
     private void RefreshShellLabels()
@@ -92,7 +90,6 @@ public partial class AppShellViewModel : BaseViewModel
         NavStockAdmin = _locale.T("Nav_StockAdmin");
         NavStock = _locale.T("Nav_Stock");
         NavProduits = _locale.T("Nav_Produits");
-        NavUsers = _locale.T("Nav_Users");
         NavSettings = _locale.T("Nav_Settings");
         Title = NavHome;
     }
@@ -127,7 +124,6 @@ public partial class AppShellViewModel : BaseViewModel
     public bool ShowNavBR => _session.CanAccessBR;
     public bool ShowNavBC => _session.CanAccessBC;
     public bool ShowNavFactures => _session.CanAccessFacturation;
-    public bool ShowNavUsers => _session.CanAccessUsers;
     public bool ShowNavSettings => _session.CanAccessSettings;
 
     [RelayCommand]
@@ -176,9 +172,6 @@ public partial class AppShellViewModel : BaseViewModel
     private void GoFactures() => _workspace.Open(_sp.GetRequiredService<FactureListViewModel>());
 
     [RelayCommand]
-    private void GoUsers() => _workspace.Open(_sp.GetRequiredService<UserManagementViewModel>());
-
-    [RelayCommand]
     private void GoSettings() => _workspace.Open(_sp.GetRequiredService<SettingsViewModel>());
 
     private void UpdateActiveNav()
@@ -196,7 +189,6 @@ public partial class AppShellViewModel : BaseViewModel
         IsNavBrActive = p is BRListViewModel or BREditViewModel;
         IsNavStockActive = p is StockMainViewModel;
         IsNavProduitsActive = p is ProduitsViewModel;
-        IsNavUsersActive = p is UserManagementViewModel;
         IsNavSettingsActive = p is SettingsViewModel;
     }
 }

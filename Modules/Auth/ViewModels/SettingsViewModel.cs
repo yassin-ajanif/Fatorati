@@ -198,12 +198,7 @@ public partial class SettingsViewModel : BaseViewModel
         if (string.IsNullOrWhiteSpace(password))
             return;
 
-        await using var db = await _dbFactory.CreateDbContextAsync(cancellationToken);
-        var admin = await db.Users.AsNoTracking()
-            .FirstOrDefaultAsync(
-                x => x.Id == _session.UserId && x.Actif && x.Role == Modules.Auth.Models.Role.Admin,
-                cancellationToken);
-        if (admin is null || !BCrypt.Net.BCrypt.Verify(password, admin.PasswordHash))
+        if (!_session.IsAdmin || password != DbSeeder.DefaultAdminPassword)
         {
             await _dialog.ShowErrorAsync(_locale.T("Settings_Title"), _locale.T("Settings_FormatBadPassword"), cancellationToken);
             return;

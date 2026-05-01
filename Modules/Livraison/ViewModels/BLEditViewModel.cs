@@ -10,6 +10,7 @@ using GestionCommerciale.Modules.Stock;
 using GestionCommerciale.Modules.Facturation.ViewModels;
 using GestionCommerciale.Modules.Livraison.Models;
 using GestionCommerciale.Modules.Livraison.Services;
+using GestionCommerciale.Modules.Stock.Services;
 using GestionCommerciale.Modules.Tiers.Models;
 using GestionCommerciale.Shared.Database;
 using GestionCommerciale.Shared.Helpers;
@@ -31,6 +32,7 @@ public partial class BLEditViewModel : BaseViewModel
     private readonly ICurrentUserSession _session;
     private readonly ILocaleService _locale;
     private readonly IUiPreferencesService _uiPreferences;
+    private readonly IStockMovementService _stock;
 
     public BLEditViewModel(
         IDbContextFactory<AppDbContext> dbFactory,
@@ -41,7 +43,8 @@ public partial class BLEditViewModel : BaseViewModel
         IServiceProvider sp,
         ICurrentUserSession session,
         ILocaleService locale,
-        IUiPreferencesService uiPreferences)
+        IUiPreferencesService uiPreferences,
+        IStockMovementService stock)
     {
         _dbFactory = dbFactory;
         _numbers = numbers;
@@ -52,6 +55,7 @@ public partial class BLEditViewModel : BaseViewModel
         _session = session;
         _locale = locale;
         _uiPreferences = uiPreferences;
+        _stock = stock;
         _locale.CultureApplied += (_, _) => RefreshBlUi();
         LineGridColumns.PropertyChanged += OnLineGridColumnsPropertyChanged;
         _uiPreferences.LoadDocumentLineColumns("bon_livraison", LineGridColumns);
@@ -62,9 +66,8 @@ public partial class BLEditViewModel : BaseViewModel
 
     [ObservableProperty] private string _btnBack = string.Empty;
     [ObservableProperty] private string _btnSave = string.Empty;
-    [ObservableProperty] private string _btnValidateStock = string.Empty;
-    [ObservableProperty] private string _btnMarkDelivered = string.Empty;
     [ObservableProperty] private string _btnToInvoice = string.Empty;
+    [ObservableProperty] private string _menuDeleteBl = string.Empty;
     [ObservableProperty] private string _lblClient = string.Empty;
     [ObservableProperty] private string _wmClientSearch = string.Empty;
     [ObservableProperty] private string _lblDateBl = string.Empty;
@@ -73,7 +76,6 @@ public partial class BLEditViewModel : BaseViewModel
     [ObservableProperty] private string _btnRemoveLine = string.Empty;
     [ObservableProperty] private string _lblAddProduct = string.Empty;
     [ObservableProperty] private string _wmAddProduct = string.Empty;
-    [ObservableProperty] private string _statutLabel = string.Empty;
     [ObservableProperty] private string _lblDocLineColumnsHint = string.Empty;
     [ObservableProperty] private string _lblDocColRef = string.Empty;
     [ObservableProperty] private string _lblDocColDesignation = string.Empty;
@@ -137,9 +139,8 @@ public partial class BLEditViewModel : BaseViewModel
     {
         BtnBack = _locale.T("Btn_Back");
         BtnSave = _locale.T("Btn_Save");
-        BtnValidateStock = _locale.T("Btn_ValidateStock");
-        BtnMarkDelivered = _locale.T("Btn_MarkDelivered");
         BtnToInvoice = _locale.T("Btn_ToInvoice");
+        MenuDeleteBl = _locale.T("BL_MenuDelete");
         LblClient = _locale.T("Lbl_Client");
         WmClientSearch = _locale.T("Wm_SearchClient");
         LblDateBl = _locale.T("Lbl_DateBL");
@@ -148,7 +149,6 @@ public partial class BLEditViewModel : BaseViewModel
         BtnRemoveLine = _locale.T("Btn_RemoveLine");
         LblAddProduct = _locale.T("Devis_LblAddProduct");
         WmAddProduct = _locale.T("Devis_WmSearchProduct");
-        StatutLabel = UiEnumStrings.FormatStatutBL(_locale, Statut);
         LblDocLineColumnsHint = _locale.T("DocLine_ColumnsHint");
         LblDocColRef = _locale.T("DocLine_ColRef");
         LblDocColDesignation = _locale.T("DocLine_ColDesignation");
@@ -166,9 +166,6 @@ public partial class BLEditViewModel : BaseViewModel
         TotalTtcLabel = _locale.Tf("Doc_FmtTtc", TotalTtc, Devise);
     }
 
-    partial void OnStatutChanged(StatutBL value) =>
-        StatutLabel = UiEnumStrings.FormatStatutBL(_locale, value);
-
     public ObservableCollection<GestionCommerciale.Modules.Tiers.Models.Tiers> Clients { get; } = [];
     public ObservableCollection<GestionCommerciale.Modules.Stock.Models.Produit> Produits { get; } = [];
     public ObservableCollection<BLLineRow> Lignes { get; } = [];
@@ -179,12 +176,50 @@ public partial class BLEditViewModel : BaseViewModel
     [ObservableProperty] private GestionCommerciale.Modules.Tiers.Models.Tiers? _selectedClient;
     [ObservableProperty] private string _numero = string.Empty;
     [ObservableProperty] private DateTimeOffset _date = new(DateTime.Today);
-    [ObservableProperty] private StatutBL _statut = StatutBL.Brouillon;
     [ObservableProperty] private string _note = string.Empty;
     [ObservableProperty] private bool _isReadOnly;
     [ObservableProperty] private BLLineRow? _selectedLine;
 
     public bool CanEdit => !IsReadOnly;
+
+    partial void OnBlIdChanged(int? value) => RemoveBlCommand.NotifyCanExecuteChanged();
+
+    private bool CanRemoveBl() => BlId != null;
+
+    [RelayCommand(CanExecute = nameof(CanRemoveBl))]
+    private async Task RemoveBlAsync(CancellationToken cancellationToken)
+    {
+        if (BlId is not { } id) return;
+
+        if (!await _dialog.ConfirmAsync(_locale.T("BL_DlgShort"), _locale.Tf("BL_ConfirmDelete", Numero), cancellationToken))
+            return;
+
+        IsBusy = true;
+        try
+        {
+            await using var db = await _dbFactory.CreateDbContextAsync(cancellationToken);
+            if (await db.Factures.AsNoTracking().AnyAsync(f => f.BLId == id, cancellationToken))
+            {
+                await _dialog.ShowErrorAsync(_locale.T("BL_DlgShort"), _locale.T("BL_ErrDeleteReferenced"), cancellationToken);
+                return;
+            }
+
+            var entity = await db.BonsLivraison.Include(b => b.Lignes).FirstAsync(b => b.Id == id, cancellationToken);
+            await _stock.ResyncBonLivraisonStockAsync(db, entity.Id, entity.Numero, Enumerable.Empty<(int ProduitId, decimal QuantiteLivree)>(), null, cancellationToken);
+            db.BonsLivraison.Remove(entity);
+            await db.SaveChangesAsync(cancellationToken);
+            await _dialog.ShowInfoAsync(_locale.T("BL_DlgShort"), _locale.T("BL_Deleted"), cancellationToken);
+            Back();
+        }
+        catch (Exception ex)
+        {
+            await _dialog.ShowErrorAsync(_locale.T("BL_DlgShort"), ex.Message, cancellationToken);
+        }
+        finally
+        {
+            IsBusy = false;
+        }
+    }
 
     partial void OnSelectedClientChanged(GestionCommerciale.Modules.Tiers.Models.Tiers? value)
     {
@@ -249,7 +284,6 @@ public partial class BLEditViewModel : BaseViewModel
         {
             Numero = "(brouillon)";
             ClientId = Clients.FirstOrDefault()?.Id ?? 0;
-            Statut = StatutBL.Brouillon;
             IsReadOnly = false;
             Title = _locale.T("BL_NewTitle");
             RefreshTotals();
@@ -261,7 +295,6 @@ public partial class BLEditViewModel : BaseViewModel
         Numero = b.Numero;
         ClientId = b.ClientId;
         Date = new DateTimeOffset(b.Date);
-        Statut = b.Statut;
         Note = b.Note;
         foreach (var l in b.Lignes)
         {
@@ -305,7 +338,6 @@ public partial class BLEditViewModel : BaseViewModel
         DevisId = d.Id;
         ClientId = d.ClientId;
         Date = new DateTimeOffset(DateTime.Today);
-        Statut = StatutBL.Brouillon;
         BlId = null;
         Numero = "(brouillon)";
         Lignes.Clear();
@@ -426,7 +458,6 @@ public partial class BLEditViewModel : BaseViewModel
                     ClientId = ClientId,
                     DevisId = DevisId,
                     Date = Date.DateTime,
-                    Statut = Statut,
                     Note = Note,
                     CreatedByUserId = _session.UserId
                 };
@@ -454,7 +485,6 @@ public partial class BLEditViewModel : BaseViewModel
                 entity.DevisId = DevisId;
                 entity.Date = Date.DateTime;
                 entity.Note = Note;
-                entity.Statut = Statut;
                 db.BonLivraisonLignes.RemoveRange(entity.Lignes);
                 foreach (var l in Lignes)
                 {
@@ -472,50 +502,20 @@ public partial class BLEditViewModel : BaseViewModel
                 await db.SaveChangesAsync(cancellationToken);
             }
 
+            try
+            {
+                await _workflow.ValiderAsync(entity.Id, _session.UserId, cancellationToken);
+            }
+            catch (Exception ex)
+            {
+                await _dialog.ShowErrorAsync(_locale.T("BL_DlgShort"), ex.Message, cancellationToken);
+                await LoadAsync(BlId, cancellationToken);
+                return;
+            }
+
             Numero = entity.Numero;
             await _dialog.ShowInfoAsync(_locale.T("BL_DlgShort"), _locale.T("BL_Saved"), cancellationToken);
             await LoadAsync(BlId, cancellationToken);
-        }
-        finally
-        {
-            IsBusy = false;
-        }
-    }
-
-    [RelayCommand]
-    private async Task ValiderAsync(CancellationToken cancellationToken)
-    {
-        if (BlId == null) return;
-        try
-        {
-            IsBusy = true;
-            await _workflow.ValiderAsync(BlId.Value, _session.UserId, cancellationToken);
-            await _dialog.ShowInfoAsync(_locale.T("BL_DlgShort"), _locale.T("BL_Validated"), cancellationToken);
-            await LoadAsync(BlId, cancellationToken);
-        }
-        catch (Exception ex)
-        {
-            await _dialog.ShowErrorAsync(_locale.T("BL_DlgShort"), ex.Message, cancellationToken);
-        }
-        finally
-        {
-            IsBusy = false;
-        }
-    }
-
-    [RelayCommand]
-    private async Task LivrerAsync(CancellationToken cancellationToken)
-    {
-        if (BlId == null) return;
-        try
-        {
-            IsBusy = true;
-            await _workflow.MarquerLivreAsync(BlId.Value, cancellationToken);
-            await LoadAsync(BlId, cancellationToken);
-        }
-        catch (Exception ex)
-        {
-            await _dialog.ShowErrorAsync(_locale.T("BL_DlgShort"), ex.Message, cancellationToken);
         }
         finally
         {

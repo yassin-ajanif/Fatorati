@@ -1,3 +1,4 @@
+using System.ComponentModel;
 using Avalonia.Controls;
 using Avalonia.Markup.Xaml;
 
@@ -15,6 +16,12 @@ public partial class BRListView : UserControl
         base.OnAttachedToVisualTree(e);
         if (DataContext is ViewModels.BRListViewModel vm)
             vm.LoadCommand.Execute(null);
+    }
+
+    private void OnRowContextMenuOpening(object? sender, CancelEventArgs e)
+    {
+        if (sender is ContextMenu cm && cm.PlacementTarget is { DataContext: { } dc })
+            cm.DataContext = dc;
     }
 
     private void InitializeComponent() => AvaloniaXamlLoader.Load(this);

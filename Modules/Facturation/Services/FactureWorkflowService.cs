@@ -22,29 +22,6 @@ public sealed class FactureWorkflowService : IFactureWorkflowService
         }
     }
 
-    public async Task RecalculateStatutAsync(int factureId, CancellationToken cancellationToken = default)
-    {
-        await using var db = await _dbFactory.CreateDbContextAsync(cancellationToken);
-        var f = await db.Factures
-            .Include(x => x.Lignes)
-            .Include(x => x.Paiements)
-            .FirstAsync(x => x.Id == factureId, cancellationToken);
-
-        if (f.Statut == StatutFacture.Annulee) return;
-
-        var (_, _, ttc) = DocumentTotalsHelper.FactureTotals(f.Lignes, f.RemiseGlobale);
-        var paye = f.Paiements.Sum(p => p.Montant);
-
-        if (paye <= 0)
-            f.Statut = StatutFacture.Emise;
-        else if (paye >= ttc)
-            f.Statut = StatutFacture.Payee;
-        else
-            f.Statut = StatutFacture.PartiellementPayee;
-
-        await db.SaveChangesAsync(cancellationToken);
-    }
-
     public async Task AddPaiementAsync(int factureId, Paiement paiement, CancellationToken cancellationToken = default)
     {
         await using var db = await _dbFactory.CreateDbContextAsync(cancellationToken);
@@ -52,8 +29,6 @@ public sealed class FactureWorkflowService : IFactureWorkflowService
             .Include(x => x.Lignes)
             .Include(x => x.Paiements)
             .FirstAsync(x => x.Id == factureId, cancellationToken);
-        if (f.Statut == StatutFacture.Annulee)
-            throw new InvalidOperationException("Facture annulée.");
 
         var (_, _, ttc) = DocumentTotalsHelper.FactureTotals(f.Lignes, f.RemiseGlobale);
         var totalApres = f.Paiements.Sum(p => p.Montant) + paiement.Montant;
@@ -62,7 +37,6 @@ public sealed class FactureWorkflowService : IFactureWorkflowService
         paiement.FactureId = factureId;
         db.Paiements.Add(paiement);
         await db.SaveChangesAsync(cancellationToken);
-        await RecalculateStatutAsync(factureId, cancellationToken);
     }
 
     public async Task UpdatePaiementAsync(int factureId, int paiementId, decimal montant, DateTime date, ModePaiement mode, string reference, CancellationToken cancellationToken = default)
@@ -75,8 +49,6 @@ public sealed class FactureWorkflowService : IFactureWorkflowService
             .Include(x => x.Lignes)
             .Include(x => x.Paiements)
             .FirstAsync(x => x.Id == factureId, cancellationToken);
-        if (f.Statut == StatutFacture.Annulee)
-            throw new InvalidOperationException("Facture annulée.");
 
         var (_, _, ttc) = DocumentTotalsHelper.FactureTotals(f.Lignes, f.RemiseGlobale);
         var totalApres = f.Paiements.Where(x => x.Id != paiementId).Sum(x => x.Montant) + montant;
@@ -88,19 +60,13 @@ public sealed class FactureWorkflowService : IFactureWorkflowService
         p.Mode = mode;
         p.Reference = reference;
         await db.SaveChangesAsync(cancellationToken);
-        await RecalculateStatutAsync(factureId, cancellationToken);
     }
 
     public async Task DeletePaiementAsync(int factureId, int paiementId, CancellationToken cancellationToken = default)
     {
         await using var db = await _dbFactory.CreateDbContextAsync(cancellationToken);
-        var f = await db.Factures.FirstAsync(x => x.Id == factureId, cancellationToken);
-        if (f.Statut == StatutFacture.Annulee)
-            throw new InvalidOperationException("Facture annulée.");
-
         var p = await db.Paiements.FirstAsync(x => x.Id == paiementId && x.FactureId == factureId, cancellationToken);
         db.Paiements.Remove(p);
         await db.SaveChangesAsync(cancellationToken);
-        await RecalculateStatutAsync(factureId, cancellationToken);
     }
 }

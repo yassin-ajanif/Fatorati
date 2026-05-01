@@ -10,7 +10,8 @@ public interface ICurrentUserSession
     string? Nom { get; }
     bool IsAdmin { get; }
 
-    void SetSession(User user);
+    /// <summary>Connexion avec l’administrateur local (sans table Users).</summary>
+    void SetDefaultAdminSession();
     void Clear();
     bool CanAccessClients { get; }
     bool CanAccessFournisseurs { get; }

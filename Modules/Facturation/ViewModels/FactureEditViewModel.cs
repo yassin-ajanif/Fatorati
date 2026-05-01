@@ -7,7 +7,6 @@ using CommunityToolkit.Mvvm.Input;
 using GestionCommerciale.Modules.Auth.Services;
 using GestionCommerciale.Modules.Stock;
 using GestionCommerciale.Modules.Facturation.Models;
-using GestionCommerciale.Modules.Livraison.Models;
 using GestionCommerciale.Modules.Facturation.Services;
 using GestionCommerciale.Modules.Tiers.Models;
 using GestionCommerciale.Shared.Database;
@@ -78,7 +77,7 @@ public partial class FactureEditViewModel : BaseViewModel
     [ObservableProperty] private string _numero = string.Empty;
     [ObservableProperty] private DateTimeOffset _date = new(DateTime.Today);
     [ObservableProperty] private DateTimeOffset _dateEcheance = new(DateTime.Today.AddDays(30));
-    [ObservableProperty] private StatutFacture _statut = StatutFacture.Emise;
+    [ObservableProperty] private bool _estPayee;
     [ObservableProperty] private decimal _remiseGlobale;
     [ObservableProperty] private string _note = string.Empty;
     [ObservableProperty] private decimal _totalHt;
@@ -98,7 +97,10 @@ public partial class FactureEditViewModel : BaseViewModel
     [ObservableProperty] private string _btnBack = string.Empty;
     [ObservableProperty] private string _btnSave = string.Empty;
     [ObservableProperty] private string _btnAvoir = string.Empty;
-    [ObservableProperty] private string _statutLabel = string.Empty;
+    [ObservableProperty] private string _menuDeleteFacture = string.Empty;
+    [ObservableProperty] private string _lblFactPayee = string.Empty;
+    [ObservableProperty] private string _lblPaid = string.Empty;
+    [ObservableProperty] private string _lblUnpaid = string.Empty;
     [ObservableProperty] private string _lblClient = string.Empty;
     [ObservableProperty] private string _wmClientSearch = string.Empty;
     [ObservableProperty] private string _lblDateFacture = string.Empty;
@@ -161,6 +163,7 @@ public partial class FactureEditViewModel : BaseViewModel
         BtnBack = _locale.T("Btn_Back");
         BtnSave = _locale.T("Btn_Save");
         BtnAvoir = _locale.T("Btn_Avoir");
+        MenuDeleteFacture = _locale.T("Fact_MenuDelete");
         LblClient = _locale.T("Lbl_Client");
         WmClientSearch = _locale.T("Wm_SearchClient");
         LblDateFacture = _locale.T("Lbl_DateFacture");
@@ -179,7 +182,9 @@ public partial class FactureEditViewModel : BaseViewModel
         BtnDelete = _locale.T("Btn_Delete");
         BtnCancel = _locale.T("Btn_Cancel");
         PayEditTooltip = _locale.T("Pay_EditTooltip");
-        StatutLabel = UiEnumStrings.FormatStatutFacture(_locale, Statut);
+        LblFactPayee = _locale.T("Fact_LblPayee");
+        LblPaid = _locale.T("Fact_Paid");
+        LblUnpaid = _locale.T("Fact_Unpaid");
         LblDocLineColumnsHint = _locale.T("DocLine_ColumnsHint");
         LblDocColRef = _locale.T("DocLine_ColRef");
         LblDocColDesignation = _locale.T("DocLine_ColDesignation");
@@ -205,11 +210,50 @@ public partial class FactureEditViewModel : BaseViewModel
 
     private bool CanExecuteAddPaiement() => FactureId.HasValue;
 
-    partial void OnStatutChanged(StatutFacture value) => AddPaiementCommand.NotifyCanExecuteChanged();
-
     partial void OnMontantPayeChanged(decimal value) => UpdateFactureTotalLines();
 
-    partial void OnFactureIdChanged(int? value) => AddPaiementCommand.NotifyCanExecuteChanged();
+    partial void OnFactureIdChanged(int? value)
+    {
+        AddPaiementCommand.NotifyCanExecuteChanged();
+        RemoveFactureCommand.NotifyCanExecuteChanged();
+    }
+
+    private bool CanRemoveFacture() => FactureId != null;
+
+    [RelayCommand(CanExecute = nameof(CanRemoveFacture))]
+    private async Task RemoveFactureAsync(CancellationToken cancellationToken)
+    {
+        if (FactureId is not { } id) return;
+
+        if (!await _dialog.ConfirmAsync(_locale.T("Fact_Title"), _locale.Tf("Fact_ConfirmDelete", Numero), cancellationToken))
+            return;
+
+        IsBusy = true;
+        try
+        {
+            await using var db = await _dbFactory.CreateDbContextAsync(cancellationToken);
+            if (await db.Avoirs.AsNoTracking().AnyAsync(a => a.FactureId == id, cancellationToken))
+            {
+                await _dialog.ShowErrorAsync(_locale.T("Fact_Title"), _locale.T("Fact_ErrDeleteReferenced"), cancellationToken);
+                return;
+            }
+
+            var entity = await db.Factures.Include(f => f.Lignes).Include(f => f.Paiements).FirstAsync(f => f.Id == id, cancellationToken);
+            db.Factures.Remove(entity);
+            await db.SaveChangesAsync(cancellationToken);
+
+            await _dialog.ShowInfoAsync(_locale.T("Fact_Title"), _locale.T("Fact_Deleted"), cancellationToken);
+            Back();
+        }
+        catch (Exception ex)
+        {
+            await _dialog.ShowErrorAsync(_locale.T("Fact_Title"), ex.Message, cancellationToken);
+        }
+        finally
+        {
+            IsBusy = false;
+        }
+    }
 
     private void ReloadPaiementsList(IEnumerable<Paiement> paiements)
     {
@@ -380,7 +424,7 @@ public partial class FactureEditViewModel : BaseViewModel
             ClientId = Clients.FirstOrDefault()?.Id ?? 0;
             Date = new DateTimeOffset(DateTime.Today);
             DateEcheance = Date.AddDays(30);
-            Statut = StatutFacture.Emise;
+            EstPayee = false;
             CanEditDraft = true;
             Title = _locale.T("Fact_NewTitle");
             MontantPaye = 0;
@@ -396,7 +440,7 @@ public partial class FactureEditViewModel : BaseViewModel
         ClientId = f.ClientId;
         Date = new DateTimeOffset(f.Date);
         DateEcheance = new DateTimeOffset(f.DateEcheance);
-        Statut = f.Statut;
+        EstPayee = f.EstPayee;
         RemiseGlobale = f.RemiseGlobale;
         Note = f.Note;
         foreach (var l in f.Lignes)
@@ -452,7 +496,7 @@ public partial class FactureEditViewModel : BaseViewModel
         ClientId = b.ClientId;
         Date = new DateTimeOffset(DateTime.Today);
         DateEcheance = Date.AddDays(30);
-        Statut = StatutFacture.Emise;
+        EstPayee = false;
         Numero = _locale.T("Fact_NewNumPlaceholder");
         await LoadLookupsAsync(db, cancellationToken);
         Lignes.Clear();
@@ -494,7 +538,7 @@ public partial class FactureEditViewModel : BaseViewModel
         ClientId = d.ClientId;
         Date = new DateTimeOffset(DateTime.Today);
         DateEcheance = Date.AddDays(30);
-        Statut = StatutFacture.Emise;
+        EstPayee = false;
         Numero = _locale.T("Fact_NewNumPlaceholder");
         RemiseGlobale = d.RemiseGlobale;
         await LoadLookupsAsync(db, cancellationToken);
@@ -587,7 +631,7 @@ public partial class FactureEditViewModel : BaseViewModel
                     DevisId = DevisId,
                     Date = Date.DateTime,
                     DateEcheance = DateEcheance.DateTime,
-                    Statut = StatutFacture.Emise,
+                    EstPayee = EstPayee,
                     RemiseGlobale = RemiseGlobale,
                     Note = Note,
                     CreatedByUserId = _session.UserId
@@ -613,13 +657,13 @@ public partial class FactureEditViewModel : BaseViewModel
             else
             {
                 entity = await db.Factures.Include(f => f.Lignes).FirstAsync(f => f.Id == FactureId, cancellationToken);
-                entity.Statut = StatutFacture.Emise;
 
                 entity.ClientId = ClientId;
                 entity.BLId = BlId;
                 entity.DevisId = DevisId;
                 entity.Date = Date.DateTime;
                 entity.DateEcheance = DateEcheance.DateTime;
+                entity.EstPayee = EstPayee;
                 entity.RemiseGlobale = RemiseGlobale;
                 entity.Note = Note;
                 db.FactureLignes.RemoveRange(entity.Lignes);
@@ -639,15 +683,6 @@ public partial class FactureEditViewModel : BaseViewModel
 
                 await db.SaveChangesAsync(cancellationToken);
             }
-
-            if (BlId.HasValue)
-            {
-                var bl = await db.BonsLivraison.FirstAsync(b => b.Id == BlId.Value, cancellationToken);
-                bl.Statut = StatutBL.Facture;
-                await db.SaveChangesAsync(cancellationToken);
-            }
-
-            await _factureWorkflow.RecalculateStatutAsync(entity.Id, cancellationToken);
 
             Numero = entity.Numero;
             await _dialog.ShowInfoAsync(_locale.T("Fact_Title"), _locale.T("Fact_Saved"), cancellationToken);

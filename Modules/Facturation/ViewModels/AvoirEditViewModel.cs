@@ -125,6 +125,45 @@ public partial class AvoirEditViewModel : BaseViewModel
         Title = _locale.T("Avoir_NewTitle");
     }
 
+    public void LoadExisting(int avoirId) => _ = LoadExistingAsync(avoirId, CancellationToken.None);
+
+    private async Task LoadExistingAsync(int avoirId, CancellationToken cancellationToken)
+    {
+        if (!_session.CanAccessAvoir)
+        {
+            await _dialog.ShowErrorAsync(_locale.T("Avoir_Title"), _locale.T("Avoir_ErrDenied"), cancellationToken);
+            return;
+        }
+
+        await using var db = await _dbFactory.CreateDbContextAsync(cancellationToken);
+        var avoir = await db.Avoirs.Include(x => x.Lignes).FirstAsync(x => x.Id == avoirId, cancellationToken);
+        AvoirId = avoir.Id;
+        FactureId = avoir.FactureId;
+        ClientId = avoir.ClientId;
+        Numero = avoir.Numero;
+        Date = new DateTimeOffset(avoir.Date);
+        Motif = avoir.Motif;
+        RetourMarchandise = avoir.RetourMarchandise;
+        Lignes.Clear();
+        foreach (var l in avoir.Lignes)
+        {
+            Lignes.Add(new AvoirLineRow
+            {
+                ProduitId = l.ProduitId,
+                Designation = l.Designation,
+                Quantite = l.Quantite,
+                PrixUnitaireHt = l.PrixUnitaireHT,
+                TauxTva = l.TauxTVA
+            });
+        }
+
+        var produits = await db.Produits.AsNoTracking().Where(p => p.Actif)
+            .SelectForListWithoutImageData().ToListAsync(cancellationToken);
+        Produits.Clear();
+        foreach (var p in produits) Produits.Add(p);
+        Title = _locale.Tf("Avoir_TitleNum", Numero);
+    }
+
     [RelayCommand]
     private void AddLine()
     {

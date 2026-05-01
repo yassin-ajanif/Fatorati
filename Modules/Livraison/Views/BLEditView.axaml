@@ -13,7 +13,14 @@
         <Button Content="{Binding BtnSave}" Command="{Binding SaveCommand}" IsEnabled="{Binding CanEdit}"/>
         <Button Content="{Binding BtnToInvoice}" Command="{Binding ToFactureCommand}"/>
       </StackPanel>
-      <TextBlock Text="{Binding Numero}" FontWeight="Bold"/>
+      <Border Background="{DynamicResource CourseraSurfaceBrush}" CornerRadius="8,8,0,0" Padding="10,8">
+        <Border.ContextMenu>
+          <ContextMenu Opening="OnHeaderContextMenuOpening">
+            <MenuItem Header="{Binding MenuDeleteBl}" Command="{Binding RemoveBlCommand}"/>
+          </ContextMenu>
+        </Border.ContextMenu>
+        <TextBlock Text="{Binding Numero}" FontWeight="Bold"/>
+      </Border>
       <Grid ColumnDefinitions="Auto,12,Auto,20,Auto" VerticalAlignment="Center">
         <TextBlock Grid.Column="0" Text="{Binding LblClient}" VerticalAlignment="Center" Opacity="0.7"/>
         <AutoCompleteBox Grid.Column="2" MinWidth="280" MaxWidth="420"

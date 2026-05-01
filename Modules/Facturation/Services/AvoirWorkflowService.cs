@@ -32,9 +32,6 @@ public sealed class AvoirWorkflowService : IAvoirWorkflowService
             .Include(f => f.Paiements)
             .FirstAsync(f => f.Id == avoir.FactureId, cancellationToken);
 
-        if (facture.Statut == StatutFacture.Annulee)
-            throw new InvalidOperationException("Avoir impossible sur une facture annulée.");
-
         var (_, _, ttcFacture) = DocumentTotalsHelper.FactureTotals(facture.Lignes, facture.RemiseGlobale);
         var (_, _, ttcAvoir) = DocumentTotalsHelper.AvoirTotals(avoir.Lignes);
 

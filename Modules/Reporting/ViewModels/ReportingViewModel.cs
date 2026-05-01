@@ -4,10 +4,6 @@ using System.Linq;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using GestionCommerciale.Modules.Auth.Services;
-using GestionCommerciale.Modules.Commande.Models;
-using GestionCommerciale.Modules.Facturation.Models;
-using GestionCommerciale.Modules.Livraison.Models;
-using GestionCommerciale.Modules.Reception.Models;
 using GestionCommerciale.Modules.Stock;
 using GestionCommerciale.Shared.Database;
 using GestionCommerciale.Shared.Helpers;
@@ -131,17 +127,13 @@ public partial class ReportingViewModel : BaseViewModel
             var expireUntil = now.AddDays(14);
 
             var facCur = await db.Factures.AsNoTracking()
-                .Where(f => f.Date >= startCur && f.Date < endCur
-                    && f.Statut != StatutFacture.Annulee
-                    && f.Statut != StatutFacture.Brouillon)
+                .Where(f => f.Date >= startCur && f.Date < endCur)
                 .Include(f => f.Lignes)
                 .ToListAsync(cancellationToken);
             var caCur = facCur.Sum(f => DocumentTotalsHelper.FactureTotals(f.Lignes ?? [], f.RemiseGlobale).ttc);
 
             var facPrev = await db.Factures.AsNoTracking()
-                .Where(f => f.Date >= startPrev && f.Date < endPrev
-                    && f.Statut != StatutFacture.Annulee
-                    && f.Statut != StatutFacture.Brouillon)
+                .Where(f => f.Date >= startPrev && f.Date < endPrev)
                 .Include(f => f.Lignes)
                 .ToListAsync(cancellationToken);
             var caPrev = facPrev.Sum(f => DocumentTotalsHelper.FactureTotals(f.Lignes ?? [], f.RemiseGlobale).ttc);
@@ -169,24 +161,26 @@ public partial class ReportingViewModel : BaseViewModel
                 d => d.DateValidite >= now && d.DateValidite <= expireUntil,
                 cancellationToken);
             var blMonth = await db.BonsLivraison.AsNoTracking().CountAsync(
-                b => b.Date >= startCur && b.Date < endCur && b.Statut != StatutBL.Brouillon,
+                b => b.Date >= startCur && b.Date < endCur,
                 cancellationToken);
-            var bcDraft = await db.BonsCommande.AsNoTracking().CountAsync(b => b.Statut == StatutBC.Brouillon, cancellationToken);
-            var bcValide = await db.BonsCommande.AsNoTracking().CountAsync(b => b.Statut == StatutBC.Valide, cancellationToken);
+            var bcMonth = await db.BonsCommande.AsNoTracking().CountAsync(
+                b => b.Date >= startCur && b.Date < endCur,
+                cancellationToken);
+            var bcTotal = await db.BonsCommande.AsNoTracking().CountAsync(cancellationToken);
             var brMonth = await db.BonsReception.AsNoTracking().CountAsync(
-                b => b.Date >= startCur && b.Date < endCur && b.Statut == StatutBR.Valide,
+                b => b.Date >= startCur && b.Date < endCur,
                 cancellationToken);
 
             KpiDevis30 = _locale.Tf("Report_KpiDevis30", devis30.ToString(CultureInfo.CurrentCulture));
             KpiDevisExpire = _locale.Tf("Report_KpiDevisExpire", devisExpire.ToString(CultureInfo.CurrentCulture));
             KpiBlMonth = _locale.Tf("Report_KpiBlMonth", blMonth.ToString(CultureInfo.CurrentCulture));
             KpiBc = _locale.Tf("Report_KpiBc",
-                bcDraft.ToString(CultureInfo.CurrentCulture),
-                bcValide.ToString(CultureInfo.CurrentCulture));
+                bcMonth.ToString(CultureInfo.CurrentCulture),
+                bcTotal.ToString(CultureInfo.CurrentCulture));
             KpiBrMonth = _locale.Tf("Report_KpiBrMonth", brMonth.ToString(CultureInfo.CurrentCulture));
 
             var factsYear = await db.Factures.AsNoTracking()
-                .Where(f => f.Date >= startCur.AddMonths(-11) && f.Statut != StatutFacture.Annulee)
+                .Where(f => f.Date >= startCur.AddMonths(-11))
                 .Include(f => f.Lignes)
                 .ToListAsync(cancellationToken);
             var topClients = factsYear
@@ -215,7 +209,7 @@ public partial class ReportingViewModel : BaseViewModel
             var blLignes = await (
                 from l in db.BonLivraisonLignes.AsNoTracking()
                 join b in db.BonsLivraison.AsNoTracking() on l.BLId equals b.Id
-                where b.Date >= blSince && b.Statut != StatutBL.Brouillon
+                where b.Date >= blSince
                 select l
             ).ToListAsync(cancellationToken);
             var topProd = blLignes
@@ -269,7 +263,7 @@ public partial class ReportingViewModel : BaseViewModel
 
             FacturesImpayees.Clear();
             var unpaid = await db.Factures.AsNoTracking()
-                .Where(f => f.Statut != StatutFacture.Annulee && f.Statut != StatutFacture.Payee)
+                .Where(f => !f.EstPayee)
                 .Include(f => f.Lignes)
                 .Include(f => f.Paiements)
                 .OrderBy(f => f.DateEcheance)

@@ -15,4 +15,15 @@ public interface IStockMovementService
         string? note,
         int? createdByUserId,
         CancellationToken cancellationToken = default);
+
+    Task ResyncBonLivraisonStockAsync(
+        AppDbContext db,
+        int bonLivraisonId,
+        string noteDetail,
+        IEnumerable<(int ProduitId, decimal QuantiteLivree)> lines,
+        int? createdByUserId,
+        CancellationToken cancellationToken = default);
+
+    /// <summary>Removes mouvements stock liés au BR et annule leur effet sur les quantités produit.</summary>
+    Task StripBonReceptionMovementsAsync(AppDbContext db, int bonReceptionId, CancellationToken cancellationToken = default);
 }

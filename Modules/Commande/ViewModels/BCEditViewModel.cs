@@ -56,6 +56,7 @@ public partial class BCEditViewModel : BaseViewModel
 
     [ObservableProperty] private string _btnBack = string.Empty;
     [ObservableProperty] private string _btnSave = string.Empty;
+    [ObservableProperty] private string _menuDeleteBc = string.Empty;
     [ObservableProperty] private string _lblSupplier = string.Empty;
     [ObservableProperty] private string _wmSupplierSearch = string.Empty;
     [ObservableProperty] private string _lblDateBc = string.Empty;
@@ -64,7 +65,6 @@ public partial class BCEditViewModel : BaseViewModel
     [ObservableProperty] private string _lblAddProduct = string.Empty;
     [ObservableProperty] private string _wmAddProduct = string.Empty;
     [ObservableProperty] private string _lblTotals = string.Empty;
-    [ObservableProperty] private string _statutLabel = string.Empty;
     [ObservableProperty] private string _lblDocLineColumnsHint = string.Empty;
     [ObservableProperty] private string _lblDocColRef = string.Empty;
     [ObservableProperty] private string _lblDocColDesignation = string.Empty;
@@ -118,6 +118,7 @@ public partial class BCEditViewModel : BaseViewModel
     {
         BtnBack = _locale.T("Btn_Back");
         BtnSave = _locale.T("Btn_Save");
+        MenuDeleteBc = _locale.T("BC_MenuDelete");
         LblSupplier = _locale.T("Lbl_Supplier");
         WmSupplierSearch = _locale.T("Wm_SearchSupplier");
         LblDateBc = _locale.T("Lbl_DateBC");
@@ -126,7 +127,6 @@ public partial class BCEditViewModel : BaseViewModel
         LblAddProduct = _locale.T("Devis_LblAddProduct");
         WmAddProduct = _locale.T("Devis_WmSearchProduct");
         LblTotals = _locale.T("Lbl_Totals");
-        StatutLabel = UiEnumStrings.FormatStatutBC(_locale, Statut);
         LblDocLineColumnsHint = _locale.T("DocLine_ColumnsHint");
         LblDocColRef = _locale.T("DocLine_ColRef");
         LblDocColDesignation = _locale.T("DocLine_ColDesignation");
@@ -143,9 +143,6 @@ public partial class BCEditViewModel : BaseViewModel
         TotalTtcLabel = _locale.Tf("Doc_FmtTtc", TotalTtc, Devise);
     }
 
-    partial void OnStatutChanged(StatutBC value) =>
-        StatutLabel = UiEnumStrings.FormatStatutBC(_locale, value);
-
     public ObservableCollection<GestionCommerciale.Modules.Tiers.Models.Tiers> Fournisseurs { get; } = [];
     public ObservableCollection<GestionCommerciale.Modules.Stock.Models.Produit> Produits { get; } = [];
     public ObservableCollection<BCLineRow> Lignes { get; } = [];
@@ -155,11 +152,48 @@ public partial class BCEditViewModel : BaseViewModel
     [ObservableProperty] private GestionCommerciale.Modules.Tiers.Models.Tiers? _selectedFournisseur;
     [ObservableProperty] private string _numero = string.Empty;
     [ObservableProperty] private DateTimeOffset _date = new(DateTime.Today);
-    [ObservableProperty] private StatutBC _statut = StatutBC.Brouillon;
     [ObservableProperty] private string _note = string.Empty;
     [ObservableProperty] private BCLineRow? _selectedLine;
 
     public bool CanEdit => true;
+
+    partial void OnBcIdChanged(int? value) => RemoveBcCommand.NotifyCanExecuteChanged();
+
+    private bool CanRemoveBc() => BcId != null;
+
+    [RelayCommand(CanExecute = nameof(CanRemoveBc))]
+    private async Task RemoveBcAsync(CancellationToken cancellationToken)
+    {
+        if (BcId is not { } id) return;
+
+        if (!await _dialog.ConfirmAsync(_locale.T("BC_Title"), _locale.Tf("BC_ConfirmDelete", Numero), cancellationToken))
+            return;
+
+        IsBusy = true;
+        try
+        {
+            await using var db = await _dbFactory.CreateDbContextAsync(cancellationToken);
+            if (await db.BonsReception.AsNoTracking().AnyAsync(r => r.BonCommandeId == id, cancellationToken))
+            {
+                await _dialog.ShowErrorAsync(_locale.T("BC_Title"), _locale.T("BC_ErrDeleteReferenced"), cancellationToken);
+                return;
+            }
+
+            var entity = await db.BonsCommande.Include(b => b.Lignes).FirstAsync(b => b.Id == id, cancellationToken);
+            db.BonsCommande.Remove(entity);
+            await db.SaveChangesAsync(cancellationToken);
+            await _dialog.ShowInfoAsync(_locale.T("BC_Title"), _locale.T("BC_Deleted"), cancellationToken);
+            Back();
+        }
+        catch (Exception ex)
+        {
+            await _dialog.ShowErrorAsync(_locale.T("BC_Title"), ex.Message, cancellationToken);
+        }
+        finally
+        {
+            IsBusy = false;
+        }
+    }
 
     partial void OnAddLineCatalogPickChanged(object? value)
     {
@@ -253,7 +287,6 @@ public partial class BCEditViewModel : BaseViewModel
         {
             Numero = "(brouillon)";
             FournisseurId = Fournisseurs.FirstOrDefault()?.Id ?? 0;
-            Statut = StatutBC.Brouillon;
             Title = _locale.T("BC_NewTitle");
             RefreshTotals();
             return;
@@ -263,7 +296,6 @@ public partial class BCEditViewModel : BaseViewModel
         Numero = b.Numero;
         FournisseurId = b.FournisseurId;
         Date = new DateTimeOffset(b.Date);
-        Statut = b.Statut;
         Note = b.Note;
         foreach (var l in b.Lignes)
         {
@@ -340,7 +372,6 @@ public partial class BCEditViewModel : BaseViewModel
                     Numero = num,
                     FournisseurId = FournisseurId,
                     Date = Date.DateTime,
-                    Statut = StatutBC.Brouillon,
                     Note = Note,
                     CreatedByUserId = _session.UserId
                 };

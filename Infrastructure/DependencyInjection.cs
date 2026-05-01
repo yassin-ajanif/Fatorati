@@ -48,7 +48,6 @@ public static class DependencyInjection
         services.AddTransient<LoginViewModel>();
         services.AddTransient<AppShellViewModel>();
         services.AddTransient<HomeViewModel>();
-        services.AddTransient<UserManagementViewModel>();
         services.AddTransient<TiersListViewModel>();
         services.AddTransient<TiersDetailViewModel>();
         services.AddTransient<StockMainViewModel>();

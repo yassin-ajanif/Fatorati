@@ -1,11 +1,11 @@
 using Avalonia.Controls;
 using Avalonia.Markup.Xaml;
 
-namespace GestionCommerciale.Modules.Auth.Views;
+namespace GestionCommerciale.Modules.Facturation.Views;
 
-public partial class UserManagementView : UserControl
+public partial class AvoirListView : UserControl
 {
-    public UserManagementView()
+    public AvoirListView()
     {
         InitializeComponent();
     }
@@ -13,7 +13,7 @@ public partial class UserManagementView : UserControl
     protected override void OnAttachedToVisualTree(Avalonia.VisualTreeAttachmentEventArgs e)
     {
         base.OnAttachedToVisualTree(e);
-        if (DataContext is ViewModels.UserManagementViewModel vm)
+        if (DataContext is ViewModels.AvoirListViewModel vm)
             vm.LoadCommand.Execute(null);
     }
 

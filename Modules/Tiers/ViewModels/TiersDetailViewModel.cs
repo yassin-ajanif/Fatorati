@@ -297,16 +297,15 @@ public partial class TiersDetailViewModel : BaseViewModel
                     Historique.Add(_locale.Tf("Hist_LineFmtShort", _locale.T("Hist_Devis"), d.Numero, d.Date.ToString("d")));
 
                 var blRows = await db.BonsLivraison.AsNoTracking().Where(b => b.ClientId == id).OrderByDescending(b => b.Date).Take(50)
-                    .Select(b => new { b.Numero, b.Date, b.Statut }).ToListAsync(cancellationToken);
+                    .Select(b => new { b.Numero, b.Date }).ToListAsync(cancellationToken);
                 foreach (var b in blRows)
-                    Historique.Add(_locale.Tf("Hist_LineFmt", _locale.T("Hist_BL"), b.Numero, b.Date.ToString("d"),
-                        UiEnumStrings.FormatStatutBL(_locale, b.Statut)));
+                    Historique.Add(_locale.Tf("Hist_LineFmtShort", _locale.T("Hist_BL"), b.Numero, b.Date.ToString("d")));
 
                 var facRows = await db.Factures.AsNoTracking().Where(f => f.ClientId == id).OrderByDescending(f => f.Date).Take(50)
-                    .Select(f => new { f.Numero, f.Date, f.Statut }).ToListAsync(cancellationToken);
+                    .Select(f => new { f.Numero, f.Date, f.EstPayee }).ToListAsync(cancellationToken);
                 foreach (var f in facRows)
                     Historique.Add(_locale.Tf("Hist_LineFmt", _locale.T("Hist_Facture"), f.Numero, f.Date.ToString("d"),
-                        UiEnumStrings.FormatStatutFacture(_locale, f.Statut)));
+                        _locale.T(f.EstPayee ? "Fact_Paid" : "Fact_Unpaid")));
 
             }
 
@@ -317,10 +316,9 @@ public partial class TiersDetailViewModel : BaseViewModel
             {
 
                 var brRows = await db.BonsReception.AsNoTracking().Where(b => b.FournisseurId == id).OrderByDescending(b => b.Date).Take(50)
-                    .Select(b => new { b.Numero, b.Date, b.Statut }).ToListAsync(cancellationToken);
+                    .Select(b => new { b.Numero, b.Date }).ToListAsync(cancellationToken);
                 foreach (var b in brRows)
-                    Historique.Add(_locale.Tf("Hist_LineFmt", _locale.T("Hist_BR"), b.Numero, b.Date.ToString("d"),
-                        UiEnumStrings.FormatStatutBR(_locale, b.Statut)));
+                    Historique.Add(_locale.Tf("Hist_LineFmtShort", _locale.T("Hist_BR"), b.Numero, b.Date.ToString("d")));
 
             }
 

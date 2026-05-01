@@ -26,10 +26,36 @@ public sealed class BonReceptionWorkflowService : IBonReceptionWorkflowService
             .Include(b => b.Lignes)
             .FirstAsync(b => b.Id == bonReceptionId, cancellationToken);
 
-        if (br.Statut != StatutBR.Brouillon)
-            throw new InvalidOperationException("Seuls les brouillons peuvent être validés.");
+        await ReplayBonReceptionLinesIntoStockAsync(db, br, userId, cancellationToken);
 
-        foreach (var ligne in br.Lignes)
+        await db.SaveChangesAsync(cancellationToken);
+        await trx.CommitAsync(cancellationToken);
+    }
+
+    public async Task ResyncStockFromLinesAsync(int bonReceptionId, int? userId, CancellationToken cancellationToken = default)
+    {
+        await using var db = await _dbFactory.CreateDbContextAsync(cancellationToken);
+        await using var trx = await db.Database.BeginTransactionAsync(cancellationToken);
+
+        var br = await db.BonsReception
+            .Include(b => b.Lignes)
+            .FirstAsync(b => b.Id == bonReceptionId, cancellationToken);
+
+        await ReplayBonReceptionLinesIntoStockAsync(db, br, userId, cancellationToken);
+
+        await db.SaveChangesAsync(cancellationToken);
+        await trx.CommitAsync(cancellationToken);
+    }
+
+    private async Task ReplayBonReceptionLinesIntoStockAsync(
+        AppDbContext db,
+        BonReception br,
+        int? userId,
+        CancellationToken cancellationToken)
+    {
+        await _stock.StripBonReceptionMovementsAsync(db, br.Id, cancellationToken);
+
+        foreach (var ligne in br.Lignes.OrderBy(l => l.Id))
         {
             if (ligne.QuantiteRecue <= 0) continue;
 
@@ -48,15 +74,11 @@ public sealed class BonReceptionWorkflowService : IBonReceptionWorkflowService
                 ligne.ProduitId,
                 TypeMouvement.Entree,
                 ligne.QuantiteRecue,
-                "BR",
+                StockMovementService.OrigineTypeBonReception,
                 br.Id,
-                $"BR {br.Numero}",
+                br.Numero,
                 userId,
                 cancellationToken);
         }
-
-        br.Statut = StatutBR.Valide;
-        await db.SaveChangesAsync(cancellationToken);
-        await trx.CommitAsync(cancellationToken);
     }
 }

@@ -6,6 +6,9 @@ namespace GestionCommerciale.Modules.Stock.Services;
 
 public sealed class StockMovementService : IStockMovementService
 {
+    public const string OrigineTypeBonLivraison = "BL";
+    public const string OrigineTypeBonReception = "BR";
+
     public async Task ApplyMovementAsync(
         AppDbContext db,
         int produitId,
@@ -27,11 +30,7 @@ public sealed class StockMovementService : IStockMovementService
         };
 
         var stockAvant = produit.StockActuel;
-        var next = stockAvant + delta;
-        if (next < 0)
-            throw new InvalidOperationException($"Stock insuffisant pour le produit {produit.Reference}.");
-
-        produit.StockActuel = next;
+        produit.StockActuel = stockAvant + delta;
 
         db.MouvementsStock.Add(new MouvementStock
         {
@@ -44,5 +43,82 @@ public sealed class StockMovementService : IStockMovementService
             Note = note ?? string.Empty,
             CreatedByUserId = createdByUserId
         });
+    }
+
+    public async Task ResyncBonLivraisonStockAsync(
+        AppDbContext db,
+        int bonLivraisonId,
+        string noteDetail,
+        IEnumerable<(int ProduitId, decimal QuantiteLivree)> lines,
+        int? createdByUserId,
+        CancellationToken cancellationToken = default)
+    {
+        var old = await db.MouvementsStock
+            .Where(m => m.OrigineType == OrigineTypeBonLivraison && m.OrigineId == bonLivraisonId)
+            .ToListAsync(cancellationToken);
+
+        foreach (var m in old)
+        {
+            var produit = await db.Produits.FirstAsync(p => p.Id == m.ProduitId, cancellationToken);
+            switch (m.Type)
+            {
+                case TypeMouvement.Sortie:
+                    produit.StockActuel += m.Quantite;
+                    break;
+                case TypeMouvement.Entree:
+                    produit.StockActuel -= m.Quantite;
+                    break;
+                case TypeMouvement.Ajustement:
+                    produit.StockActuel -= m.Quantite;
+                    break;
+                default:
+                    throw new ArgumentOutOfRangeException(nameof(m.Type), m.Type, null);
+            }
+
+            db.MouvementsStock.Remove(m);
+        }
+
+        foreach (var (produitId, qte) in lines)
+        {
+            if (produitId <= 0 || qte <= 0) continue;
+            await ApplyMovementAsync(
+                db,
+                produitId,
+                TypeMouvement.Sortie,
+                qte,
+                OrigineTypeBonLivraison,
+                bonLivraisonId,
+                noteDetail,
+                createdByUserId,
+                cancellationToken);
+        }
+    }
+
+    public async Task StripBonReceptionMovementsAsync(AppDbContext db, int bonReceptionId, CancellationToken cancellationToken = default)
+    {
+        var old = await db.MouvementsStock
+            .Where(m => m.OrigineType == OrigineTypeBonReception && m.OrigineId == bonReceptionId)
+            .ToListAsync(cancellationToken);
+
+        foreach (var m in old)
+        {
+            var produit = await db.Produits.FirstAsync(p => p.Id == m.ProduitId, cancellationToken);
+            switch (m.Type)
+            {
+                case TypeMouvement.Entree:
+                    produit.StockActuel -= m.Quantite;
+                    break;
+                case TypeMouvement.Sortie:
+                    produit.StockActuel += m.Quantite;
+                    break;
+                case TypeMouvement.Ajustement:
+                    produit.StockActuel -= m.Quantite;
+                    break;
+                default:
+                    throw new ArgumentOutOfRangeException(nameof(m.Type), m.Type, null);
+            }
+
+            db.MouvementsStock.Remove(m);
+        }
     }
 }

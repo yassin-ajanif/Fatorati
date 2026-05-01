@@ -12,8 +12,14 @@
         <Button Content="{Binding BtnBack}" Command="{Binding BackCommand}"/>
         <Button Content="{Binding BtnSave}" Command="{Binding SaveCommand}" IsEnabled="{Binding CanEdit}"/>
       </StackPanel>
-      <TextBlock Text="{Binding Numero}" FontWeight="Bold"/>
-      <TextBlock Text="{Binding StatutLabel}"/>
+      <Border Background="{DynamicResource CourseraSurfaceBrush}" CornerRadius="8,8,0,0" Padding="10,8">
+        <Border.ContextMenu>
+          <ContextMenu Opening="OnHeaderContextMenuOpening">
+            <MenuItem Header="{Binding MenuDeleteBc}" Command="{Binding RemoveBcCommand}"/>
+          </ContextMenu>
+        </Border.ContextMenu>
+        <TextBlock Text="{Binding Numero}" FontWeight="Bold"/>
+      </Border>
       <Grid ColumnDefinitions="Auto,*,24,Auto,Auto" VerticalAlignment="Center">
         <TextBlock Grid.Column="0" Text="{Binding LblSupplier}" VerticalAlignment="Center" Opacity="0.7" Margin="0,0,10,0"/>
         <AutoCompleteBox Grid.Column="1"

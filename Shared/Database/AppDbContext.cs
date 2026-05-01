@@ -1,4 +1,3 @@
-using GestionCommerciale.Modules.Auth.Models;
 using GestionCommerciale.Modules.Devis.Models;
 using GestionCommerciale.Modules.Facturation.Models;
 using GestionCommerciale.Modules.Livraison.Models;
@@ -14,7 +13,6 @@ public class AppDbContext : DbContext
 {
     public AppDbContext(DbContextOptions<AppDbContext> options) : base(options) { }
 
-    public DbSet<User> Users => Set<User>();
     public DbSet<Tiers> Tiers => Set<Tiers>();
     public DbSet<Categorie> Categories => Set<Categorie>();
     public DbSet<Produit> Produits => Set<Produit>();
@@ -36,11 +34,6 @@ public class AppDbContext : DbContext
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
-        modelBuilder.Entity<User>(e =>
-        {
-            e.Property(u => u.Role).HasConversion<int>();
-        });
-
         modelBuilder.Entity<Tiers>(e =>
         {
             e.ToTable("Tiers");
@@ -66,26 +59,22 @@ public class AppDbContext : DbContext
 
         modelBuilder.Entity<BonLivraison>(e =>
         {
-            e.Property(b => b.Statut).HasConversion<int>();
             e.HasMany(b => b.Lignes).WithOne(l => l.BonLivraison).HasForeignKey(l => l.BLId).OnDelete(DeleteBehavior.Cascade);
         });
 
         modelBuilder.Entity<BonCommande>(e =>
         {
-            e.Property(b => b.Statut).HasConversion<int>();
             e.HasMany(b => b.Lignes).WithOne(l => l.BonCommande).HasForeignKey(l => l.BonCommandeId).OnDelete(DeleteBehavior.Cascade);
         });
 
         modelBuilder.Entity<BonReception>(e =>
         {
-            e.Property(b => b.Statut).HasConversion<int>();
             e.HasOne(b => b.BonCommande).WithMany().HasForeignKey(b => b.BonCommandeId).OnDelete(DeleteBehavior.SetNull);
             e.HasMany(b => b.Lignes).WithOne(l => l.BonReception).HasForeignKey(l => l.BRId).OnDelete(DeleteBehavior.Cascade);
         });
 
         modelBuilder.Entity<Facture>(e =>
         {
-            e.Property(f => f.Statut).HasConversion<int>();
             e.HasMany(f => f.Lignes).WithOne(l => l.Facture).HasForeignKey(l => l.FactureId).OnDelete(DeleteBehavior.Cascade);
             e.HasMany(f => f.Paiements).WithOne(p => p.Facture).HasForeignKey(p => p.FactureId).OnDelete(DeleteBehavior.Cascade);
         });

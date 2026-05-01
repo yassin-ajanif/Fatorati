@@ -13,24 +13,47 @@
         <Button Content="{Binding BtnSave}" Command="{Binding SaveDraftCommand}" IsEnabled="{Binding CanEditDraft}"/>
         <Button Content="{Binding BtnAvoir}" Command="{Binding ToAvoirCommand}"/>
       </StackPanel>
-      <TextBlock Text="{Binding Numero}" FontWeight="Bold"/>
-      <TextBlock Text="{Binding LblClient}" Opacity="0.7"/>
-      <AutoCompleteBox MinWidth="280" MaxWidth="420"
-                       MinimumPrefixLength="1" MaxDropDownHeight="320"
-                       Watermark="{Binding WmClientSearch}"
-                       ItemsSource="{Binding Clients}"
-                       ItemFilter="{Binding PartyAutocompleteFilter}"
-                       SelectedItem="{Binding SelectedClient, Mode=TwoWay}"
-                       IsEnabled="{Binding CanEditDraft}">
-        <AutoCompleteBox.ValueMemberBinding>
-          <Binding Path="Nom"/>
-        </AutoCompleteBox.ValueMemberBinding>
-        <AutoCompleteBox.ItemTemplate>
-          <DataTemplate DataType="m:Tiers">
-            <TextBlock Text="{Binding Nom}"/>
-          </DataTemplate>
-        </AutoCompleteBox.ItemTemplate>
-      </AutoCompleteBox>
+      <Border Background="{DynamicResource CourseraSurfaceBrush}" CornerRadius="8,8,0,0" Padding="10,8">
+        <Border.ContextMenu>
+          <ContextMenu Opening="OnHeaderContextMenuOpening">
+            <MenuItem Header="{Binding MenuDeleteFacture}" Command="{Binding RemoveFactureCommand}"/>
+          </ContextMenu>
+        </Border.ContextMenu>
+        <TextBlock Text="{Binding Numero}" FontWeight="Bold"/>
+      </Border>
+      <Grid ColumnDefinitions="*,Auto" VerticalAlignment="Top">
+        <StackPanel Grid.Column="0" Spacing="4" HorizontalAlignment="Left">
+          <TextBlock Text="{Binding LblClient}" Opacity="0.7"/>
+          <AutoCompleteBox MinWidth="280"
+                           MaxWidth="420"
+                           HorizontalAlignment="Left"
+                           MinimumPrefixLength="1" MaxDropDownHeight="320"
+                           Watermark="{Binding WmClientSearch}"
+                           ItemsSource="{Binding Clients}"
+                           ItemFilter="{Binding PartyAutocompleteFilter}"
+                           SelectedItem="{Binding SelectedClient, Mode=TwoWay}"
+                           IsEnabled="{Binding CanEditDraft}">
+            <AutoCompleteBox.ValueMemberBinding>
+              <Binding Path="Nom"/>
+            </AutoCompleteBox.ValueMemberBinding>
+            <AutoCompleteBox.ItemTemplate>
+              <DataTemplate DataType="m:Tiers">
+                <TextBlock Text="{Binding Nom}"/>
+              </DataTemplate>
+            </AutoCompleteBox.ItemTemplate>
+          </AutoCompleteBox>
+        </StackPanel>
+        <StackPanel Grid.Column="1"
+                    Orientation="Horizontal"
+                    Spacing="10"
+                    VerticalAlignment="Bottom"
+                    Margin="16,0,0,0">
+          <TextBlock Text="{Binding LblFactPayee}" VerticalAlignment="Center" Opacity="0.7"/>
+          <ToggleSwitch IsChecked="{Binding EstPayee, Mode=TwoWay}"
+                        OnContent="{Binding LblPaid}"
+                        OffContent="{Binding LblUnpaid}"/>
+        </StackPanel>
+      </Grid>
       <StackPanel Orientation="Horizontal" Spacing="16">
         <StackPanel Orientation="Horizontal" Spacing="8">
           <TextBlock Text="{Binding LblDateFacture}" VerticalAlignment="Center" Opacity="0.7"/>

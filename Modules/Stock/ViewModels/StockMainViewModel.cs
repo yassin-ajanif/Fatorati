@@ -52,10 +52,9 @@ public partial class StockMainViewModel : BaseViewModel
     [ObservableProperty] private string _btnApply = string.Empty;
     [ObservableProperty] private string _lblMovements = string.Empty;
     [ObservableProperty] private string _colDate = string.Empty;
-    [ObservableProperty] private string _colType = string.Empty;
+    [ObservableProperty] private string _colStockCurrent = string.Empty;
     [ObservableProperty] private string _colBeforeQty = string.Empty;
     [ObservableProperty] private string _colQty = string.Empty;
-    [ObservableProperty] private string _colOrigin = string.Empty;
     [ObservableProperty] private string _colDetail = string.Empty;
 
     private void RefreshStockUi()
@@ -77,10 +76,9 @@ public partial class StockMainViewModel : BaseViewModel
         BtnApply = _locale.T("Btn_Apply");
         LblMovements = _locale.T("Lbl_MovementsForProduct");
         ColDate = _locale.T("Lbl_ColDate");
-        ColType = _locale.T("Lbl_ColType");
+        ColStockCurrent = _locale.T("Lbl_ColStockCurrent");
         ColBeforeQty = _locale.T("Lbl_ColBeforeQty");
         ColQty = _locale.T("Lbl_ColQty");
-        ColOrigin = _locale.T("Lbl_ColOrigin");
         ColDetail = _locale.T("Lbl_ColDetail");
         if (SelectedProduit != null)
             _ = LoadMouvementsAsync(SelectedProduit.Id, CancellationToken.None);
@@ -151,6 +149,11 @@ public partial class StockMainViewModel : BaseViewModel
         }
 
         var id = SelectedProduit.Id;
+        var libInventaire = _locale.T("Stock_DefaultMotif");
+        var motif = AjustementNote.Trim();
+        var detailNote = string.IsNullOrEmpty(motif)
+            ? libInventaire
+            : $"{libInventaire} — {motif}";
         IsBusy = true;
         try
         {
@@ -161,9 +164,9 @@ public partial class StockMainViewModel : BaseViewModel
                 id,
                 TypeMouvement.Ajustement,
                 AjustementDelta,
-                _locale.T("Stock_DefaultMotif"),
+                libInventaire,
                 null,
-                AjustementNote,
+                detailNote,
                 _session.UserId,
                 cancellationToken);
             await db.SaveChangesAsync(cancellationToken);

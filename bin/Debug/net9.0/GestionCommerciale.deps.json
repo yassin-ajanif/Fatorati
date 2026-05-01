@@ -14,7 +14,6 @@
           "Avalonia.Fonts.Inter": "11.1.0",
           "Avalonia.Markup.Xaml.Loader": "11.1.0",
           "Avalonia.Themes.Fluent": "11.1.0",
-          "BCrypt.Net-Next": "4.0.3",
           "CommunityToolkit.Mvvm": "8.2.1",
           "HotAvalonia": "3.1.0",
           "Microsoft.EntityFrameworkCore.Design": "9.0.0",
@@ -275,14 +274,6 @@
           "lib/net8.0/Avalonia.X11.dll": {
             "assemblyVersion": "11.1.0.0",
             "fileVersion": "11.1.0.0"
-          }
-        }
-      },
-      "BCrypt.Net-Next/4.0.3": {
-        "runtime": {
-          "lib/net6.0/BCrypt.Net-Next.dll": {
-            "assemblyVersion": "4.0.3.0",
-            "fileVersion": "4.0.3.0"
           }
         }
       },
@@ -1464,13 +1455,6 @@
       "sha512": "sha512-LaDcOYi/JiXHq6cfwP2+sFknu7dBJcE9QGWniHVwC69gieRgtsw1L4Kd0beYJO873zVFzWYAp06H+m6zcqoTQw==",
       "path": "avalonia.x11/11.1.0",
       "hashPath": "avalonia.x11.11.1.0.nupkg.sha512"
-    },
-    "BCrypt.Net-Next/4.0.3": {
-      "type": "package",
-      "serviceable": true,
-      "sha512": "sha512-W+U9WvmZQgi5cX6FS5GDtDoPzUCV4LkBLkywq/kRZhuDwcbavOzcDAr3LXJFqHUi952Yj3LEYoWW0jbEUQChsA==",
-      "path": "bcrypt.net-next/4.0.3",
-      "hashPath": "bcrypt.net-next.4.0.3.nupkg.sha512"
     },
     "CommunityToolkit.Mvvm/8.2.1": {
       "type": "package",

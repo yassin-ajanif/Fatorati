@@ -40,7 +40,6 @@
       <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
     </PackageReference>
     <PackageReference Include="Microsoft.Extensions.DependencyInjection" Version="9.0.0" />
-    <PackageReference Include="BCrypt.Net-Next" Version="4.0.3" />
     <PackageReference Include="QuestPDF" Version="2025.7.1" />
     <PackageReference Include="SkiaSharp" Version="2.88.8" />
   </ItemGroup>

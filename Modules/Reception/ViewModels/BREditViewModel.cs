@@ -1,12 +1,16 @@
 using System.Collections.ObjectModel;
+using System.Collections.Specialized;
+using System.ComponentModel;
 using Avalonia.Controls;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using GestionCommerciale.Modules.Auth.Services;
 using GestionCommerciale.Modules.Stock;
 using GestionCommerciale.Modules.Commande.Models;
+using GestionCommerciale.Modules.Facturation.ViewModels;
 using GestionCommerciale.Modules.Reception.Models;
 using GestionCommerciale.Modules.Reception.Services;
+using GestionCommerciale.Modules.Stock.Services;
 using GestionCommerciale.Modules.Tiers.Models;
 using GestionCommerciale.Shared.Database;
 using GestionCommerciale.Shared.Helpers;
@@ -27,6 +31,8 @@ public partial class BREditViewModel : BaseViewModel
     private readonly IServiceProvider _sp;
     private readonly ICurrentUserSession _session;
     private readonly ILocaleService _locale;
+    private readonly IUiPreferencesService _uiPreferences;
+    private readonly IStockMovementService _stock;
     private int? _sourceBonCommandeId;
 
     public BREditViewModel(
@@ -37,7 +43,9 @@ public partial class BREditViewModel : BaseViewModel
         WorkspaceNavigator workspaceNavigator,
         IServiceProvider sp,
         ICurrentUserSession session,
-        ILocaleService locale)
+        ILocaleService locale,
+        IUiPreferencesService uiPreferences,
+        IStockMovementService stock)
     {
         _dbFactory = dbFactory;
         _numbers = numbers;
@@ -47,13 +55,19 @@ public partial class BREditViewModel : BaseViewModel
         _sp = sp;
         _session = session;
         _locale = locale;
+        _uiPreferences = uiPreferences;
+        _stock = stock;
         _locale.CultureApplied += (_, _) => RefreshBrUi();
+        LineGridColumns.PropertyChanged += OnLineGridColumnsPropertyChanged;
+        _uiPreferences.LoadDocumentLineColumns("bon_reception", LineGridColumns);
+        Lignes.CollectionChanged += LignesOnCollectionChanged;
         Title = _locale.T("BR_Title");
         RefreshBrUi();
     }
 
     [ObservableProperty] private string _btnBack = string.Empty;
     [ObservableProperty] private string _btnSave = string.Empty;
+    [ObservableProperty] private string _menuDeleteBr = string.Empty;
     [ObservableProperty] private string _lblSupplier = string.Empty;
     [ObservableProperty] private string _wmSupplierSearch = string.Empty;
     [ObservableProperty] private string _lblDateBr = string.Empty;
@@ -62,18 +76,86 @@ public partial class BREditViewModel : BaseViewModel
     [ObservableProperty] private string _btnRemoveLine = string.Empty;
     [ObservableProperty] private string _lblAddProduct = string.Empty;
     [ObservableProperty] private string _wmAddProduct = string.Empty;
-    [ObservableProperty] private string _statutLabel = string.Empty;
+    [ObservableProperty] private string _lblDocLineColumnsHint = string.Empty;
+    [ObservableProperty] private string _lblDocColRef = string.Empty;
+    [ObservableProperty] private string _lblDocColDesignation = string.Empty;
+    [ObservableProperty] private string _lblDocColQte = string.Empty;
+    [ObservableProperty] private string _lblDocColCond = string.Empty;
+    [ObservableProperty] private string _wmDocLineUnite = string.Empty;
+    [ObservableProperty] private string _lblDocColPuHt = string.Empty;
+    [ObservableProperty] private string _lblDocColRemise = string.Empty;
+    [ObservableProperty] private string _lblDocColTva = string.Empty;
+    [ObservableProperty] private string _lblDocColMontantHt = string.Empty;
+    [ObservableProperty] private string _lblDocColMontantTtc = string.Empty;
+    [ObservableProperty] private string _lblTotals = string.Empty;
+    [ObservableProperty] private string _wmNote = string.Empty;
+
+    [ObservableProperty] private decimal _totalHt;
+    [ObservableProperty] private decimal _totalTva;
+    [ObservableProperty] private decimal _totalTtc;
+    [ObservableProperty] private string _totalHtLabel = "HT 0,00 MAD";
+    [ObservableProperty] private string _totalTvaLabel = "TVA 0,00 MAD";
+    [ObservableProperty] private string _totalTtcLabel = "TTC 0,00 MAD";
+    [ObservableProperty] private string _devise = "MAD";
+
     [ObservableProperty] private string _addLineSearchText = string.Empty;
     [ObservableProperty] private object? _addLineCatalogPick;
     private bool _suppressAddLinePick;
 
+    public DocumentLineGridColumnState LineGridColumns { get; } = new(supportsLineRemise: false);
+
     public AutoCompleteFilterPredicate<object?> ProduitAutocompleteFilter => ProductAutoComplete.ItemFilter;
     public AutoCompleteFilterPredicate<object?> PartyAutocompleteFilter => PartyAutoComplete.ItemFilter;
+
+    public bool ShowTotalTva => LineGridColumns.ShowTva && LineGridColumns.ShowMontantTtc;
+    public bool ShowTotalTtc => LineGridColumns.ShowMontantTtc && LineGridColumns.ShowTva;
+
+    private void OnLineGridColumnsPropertyChanged(object? sender, PropertyChangedEventArgs e)
+    {
+        if (e.PropertyName is nameof(DocumentLineGridColumnState.ShowTva) or nameof(DocumentLineGridColumnState.ShowMontantTtc))
+        {
+            OnPropertyChanged(nameof(ShowTotalTva));
+            OnPropertyChanged(nameof(ShowTotalTtc));
+            RefreshTotals();
+        }
+
+        _uiPreferences.SaveDocumentLineColumns("bon_reception", LineGridColumns);
+    }
+
+    private void LignesOnCollectionChanged(object? sender, NotifyCollectionChangedEventArgs e)
+    {
+        if (e.NewItems != null)
+            foreach (BRLineRow row in e.NewItems)
+                row.PropertyChanged += LineOnPropertyChanged;
+        if (e.OldItems != null)
+            foreach (BRLineRow row in e.OldItems)
+                row.PropertyChanged -= LineOnPropertyChanged;
+        RefreshTotals();
+    }
+
+    private void LineOnPropertyChanged(object? sender, PropertyChangedEventArgs e) => RefreshTotals();
+
+    private void RefreshTotals()
+    {
+        var includeTvaInTotals = ShowTotalTtc;
+        var ht = Lignes.Sum(l => l.MontantHt);
+        var tva = includeTvaInTotals
+            ? Lignes.Sum(l => l.MontantHt * (l.TauxTva / 100m))
+            : 0m;
+        var ttc = ht + tva;
+        TotalHt = ht;
+        TotalTva = tva;
+        TotalTtc = ttc;
+        TotalHtLabel = _locale.Tf("Doc_FmtHt", ht, Devise);
+        TotalTvaLabel = _locale.Tf("Doc_FmtTva", tva, Devise);
+        TotalTtcLabel = _locale.Tf("Doc_FmtTtc", ttc, Devise);
+    }
 
     private void RefreshBrUi()
     {
         BtnBack = _locale.T("Btn_Back");
         BtnSave = _locale.T("Btn_Save");
+        MenuDeleteBr = _locale.T("BR_MenuDelete");
         LblSupplier = _locale.T("Lbl_Supplier");
         WmSupplierSearch = _locale.T("Wm_SearchSupplier");
         LblDateBr = _locale.T("Lbl_DateBR");
@@ -82,11 +164,25 @@ public partial class BREditViewModel : BaseViewModel
         BtnRemoveLine = _locale.T("Btn_RemoveLine");
         LblAddProduct = _locale.T("Devis_LblAddProduct");
         WmAddProduct = _locale.T("Devis_WmSearchProduct");
-        StatutLabel = UiEnumStrings.FormatStatutBR(_locale, Statut);
+        WmNote = _locale.T("Lbl_Note");
+        LblDocLineColumnsHint = _locale.T("DocLine_ColumnsHint");
+        LblDocColRef = _locale.T("DocLine_ColRef");
+        LblDocColDesignation = _locale.T("DocLine_ColDesignation");
+        LblDocColQte = _locale.T("DocLine_ColQte");
+        LblDocColCond = _locale.T("DocLine_ColCond");
+        WmDocLineUnite = _locale.T("DocLine_WmUnite");
+        LblDocColPuHt = _locale.T("DocLine_ColPuHt");
+        LblDocColRemise = _locale.T("DocLine_ColRemise");
+        LblDocColTva = _locale.T("DocLine_ColTva");
+        LblDocColMontantHt = _locale.T("DocLine_ColMontantHt");
+        LblDocColMontantTtc = _locale.T("DocLine_ColMontantTtc");
+        LblTotals = _locale.T("Lbl_Totals");
+        TotalHtLabel = _locale.Tf("Doc_FmtHt", TotalHt, Devise);
+        TotalTvaLabel = _locale.Tf("Doc_FmtTva", TotalTva, Devise);
+        TotalTtcLabel = _locale.Tf("Doc_FmtTtc", TotalTtc, Devise);
     }
 
-    partial void OnStatutChanged(StatutBR value) =>
-        StatutLabel = UiEnumStrings.FormatStatutBR(_locale, value);
+    partial void OnIsReadOnlyChanged(bool value) => OnPropertyChanged(nameof(CanEdit));
 
     public ObservableCollection<GestionCommerciale.Modules.Tiers.Models.Tiers> Fournisseurs { get; } = [];
     public ObservableCollection<GestionCommerciale.Modules.Stock.Models.Produit> Produits { get; } = [];
@@ -97,12 +193,44 @@ public partial class BREditViewModel : BaseViewModel
     [ObservableProperty] private GestionCommerciale.Modules.Tiers.Models.Tiers? _selectedFournisseur;
     [ObservableProperty] private string _numero = string.Empty;
     [ObservableProperty] private DateTimeOffset _date = new(DateTime.Today);
-    [ObservableProperty] private StatutBR _statut = StatutBR.Brouillon;
     [ObservableProperty] private string _note = string.Empty;
     [ObservableProperty] private bool _isReadOnly;
     [ObservableProperty] private BRLineRow? _selectedLine;
 
-    public bool CanEdit => !IsReadOnly && Statut == StatutBR.Brouillon;
+    public bool CanEdit => !IsReadOnly;
+
+    partial void OnBrIdChanged(int? value) => RemoveBrCommand.NotifyCanExecuteChanged();
+
+    private bool CanRemoveBr() => BrId != null;
+
+    [RelayCommand(CanExecute = nameof(CanRemoveBr))]
+    private async Task RemoveBrAsync(CancellationToken cancellationToken)
+    {
+        if (BrId is not { } id) return;
+
+        if (!await _dialog.ConfirmAsync(_locale.T("BR_DlgShort"), _locale.Tf("BR_ConfirmDelete", Numero), cancellationToken))
+            return;
+
+        IsBusy = true;
+        try
+        {
+            await using var db = await _dbFactory.CreateDbContextAsync(cancellationToken);
+            var entity = await db.BonsReception.Include(b => b.Lignes).FirstAsync(b => b.Id == id, cancellationToken);
+            await _stock.StripBonReceptionMovementsAsync(db, entity.Id, cancellationToken);
+            db.BonsReception.Remove(entity);
+            await db.SaveChangesAsync(cancellationToken);
+            await _dialog.ShowInfoAsync(_locale.T("BR_DlgShort"), _locale.T("BR_Deleted"), cancellationToken);
+            Back();
+        }
+        catch (Exception ex)
+        {
+            await _dialog.ShowErrorAsync(_locale.T("BR_DlgShort"), ex.Message, cancellationToken);
+        }
+        finally
+        {
+            IsBusy = false;
+        }
+    }
 
     partial void OnSelectedFournisseurChanged(GestionCommerciale.Modules.Tiers.Models.Tiers? value)
     {
@@ -130,15 +258,11 @@ public partial class BREditViewModel : BaseViewModel
         }
         else
         {
-            Lignes.Add(new BRLineRow
-            {
-                ProduitId = p.Id,
-                Designation = p.Designation,
-                QuantiteRecue = 1,
-                PrixUnitaireHt = p.PrixAchatHT,
-                TauxTva = p.TauxTVA
-            });
-            SelectedLine = Lignes.LastOrDefault();
+            var row = new BRLineRow();
+            row.ApplyCatalogProduct(p);
+            row.QuantiteRecue = 1;
+            Lignes.Add(row);
+            SelectedLine = row;
         }
         AddLineCatalogPick = null;
         AddLineSearchText = string.Empty;
@@ -166,9 +290,9 @@ public partial class BREditViewModel : BaseViewModel
         {
             Numero = "(brouillon)";
             FournisseurId = Fournisseurs.FirstOrDefault()?.Id ?? 0;
-            Statut = StatutBR.Brouillon;
             IsReadOnly = false;
             Title = _locale.T("BR_NewTitle");
+            RefreshTotals();
             return;
         }
 
@@ -176,22 +300,25 @@ public partial class BREditViewModel : BaseViewModel
         Numero = b.Numero;
         FournisseurId = b.FournisseurId;
         Date = new DateTimeOffset(b.Date);
-        Statut = b.Statut;
         Note = b.Note;
         foreach (var l in b.Lignes)
         {
+            var prod = Produits.FirstOrDefault(p => p.Id == l.ProduitId);
             Lignes.Add(new BRLineRow
             {
                 ProduitId = l.ProduitId,
+                Reference = prod?.Reference ?? string.Empty,
                 Designation = l.Designation,
+                Conditionnement = prod?.Unite ?? string.Empty,
                 QuantiteRecue = l.QuantiteRecue,
                 PrixUnitaireHt = l.PrixUnitaireHT,
                 TauxTva = l.TauxTVA
             });
         }
 
-        IsReadOnly = Statut == StatutBR.Valide;
+        IsReadOnly = false;
         Title = _locale.Tf("BR_TitleNum", Numero);
+        RefreshTotals();
     }
 
     public void Load(int? id) => _ = LoadAsync(id, CancellationToken.None);
@@ -219,15 +346,17 @@ public partial class BREditViewModel : BaseViewModel
 
         FournisseurId = bc.FournisseurId;
         Date = new DateTimeOffset(DateTime.Today);
-        Statut = StatutBR.Brouillon;
         Note = string.Empty;
         Numero = "(brouillon)";
         foreach (var l in bc.Lignes.OrderBy(x => x.Id))
         {
+            var prod = Produits.FirstOrDefault(p => p.Id == l.ProduitId);
             Lignes.Add(new BRLineRow
             {
                 ProduitId = l.ProduitId,
+                Reference = prod?.Reference ?? string.Empty,
                 Designation = l.Designation,
+                Conditionnement = prod?.Unite ?? string.Empty,
                 QuantiteRecue = l.QuantiteCommandee,
                 PrixUnitaireHt = l.PrixUnitaireHT,
                 TauxTva = l.TauxTVA
@@ -236,6 +365,7 @@ public partial class BREditViewModel : BaseViewModel
 
         IsReadOnly = false;
         Title = _locale.Tf("BR_NewFromBc", bc.Numero);
+        RefreshTotals();
         return true;
     }
 
@@ -244,14 +374,15 @@ public partial class BREditViewModel : BaseViewModel
     {
         if (!CanEdit) return;
         var p = Produits.FirstOrDefault();
-        Lignes.Add(new BRLineRow
+        var row = new BRLineRow();
+        if (p != null)
+            row.ApplyCatalogProduct(p);
+        else
         {
-            ProduitId = p?.Id ?? 0,
-            Designation = p?.Designation ?? string.Empty,
-            QuantiteRecue = 1,
-            PrixUnitaireHt = p?.PrixAchatHT ?? 0,
-            TauxTva = p?.TauxTVA ?? 20
-        });
+            row.TauxTva = 20;
+        }
+        row.QuantiteRecue = 1;
+        Lignes.Add(row);
     }
 
     [RelayCommand]
@@ -269,9 +400,7 @@ public partial class BREditViewModel : BaseViewModel
         if (row == null) return;
         var p = Produits.FirstOrDefault(x => x.Id == row.ProduitId);
         if (p == null) return;
-        row.Designation = p.Designation;
-        row.PrixUnitaireHt = p.PrixAchatHT;
-        row.TauxTva = p.TauxTVA;
+        row.ApplyCatalogProduct(p);
     }
 
     [RelayCommand]
@@ -311,7 +440,6 @@ public partial class BREditViewModel : BaseViewModel
                     BonCommandeId = _sourceBonCommandeId,
                     FournisseurId = FournisseurId,
                     Date = Date.DateTime,
-                    Statut = StatutBR.Brouillon,
                     Note = Note,
                     CreatedByUserId = _session.UserId
                 };
@@ -335,12 +463,6 @@ public partial class BREditViewModel : BaseViewModel
             else
             {
                 entity = await db.BonsReception.Include(b => b.Lignes).FirstAsync(b => b.Id == BrId, cancellationToken);
-                if (entity.Statut != StatutBR.Brouillon)
-                {
-                    await _dialog.ShowErrorAsync(_locale.T("BR_DlgShort"), _locale.T("BR_ErrDraftOnly"), cancellationToken);
-                    return;
-                }
-
                 entity.FournisseurId = FournisseurId;
                 entity.Date = Date.DateTime;
                 entity.Note = Note;

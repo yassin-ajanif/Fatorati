@@ -68,6 +68,7 @@ public partial class DevisEditViewModel : BaseViewModel
     [ObservableProperty] private string _btnSave = string.Empty;
     [ObservableProperty] private string _btnToBl = string.Empty;
     [ObservableProperty] private string _btnToFacture = string.Empty;
+    [ObservableProperty] private string _menuDeleteDevis = string.Empty;
     [ObservableProperty] private string _lblExpired = string.Empty;
     [ObservableProperty] private string _lblClient = string.Empty;
     [ObservableProperty] private string _wmClientSearch = string.Empty;
@@ -101,6 +102,7 @@ public partial class DevisEditViewModel : BaseViewModel
         BtnSave = _locale.T("Btn_Save");
         BtnToBl = _locale.T("Btn_ToBL");
         BtnToFacture = _locale.T("Btn_ToFacture");
+        MenuDeleteDevis = _locale.T("Devis_MenuDelete");
         LblExpired = _locale.T("Lbl_Expired");
         LblClient = _locale.T("Lbl_Client");
         WmClientSearch = _locale.T("Wm_SearchClient");
@@ -253,6 +255,46 @@ public partial class DevisEditViewModel : BaseViewModel
     {
         if (SelectedClient?.Id == value) return;
         SelectedClient = Clients.FirstOrDefault(c => c.Id == value);
+    }
+
+    partial void OnDevisIdChanged(int? value) => RemoveDevisCommand.NotifyCanExecuteChanged();
+
+    private bool CanRemoveDevis() => DevisId != null;
+
+    [RelayCommand(CanExecute = nameof(CanRemoveDevis))]
+    private async Task RemoveDevisAsync(CancellationToken cancellationToken)
+    {
+        if (DevisId is not { } id) return;
+
+        if (!await _dialog.ConfirmAsync(_locale.T("Devis_Title"), _locale.Tf("Devis_ConfirmDelete", Numero), cancellationToken))
+            return;
+
+        IsBusy = true;
+        try
+        {
+            await using var db = await _dbFactory.CreateDbContextAsync(cancellationToken);
+            var referenced = await db.BonsLivraison.AsNoTracking().AnyAsync(b => b.DevisId == id, cancellationToken)
+                || await db.Factures.AsNoTracking().AnyAsync(f => f.DevisId == id, cancellationToken);
+            if (referenced)
+            {
+                await _dialog.ShowErrorAsync(_locale.T("Devis_Title"), _locale.T("Devis_ErrDeleteReferenced"), cancellationToken);
+                return;
+            }
+
+            var entity = await db.Devis.Include(d => d.Lignes).FirstAsync(d => d.Id == id, cancellationToken);
+            db.Devis.Remove(entity);
+            await db.SaveChangesAsync(cancellationToken);
+            await _dialog.ShowInfoAsync(_locale.T("Devis_Title"), _locale.T("Devis_Deleted"), cancellationToken);
+            Back();
+        }
+        catch (Exception ex)
+        {
+            await _dialog.ShowErrorAsync(_locale.T("Devis_Title"), ex.Message, cancellationToken);
+        }
+        finally
+        {
+            IsBusy = false;
+        }
     }
 
     partial void OnAddLineCatalogPickChanged(object? value)

@@ -17,44 +17,6 @@ namespace GestionCommerciale.Shared.Database.Migrations
 #pragma warning disable 612, 618
             modelBuilder.HasAnnotation("ProductVersion", "9.0.0");
 
-            modelBuilder.Entity("GestionCommerciale.Modules.Auth.Models.User", b =>
-                {
-                    b.Property<int>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("INTEGER");
-
-                    b.Property<bool>("Actif")
-                        .HasColumnType("INTEGER");
-
-                    b.Property<DateTime>("CreatedAt")
-                        .HasColumnType("TEXT");
-
-                    b.Property<int?>("CreatedByUserId")
-                        .HasColumnType("INTEGER");
-
-                    b.Property<string>("Email")
-                        .IsRequired()
-                        .HasColumnType("TEXT");
-
-                    b.Property<string>("Nom")
-                        .IsRequired()
-                        .HasColumnType("TEXT");
-
-                    b.Property<string>("PasswordHash")
-                        .IsRequired()
-                        .HasColumnType("TEXT");
-
-                    b.Property<int>("Role")
-                        .HasColumnType("INTEGER");
-
-                    b.Property<DateTime>("UpdatedAt")
-                        .HasColumnType("TEXT");
-
-                    b.HasKey("Id");
-
-                    b.ToTable("Users");
-                });
-
             modelBuilder.Entity("GestionCommerciale.Modules.Commande.Models.BonCommande", b =>
                 {
                     b.Property<int>("Id")
@@ -80,9 +42,6 @@ namespace GestionCommerciale.Shared.Database.Migrations
                     b.Property<string>("Numero")
                         .IsRequired()
                         .HasColumnType("TEXT");
-
-                    b.Property<int>("Statut")
-                        .HasColumnType("INTEGER");
 
                     b.Property<DateTime>("UpdatedAt")
                         .HasColumnType("TEXT");
@@ -335,6 +294,9 @@ namespace GestionCommerciale.Shared.Database.Migrations
                     b.Property<int?>("DevisId")
                         .HasColumnType("INTEGER");
 
+                    b.Property<bool>("EstPayee")
+                        .HasColumnType("INTEGER");
+
                     b.Property<string>("Note")
                         .IsRequired()
                         .HasColumnType("TEXT");
@@ -345,9 +307,6 @@ namespace GestionCommerciale.Shared.Database.Migrations
 
                     b.Property<decimal>("RemiseGlobale")
                         .HasColumnType("TEXT");
-
-                    b.Property<int>("Statut")
-                        .HasColumnType("INTEGER");
 
                     b.Property<DateTime>("UpdatedAt")
                         .HasColumnType("TEXT");
@@ -472,9 +431,6 @@ namespace GestionCommerciale.Shared.Database.Migrations
                         .IsRequired()
                         .HasColumnType("TEXT");
 
-                    b.Property<int>("Statut")
-                        .HasColumnType("INTEGER");
-
                     b.Property<DateTime>("UpdatedAt")
                         .HasColumnType("TEXT");
 
@@ -555,9 +511,6 @@ namespace GestionCommerciale.Shared.Database.Migrations
                     b.Property<string>("Numero")
                         .IsRequired()
                         .HasColumnType("TEXT");
-
-                    b.Property<int>("Statut")
-                        .HasColumnType("INTEGER");
 
                     b.Property<DateTime>("UpdatedAt")
                         .HasColumnType("TEXT");

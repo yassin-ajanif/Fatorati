@@ -20,14 +20,14 @@ public sealed class CurrentUserSession : ICurrentUserSession
     public bool CanAccessFacturation => IsAuthenticated && Role is Models.Role.Admin or Models.Role.Comptable;
     public bool CanAccessAvoir => IsAuthenticated && Role is Models.Role.Admin or Models.Role.Comptable;
     public bool CanAccessReporting => IsAuthenticated && Role is Models.Role.Admin or Models.Role.Comptable;
-    public bool CanAccessUsers => IsAuthenticated && Role == Models.Role.Admin;
+    public bool CanAccessUsers => false;
     public bool CanAccessSettings => IsAuthenticated && Role == Models.Role.Admin;
 
-    public void SetSession(User user)
+    public void SetDefaultAdminSession()
     {
-        UserId = user.Id;
-        Role = user.Role;
-        Nom = user.Nom;
+        UserId = null;
+        Role = Models.Role.Admin;
+        Nom = "Administrateur";
         IsAuthenticated = true;
     }
 

@@ -1,6 +1,6 @@
 {
   "version": 2,
-  "dgSpecHash": "P9dzfM7dNP8=",
+  "dgSpecHash": "LBSk4X85Cv4=",
   "success": true,
   "projectFilePath": "D:\\Fatorati\\GestionCommerciale\\GestionCommerciale.csproj",
   "expectedPackageFiles": [
@@ -21,7 +21,6 @@
     "C:\\Users\\yassin\\.nuget\\packages\\avalonia.themes.simple\\11.1.0\\avalonia.themes.simple.11.1.0.nupkg.sha512",
     "C:\\Users\\yassin\\.nuget\\packages\\avalonia.win32\\11.1.0\\avalonia.win32.11.1.0.nupkg.sha512",
     "C:\\Users\\yassin\\.nuget\\packages\\avalonia.x11\\11.1.0\\avalonia.x11.11.1.0.nupkg.sha512",
-    "C:\\Users\\yassin\\.nuget\\packages\\bcrypt.net-next\\4.0.3\\bcrypt.net-next.4.0.3.nupkg.sha512",
     "C:\\Users\\yassin\\.nuget\\packages\\communitytoolkit.mvvm\\8.2.1\\communitytoolkit.mvvm.8.2.1.nupkg.sha512",
     "C:\\Users\\yassin\\.nuget\\packages\\fody\\6.9.2\\fody.6.9.2.nupkg.sha512",
     "C:\\Users\\yassin\\.nuget\\packages\\harfbuzzsharp\\7.3.0.2\\harfbuzzsharp.7.3.0.2.nupkg.sha512",
@@ -90,12 +89,5 @@
     "C:\\Users\\yassin\\.nuget\\packages\\system.threading.channels\\7.0.0\\system.threading.channels.7.0.0.nupkg.sha512",
     "C:\\Users\\yassin\\.nuget\\packages\\tmds.dbus.protocol\\0.16.0\\tmds.dbus.protocol.0.16.0.nupkg.sha512"
   ],
-  "logs": [
-    {
-      "code": "NU1900",
-      "level": "Warning",
-      "warningLevel": 1,
-      "message": "Error occurred while getting package vulnerability data: Unable to load the service index for source https://api.nuget.org/v3/index.json."
-    }
-  ]
+  "logs": []
 }
