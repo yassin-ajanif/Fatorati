@@ -1,0 +1,56 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:GestionCommerciale.Modules.Tiers.ViewModels"
+             x:Class="GestionCommerciale.Modules.Tiers.Views.TiersDetailView"
+             x:DataType="vm:TiersDetailViewModel">
+  <Grid ColumnDefinitions="360,*" Margin="0,0,0,8">
+    <ScrollViewer Grid.Column="0">
+      <StackPanel Spacing="8">
+        <Button Content="{Binding BtnBackList}" Command="{Binding BackCommand}" HorizontalAlignment="Left"/>
+        <ComboBox ItemsSource="{Binding Types}" SelectedItem="{Binding Type}"/>
+
+        <StackPanel Spacing="3">
+          <TextBlock Text="{Binding WmNom}"/>
+          <TextBox Watermark="{Binding WmNom}" Text="{Binding Nom}"/>
+        </StackPanel>
+
+        <StackPanel Spacing="3">
+          <TextBlock Text="{Binding WmIce}"/>
+          <TextBox Watermark="{Binding WmIce}" Text="{Binding Ice}"/>
+        </StackPanel>
+
+        <StackPanel Spacing="3">
+          <TextBlock Text="{Binding WmAdresse}"/>
+          <TextBox Watermark="{Binding WmAdresse}" Text="{Binding Adresse}"/>
+        </StackPanel>
+
+        <StackPanel Spacing="3">
+          <TextBlock Text="{Binding WmVille}"/>
+          <TextBox Watermark="{Binding WmVille}" Text="{Binding Ville}"/>
+        </StackPanel>
+
+        <StackPanel Spacing="3">
+          <TextBlock Text="{Binding WmTelephone}"/>
+          <TextBox Watermark="{Binding WmTelephone}" Text="{Binding Telephone}"/>
+        </StackPanel>
+
+        <StackPanel Spacing="3">
+          <TextBlock Text="{Binding WmEmail}"/>
+          <TextBox Watermark="{Binding WmEmail}" Text="{Binding Email}"/>
+        </StackPanel>
+
+        <StackPanel Spacing="3">
+          <TextBlock Text="{Binding WmConditions}"/>
+          <TextBox Watermark="{Binding WmConditions}" Text="{Binding ConditionsPaiement}"/>
+        </StackPanel>
+
+        <CheckBox Content="{Binding ChkActif}" IsChecked="{Binding Actif}"/>
+        <Button Content="{Binding BtnSave}" Command="{Binding SaveCommand}"/>
+      </StackPanel>
+    </ScrollViewer>
+    <DockPanel Grid.Column="1" Margin="16,0,0,0">
+      <TextBlock DockPanel.Dock="Top" Text="{Binding LblHistorique}" FontWeight="SemiBold" Margin="0,0,0,8"/>
+      <ListBox ItemsSource="{Binding Historique}"/>
+    </DockPanel>
+  </Grid>
+</UserControl>

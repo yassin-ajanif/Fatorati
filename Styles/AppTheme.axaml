@@ -1,0 +1,103 @@
+<Styles xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+  <Styles.Resources>
+    <Color x:Key="CourseraBgColor">#EEF4FF</Color>
+    <Color x:Key="CourseraSurfaceColor">#FFFFFF</Color>
+    <Color x:Key="CourseraSurfaceMutedColor">#EAF2FF</Color>
+    <Color x:Key="CourseraBorderColor">#CFDCF7</Color>
+    <Color x:Key="CourseraTextColor">#1F2937</Color>
+    <Color x:Key="CourseraSubtleTextColor">#5E7296</Color>
+    <Color x:Key="CourseraPrimaryColor">#2563EB</Color>
+    <Color x:Key="CourseraPrimaryHoverColor">#1D4ED8</Color>
+    <Color x:Key="CourseraDangerColor">#DC2626</Color>
+    <Color x:Key="CourseraWarningColor">#D97706</Color>
+
+    <SolidColorBrush x:Key="CourseraBgBrush" Color="{StaticResource CourseraBgColor}"/>
+    <SolidColorBrush x:Key="CourseraSurfaceBrush" Color="{StaticResource CourseraSurfaceColor}"/>
+    <SolidColorBrush x:Key="CourseraSurfaceMutedBrush" Color="{StaticResource CourseraSurfaceMutedColor}"/>
+    <SolidColorBrush x:Key="CourseraBorderBrush" Color="{StaticResource CourseraBorderColor}"/>
+    <SolidColorBrush x:Key="CourseraTextBrush" Color="{StaticResource CourseraTextColor}"/>
+    <SolidColorBrush x:Key="CourseraSubtleTextBrush" Color="{StaticResource CourseraSubtleTextColor}"/>
+    <SolidColorBrush x:Key="CourseraPrimaryBrush" Color="{StaticResource CourseraPrimaryColor}"/>
+    <SolidColorBrush x:Key="CourseraPrimaryHoverBrush" Color="{StaticResource CourseraPrimaryHoverColor}"/>
+    <SolidColorBrush x:Key="CourseraDangerBrush" Color="{StaticResource CourseraDangerColor}"/>
+    <SolidColorBrush x:Key="CourseraWarningBrush" Color="{StaticResource CourseraWarningColor}"/>
+  </Styles.Resources>
+
+  <Style Selector="Window">
+    <Setter Property="Background" Value="{DynamicResource CourseraBgBrush}"/>
+    <Setter Property="Foreground" Value="{DynamicResource CourseraTextBrush}"/>
+  </Style>
+
+  <Style Selector="UserControl">
+    <Setter Property="Foreground" Value="{DynamicResource CourseraTextBrush}"/>
+  </Style>
+
+  <Style Selector="Border">
+    <Setter Property="BorderBrush" Value="{DynamicResource CourseraBorderBrush}"/>
+  </Style>
+
+  <Style Selector="TextBlock">
+    <Setter Property="Foreground" Value="{DynamicResource CourseraTextBrush}"/>
+  </Style>
+
+  <Style Selector="TextBlock.subtle">
+    <Setter Property="Foreground" Value="{DynamicResource CourseraSubtleTextBrush}"/>
+  </Style>
+
+  <Style Selector="TextBox, ComboBox, NumericUpDown">
+    <Setter Property="Background" Value="{DynamicResource CourseraSurfaceBrush}"/>
+    <Setter Property="BorderBrush" Value="{DynamicResource CourseraBorderBrush}"/>
+    <Setter Property="BorderThickness" Value="1"/>
+    <Setter Property="CornerRadius" Value="8"/>
+    <Setter Property="Padding" Value="10,7"/>
+    <Setter Property="MinHeight" Value="36"/>
+  </Style>
+
+  <Style Selector="NumericUpDown">
+    <Setter Property="ShowButtonSpinner" Value="False"/>
+  </Style>
+
+  <Style Selector="Button">
+    <Setter Property="Background" Value="{DynamicResource CourseraSurfaceBrush}"/>
+    <Setter Property="BorderBrush" Value="{DynamicResource CourseraBorderBrush}"/>
+    <Setter Property="BorderThickness" Value="1"/>
+    <Setter Property="CornerRadius" Value="8"/>
+    <Setter Property="Padding" Value="12,8"/>
+    <Setter Property="MinHeight" Value="36"/>
+    <Setter Property="Foreground" Value="{DynamicResource CourseraTextBrush}"/>
+    <Setter Property="FontWeight" Value="SemiBold"/>
+  </Style>
+
+  <Style Selector="Button:pointerover">
+    <Setter Property="Background" Value="{DynamicResource CourseraSurfaceMutedBrush}"/>
+  </Style>
+
+  <Style Selector="Button.primary">
+    <Setter Property="Background" Value="{DynamicResource CourseraPrimaryBrush}"/>
+    <Setter Property="BorderBrush" Value="{DynamicResource CourseraPrimaryBrush}"/>
+    <Setter Property="Foreground" Value="White"/>
+  </Style>
+
+  <Style Selector="Button.primary:pointerover">
+    <Setter Property="Background" Value="{DynamicResource CourseraPrimaryHoverBrush}"/>
+    <Setter Property="BorderBrush" Value="{DynamicResource CourseraPrimaryHoverBrush}"/>
+  </Style>
+
+  <Style Selector="ListBox">
+    <Setter Property="Background" Value="{DynamicResource CourseraSurfaceBrush}"/>
+    <Setter Property="BorderBrush" Value="{DynamicResource CourseraBorderBrush}"/>
+    <Setter Property="BorderThickness" Value="1"/>
+    <Setter Property="CornerRadius" Value="10"/>
+  </Style>
+
+  <!-- DatePicker: avoid huge default stretch (especially the month segment) -->
+  <Style Selector="DatePicker">
+    <Setter Property="HorizontalAlignment" Value="Left"/>
+    <Setter Property="MaxWidth" Value="318"/>
+  </Style>
+  <Style Selector="DatePicker ComboBox">
+    <Setter Property="MinWidth" Value="44"/>
+    <Setter Property="MaxWidth" Value="100"/>
+  </Style>
+</Styles>

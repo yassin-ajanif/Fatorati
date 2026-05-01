@@ -1,0 +1,27 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:GestionCommerciale.Modules.Auth.ViewModels"
+             xmlns:m="using:GestionCommerciale.Modules.Auth.Models"
+             x:Class="GestionCommerciale.Modules.Auth.Views.UserManagementView"
+             x:DataType="vm:UserManagementViewModel">
+  <Grid RowDefinitions="Auto,*" ColumnDefinitions="*,320" Margin="0,0,0,8">
+    <StackPanel Grid.ColumnSpan="2" Orientation="Horizontal" Spacing="8" Margin="0,0,0,8">
+      <Button Content="{Binding BtnRefresh}" Command="{Binding LoadCommand}"/>
+    </StackPanel>
+    <ListBox Grid.Row="1" Grid.Column="0" ItemsSource="{Binding Users}" SelectedItem="{Binding SelectedUser}" MinHeight="200">
+      <ListBox.ItemTemplate>
+        <DataTemplate DataType="m:User">
+          <TextBlock Text="{Binding Nom}"/>
+        </DataTemplate>
+      </ListBox.ItemTemplate>
+    </ListBox>
+    <StackPanel Grid.Row="1" Grid.Column="1" Spacing="8" Margin="12,0,0,0">
+      <TextBlock Text="{Binding FormHint}" FontWeight="SemiBold" TextWrapping="Wrap"/>
+      <TextBox Watermark="{Binding WmNom}" Text="{Binding Nom}"/>
+      <TextBox Watermark="{Binding WmEmailField}" Text="{Binding Email}"/>
+      <TextBox Watermark="{Binding WmPasswordOptional}" PasswordChar="*" Text="{Binding Password}"/>
+      <ComboBox ItemsSource="{Binding Roles}" SelectedItem="{Binding Role}"/>
+      <Button Content="{Binding BtnSave}" Command="{Binding SaveUserCommand}"/>
+    </StackPanel>
+  </Grid>
+</UserControl>

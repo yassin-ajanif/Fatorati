@@ -1,0 +1,206 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:GestionCommerciale.Modules.Reporting.ViewModels"
+             x:Class="GestionCommerciale.Modules.Reporting.Views.ReportingView"
+             x:DataType="vm:ReportingViewModel"
+             x:CompileBindings="False">
+  <Grid>
+    <ScrollViewer>
+      <StackPanel Spacing="20" Margin="0,0,0,24" MinWidth="520">
+        <StackPanel Orientation="Horizontal" Spacing="8">
+          <Button Content="{Binding BtnRefresh}" Command="{Binding LoadCommand}" Classes="primary"/>
+          <Button Content="{Binding BtnExportStockCsv}" Command="{Binding ExportStockCsvCommand}"/>
+        </StackPanel>
+
+        <TextBlock Text="{Binding LblCa}" FontWeight="SemiBold" FontSize="15"/>
+        <Grid ColumnDefinitions="*,*" RowDefinitions="Auto,Auto">
+          <Border Grid.Row="0" Grid.Column="0" Padding="16" Margin="0,0,6,0"
+                  Background="{DynamicResource CourseraSurfaceBrush}"
+                  BorderBrush="{DynamicResource CourseraBorderBrush}" BorderThickness="1" CornerRadius="12">
+            <TextBlock Text="{Binding LineCaCurrent}" TextWrapping="Wrap" FontSize="17" FontWeight="SemiBold"/>
+          </Border>
+          <Border Grid.Row="0" Grid.Column="1" Padding="16" Margin="6,0,0,0"
+                  Background="{DynamicResource CourseraSurfaceBrush}"
+                  BorderBrush="{DynamicResource CourseraBorderBrush}" BorderThickness="1" CornerRadius="12">
+            <TextBlock Text="{Binding LineCaPrev}" TextWrapping="Wrap" FontSize="17" FontWeight="SemiBold"/>
+          </Border>
+          <Border Grid.Row="1" Grid.Column="0" Grid.ColumnSpan="2" Padding="14,12" Margin="0,12,0,0"
+                  Background="{DynamicResource CourseraSurfaceMutedBrush}"
+                  BorderBrush="{DynamicResource CourseraBorderBrush}" BorderThickness="1" CornerRadius="10">
+            <StackPanel Spacing="4">
+              <TextBlock Text="{Binding LblCaDelta}" FontWeight="SemiBold" Classes="subtle" FontSize="12"/>
+              <TextBlock Text="{Binding LineCaDelta}" TextWrapping="Wrap"/>
+            </StackPanel>
+          </Border>
+        </Grid>
+
+        <TextBlock Text="{Binding LblKpiStrip}" FontWeight="SemiBold" FontSize="15" Margin="0,4,0,0"/>
+        <Grid ColumnDefinitions="*,*,*,*" RowDefinitions="Auto,Auto">
+          <Border Grid.Row="0" Grid.Column="0" Padding="12" Margin="0,0,6,6"
+                  Background="{DynamicResource CourseraSurfaceBrush}"
+                  BorderBrush="{DynamicResource CourseraBorderBrush}" BorderThickness="1" CornerRadius="10">
+            <TextBlock Text="{Binding KpiDevis30}" TextWrapping="Wrap" FontSize="13"/>
+          </Border>
+          <Border Grid.Row="0" Grid.Column="1" Padding="12" Margin="0,0,6,6"
+                  Background="{DynamicResource CourseraSurfaceBrush}"
+                  BorderBrush="{DynamicResource CourseraBorderBrush}" BorderThickness="1" CornerRadius="10">
+            <TextBlock Text="{Binding KpiDevisExpire}" TextWrapping="Wrap" FontSize="13"/>
+          </Border>
+          <Border Grid.Row="0" Grid.Column="2" Padding="12" Margin="0,0,6,6"
+                  Background="{DynamicResource CourseraSurfaceBrush}"
+                  BorderBrush="{DynamicResource CourseraBorderBrush}" BorderThickness="1" CornerRadius="10">
+            <TextBlock Text="{Binding KpiBlMonth}" TextWrapping="Wrap" FontSize="13"/>
+          </Border>
+          <Border Grid.Row="0" Grid.Column="3" Padding="12" Margin="0,0,0,6"
+                  Background="{DynamicResource CourseraSurfaceBrush}"
+                  BorderBrush="{DynamicResource CourseraBorderBrush}" BorderThickness="1" CornerRadius="10">
+            <TextBlock Text="{Binding KpiBc}" TextWrapping="Wrap" FontSize="13"/>
+          </Border>
+          <Border Grid.Row="1" Grid.Column="0" Padding="12" Margin="0,0,6,0"
+                  Background="{DynamicResource CourseraSurfaceBrush}"
+                  BorderBrush="{DynamicResource CourseraBorderBrush}" BorderThickness="1" CornerRadius="10">
+            <TextBlock Text="{Binding KpiBrMonth}" TextWrapping="Wrap" FontSize="13"/>
+          </Border>
+          <Border Grid.Row="1" Grid.Column="1" Padding="12" Margin="0,0,6,0"
+                  Background="{DynamicResource CourseraSurfaceBrush}"
+                  BorderBrush="{DynamicResource CourseraBorderBrush}" BorderThickness="1" CornerRadius="10">
+            <TextBlock Text="{Binding KpiEncours}" TextWrapping="Wrap" FontSize="13"/>
+          </Border>
+          <Border Grid.Row="1" Grid.Column="2" Padding="12" Margin="0,0,6,0"
+                  Background="{DynamicResource CourseraSurfaceBrush}"
+                  BorderBrush="{DynamicResource CourseraBorderBrush}" BorderThickness="1" CornerRadius="10">
+            <TextBlock Text="{Binding KpiAvoirYtd}" TextWrapping="Wrap" FontSize="13"/>
+          </Border>
+          <Border Grid.Row="1" Grid.Column="3" Padding="12" Margin="0,0,0,0"
+                  Background="{DynamicResource CourseraSurfaceBrush}"
+                  BorderBrush="{DynamicResource CourseraBorderBrush}" BorderThickness="1" CornerRadius="10">
+            <TextBlock Text="{Binding KpiStock}" TextWrapping="Wrap" FontSize="13"/>
+          </Border>
+        </Grid>
+
+        <Grid ColumnDefinitions="*,*" Margin="0,4,0,0">
+          <Border Grid.Column="0" Padding="16" Margin="0,0,8,0"
+                  Background="{DynamicResource CourseraSurfaceBrush}"
+                  BorderBrush="{DynamicResource CourseraBorderBrush}" BorderThickness="1" CornerRadius="12">
+            <StackPanel Spacing="12">
+              <TextBlock Text="{Binding LblTopClients}" FontWeight="SemiBold"/>
+              <ItemsControl ItemsSource="{Binding TopClients}">
+                <ItemsControl.ItemTemplate>
+                  <DataTemplate x:DataType="vm:ReportRankRow">
+                    <StackPanel Spacing="6" Margin="0,0,0,12">
+                      <Grid ColumnDefinitions="*,Auto">
+                        <TextBlock Text="{Binding Label}" TextWrapping="Wrap"/>
+                        <TextBlock Grid.Column="1" Text="{Binding ValueText}" FontWeight="SemiBold" Margin="8,0,0,0"/>
+                      </Grid>
+                      <Grid Width="220" Height="10" HorizontalAlignment="Left">
+                        <Border Background="{DynamicResource CourseraSurfaceMutedBrush}" CornerRadius="5"/>
+                        <Border HorizontalAlignment="Left" Height="10" Width="{Binding BarWidth}"
+                                Background="{DynamicResource CourseraPrimaryBrush}" CornerRadius="5"/>
+                      </Grid>
+                    </StackPanel>
+                  </DataTemplate>
+                </ItemsControl.ItemTemplate>
+              </ItemsControl>
+              <TextBlock Text="{Binding EmptyMessageTopClients}" Classes="subtle" TextWrapping="Wrap"
+                         IsVisible="{Binding ShowEmptyTopClients}"/>
+            </StackPanel>
+          </Border>
+          <Border Grid.Column="1" Padding="16" Margin="8,0,0,0"
+                  Background="{DynamicResource CourseraSurfaceBrush}"
+                  BorderBrush="{DynamicResource CourseraBorderBrush}" BorderThickness="1" CornerRadius="12">
+            <StackPanel Spacing="12">
+              <TextBlock Text="{Binding LblTopProducts}" FontWeight="SemiBold"/>
+              <ItemsControl ItemsSource="{Binding TopProduits}">
+                <ItemsControl.ItemTemplate>
+                  <DataTemplate x:DataType="vm:ReportRankRow">
+                    <StackPanel Spacing="6" Margin="0,0,0,12">
+                      <Grid ColumnDefinitions="*,Auto">
+                        <TextBlock Text="{Binding Label}" TextWrapping="Wrap"/>
+                        <TextBlock Grid.Column="1" Text="{Binding ValueText}" FontWeight="SemiBold" Margin="8,0,0,0"/>
+                      </Grid>
+                      <Grid Width="220" Height="10" HorizontalAlignment="Left">
+                        <Border Background="{DynamicResource CourseraSurfaceMutedBrush}" CornerRadius="5"/>
+                        <Border HorizontalAlignment="Left" Height="10" Width="{Binding BarWidth}"
+                                Background="{DynamicResource CourseraPrimaryBrush}" CornerRadius="5"/>
+                      </Grid>
+                    </StackPanel>
+                  </DataTemplate>
+                </ItemsControl.ItemTemplate>
+              </ItemsControl>
+              <TextBlock Text="{Binding EmptyMessageTopProducts}" Classes="subtle" TextWrapping="Wrap"
+                         IsVisible="{Binding ShowEmptyTopProducts}"/>
+            </StackPanel>
+          </Border>
+        </Grid>
+
+        <Border Padding="16" Background="{DynamicResource CourseraSurfaceBrush}"
+                BorderBrush="{DynamicResource CourseraBorderBrush}" BorderThickness="1" CornerRadius="12">
+          <StackPanel Spacing="12">
+            <TextBlock Text="{Binding LblStockAlerts}" FontWeight="SemiBold"/>
+            <ItemsControl ItemsSource="{Binding StockAlertes}">
+              <ItemsControl.ItemTemplate>
+                <DataTemplate x:DataType="vm:ReportStockAlertRow">
+                  <Border Padding="10,8" Margin="0,0,0,8"
+                          Background="{DynamicResource CourseraSurfaceMutedBrush}"
+                          BorderBrush="{DynamicResource CourseraBorderBrush}" BorderThickness="1" CornerRadius="8">
+                    <StackPanel Spacing="2">
+                      <TextBlock Text="{Binding Reference}" FontWeight="SemiBold"/>
+                      <TextBlock Text="{Binding Detail}" Classes="subtle" TextWrapping="Wrap"/>
+                    </StackPanel>
+                  </Border>
+                </DataTemplate>
+              </ItemsControl.ItemTemplate>
+            </ItemsControl>
+            <TextBlock Text="{Binding EmptyMessageStock}" Classes="subtle" TextWrapping="Wrap"
+                       IsVisible="{Binding ShowEmptyStock}"/>
+          </StackPanel>
+        </Border>
+
+        <Border Padding="16" Background="{DynamicResource CourseraSurfaceBrush}"
+                BorderBrush="{DynamicResource CourseraBorderBrush}" BorderThickness="1" CornerRadius="12">
+          <StackPanel Spacing="12">
+            <TextBlock Text="{Binding LblUnpaid}" FontWeight="SemiBold"/>
+            <ItemsControl ItemsSource="{Binding FacturesImpayees}">
+              <ItemsControl.ItemTemplate>
+                <DataTemplate x:DataType="vm:ReportUnpaidRow">
+                  <Border Padding="10,8" Margin="0,0,0,8"
+                          Background="{DynamicResource CourseraSurfaceMutedBrush}"
+                          BorderBrush="{DynamicResource CourseraBorderBrush}" BorderThickness="1" CornerRadius="8">
+                    <Grid ColumnDefinitions="4,*">
+                      <Grid Grid.Column="0" Width="4">
+                        <Border IsVisible="{Binding ShowStripOverdue}" Background="{DynamicResource CourseraDangerBrush}"
+                                CornerRadius="2,0,0,2" HorizontalAlignment="Stretch" VerticalAlignment="Stretch"/>
+                        <Border IsVisible="{Binding ShowStripSoon}" Background="{DynamicResource CourseraWarningBrush}"
+                                CornerRadius="2,0,0,2" HorizontalAlignment="Stretch" VerticalAlignment="Stretch"/>
+                        <Border IsVisible="{Binding ShowStripNeutral}" Background="{DynamicResource CourseraPrimaryBrush}"
+                                CornerRadius="2,0,0,2" HorizontalAlignment="Stretch" VerticalAlignment="Stretch"/>
+                      </Grid>
+                      <StackPanel Grid.Column="1" Margin="12,0,0,0" Spacing="4">
+                        <TextBlock Text="{Binding Numero}" FontWeight="SemiBold"/>
+                        <Grid ColumnDefinitions="*,Auto">
+                          <TextBlock Text="{Binding DueStatus}" Classes="subtle" TextWrapping="Wrap"/>
+                          <TextBlock Grid.Column="1" Text="{Binding Reste}" FontWeight="SemiBold" Margin="8,0,0,0"/>
+                        </Grid>
+                        <TextBlock Text="{Binding DateEcheance}" Classes="subtle" FontSize="12"/>
+                      </StackPanel>
+                    </Grid>
+                  </Border>
+                </DataTemplate>
+              </ItemsControl.ItemTemplate>
+            </ItemsControl>
+            <TextBlock Text="{Binding EmptyMessageUnpaid}" Classes="subtle" TextWrapping="Wrap"
+                       IsVisible="{Binding ShowEmptyUnpaid}"/>
+          </StackPanel>
+        </Border>
+      </StackPanel>
+    </ScrollViewer>
+
+    <Border IsVisible="{Binding IsBusy}" Background="#AAEEF4FF"
+            HorizontalAlignment="Stretch" VerticalAlignment="Stretch">
+      <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center" Spacing="10">
+        <TextBlock Text="{Binding LblLoading}" FontWeight="SemiBold"/>
+        <ProgressBar IsIndeterminate="True" Width="200" Height="4"/>
+      </StackPanel>
+    </Border>
+  </Grid>
+</UserControl>

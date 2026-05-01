@@ -1,0 +1,90 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:GestionCommerciale.Modules.Auth.ViewModels"
+             x:Class="GestionCommerciale.Modules.Auth.Views.SettingsView"
+             x:DataType="vm:SettingsViewModel">
+  <ScrollViewer>
+    <StackPanel Spacing="14" MaxWidth="520">
+      <StackPanel Orientation="Horizontal" Spacing="8">
+        <Button Content="{Binding LblLoad}" Command="{Binding LoadCommand}"/>
+        <Button Content="{Binding LblSave}" Command="{Binding SaveCommand}"/>
+      </StackPanel>
+
+      <StackPanel Spacing="4">
+        <TextBlock Text="{Binding LblUiLanguage}" FontWeight="SemiBold"/>
+        <ComboBox ItemsSource="{Binding LanguageOptions}" SelectedItem="{Binding SelectedLanguageOption}" MinWidth="200">
+          <ComboBox.ItemTemplate>
+            <DataTemplate DataType="vm:UiLanguageOption">
+              <TextBlock Text="{Binding Label}"/>
+            </DataTemplate>
+          </ComboBox.ItemTemplate>
+        </ComboBox>
+      </StackPanel>
+
+      <StackPanel Spacing="4">
+        <TextBlock Text="{Binding LblSocieteNom}" FontWeight="SemiBold"/>
+        <TextBox Text="{Binding SocieteNom}" Watermark="{Binding WmSociete}"/>
+      </StackPanel>
+
+      <StackPanel Spacing="4">
+        <TextBlock Text="{Binding LblAdresse}" FontWeight="SemiBold"/>
+        <TextBox Text="{Binding SocieteAdresse}" Watermark="{Binding WmAdresse}" AcceptsReturn="True" Height="80"/>
+      </StackPanel>
+
+      <StackPanel Spacing="4">
+        <TextBlock Text="{Binding LblIce}" FontWeight="SemiBold"/>
+        <TextBox Text="{Binding SocieteIce}" Watermark="{Binding WmIce}"/>
+      </StackPanel>
+
+      <StackPanel Spacing="4">
+        <TextBlock Text="{Binding LblMentionsLegales}" FontWeight="SemiBold"/>
+        <TextBox Text="{Binding SocieteMentionsLegales}" Watermark="{Binding WmMentionsLegales}" AcceptsReturn="True" MinHeight="72"/>
+      </StackPanel>
+
+      <StackPanel Spacing="4">
+        <TextBlock Text="{Binding LblLogo}" FontWeight="SemiBold"/>
+        <Grid ColumnDefinitions="*,Auto">
+          <TextBox Grid.Column="0"
+                   Text="{Binding SocieteLogoPath}"
+                   Watermark="{Binding WmLogoPath}"
+                   IsReadOnly="True"
+                   VerticalContentAlignment="Center"/>
+          <Button Grid.Column="1"
+                  Margin="8,0,0,0"
+                  Content="{Binding LblPickLogo}"
+                  Command="{Binding PickLogoCommand}"
+                  VerticalAlignment="Center"/>
+        </Grid>
+      </StackPanel>
+
+      <StackPanel Spacing="4">
+        <TextBlock Text="{Binding LblTva}" FontWeight="SemiBold"/>
+        <TextBox Text="{Binding TauxTvaText}" Watermark="{Binding WmTva}"/>
+      </StackPanel>
+
+      <StackPanel Spacing="4">
+        <TextBlock Text="{Binding LblBl}" FontWeight="SemiBold"/>
+        <CheckBox Content="{Binding LblBlocageStock}" IsChecked="{Binding BlocageStock}"/>
+      </StackPanel>
+
+      <StackPanel Spacing="4">
+        <TextBlock Text="{Binding LblDevisJours}" FontWeight="SemiBold"/>
+        <NumericUpDown Minimum="1" Maximum="365" Value="{Binding DevisValiditeJours}"/>
+      </StackPanel>
+
+      <StackPanel Spacing="4">
+        <TextBlock Text="{Binding LblDevise}" FontWeight="SemiBold"/>
+        <TextBox Text="{Binding Devise}" Watermark="{Binding WmDevise}"/>
+      </StackPanel>
+
+      <Border BorderBrush="#993300" BorderThickness="1" CornerRadius="6" Padding="10" Margin="0,8,0,0">
+        <StackPanel Spacing="8">
+          <TextBlock Text="{Binding LblDangerZone}" FontWeight="Bold" Foreground="#993300"/>
+          <Button Content="{Binding BtnFormatSystem}"
+                  Command="{Binding FormatSystemCommand}"
+                  HorizontalAlignment="Left"/>
+        </StackPanel>
+      </Border>
+    </StackPanel>
+  </ScrollViewer>
+</UserControl>

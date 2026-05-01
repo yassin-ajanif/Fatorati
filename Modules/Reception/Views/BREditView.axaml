@@ -1,0 +1,88 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:GestionCommerciale.Modules.Reception.ViewModels"
+             xmlns:m="using:GestionCommerciale.Modules.Tiers.Models"
+             xmlns:stock="using:GestionCommerciale.Modules.Stock.Models"
+             xmlns:conv="using:GestionCommerciale.Shared.Converters"
+             x:Class="GestionCommerciale.Modules.Reception.Views.BREditView"
+             x:DataType="vm:BREditViewModel">
+  <ScrollViewer>
+    <StackPanel Spacing="10">
+      <StackPanel Orientation="Horizontal" Spacing="8">
+        <Button Content="{Binding BtnBack}" Command="{Binding BackCommand}"/>
+        <Button Content="{Binding BtnSave}" Command="{Binding SaveCommand}" IsEnabled="{Binding CanEdit}"/>
+      </StackPanel>
+      <TextBlock Text="{Binding Numero}" FontWeight="Bold"/>
+      <TextBlock Text="{Binding StatutLabel}"/>
+      <Grid ColumnDefinitions="Auto,*,24,Auto,Auto" VerticalAlignment="Center">
+        <TextBlock Grid.Column="0" Text="{Binding LblSupplier}" VerticalAlignment="Center" Opacity="0.7" Margin="0,0,10,0"/>
+        <AutoCompleteBox Grid.Column="1"
+                         MinWidth="200" MaxWidth="420"
+                         MinimumPrefixLength="1" MaxDropDownHeight="320"
+                         Watermark="{Binding WmSupplierSearch}"
+                         ItemsSource="{Binding Fournisseurs}"
+                         ItemFilter="{Binding PartyAutocompleteFilter}"
+                         SelectedItem="{Binding SelectedFournisseur, Mode=TwoWay}"
+                         IsEnabled="{Binding CanEdit}"
+                         VerticalAlignment="Center">
+          <AutoCompleteBox.ValueMemberBinding>
+            <Binding Path="Nom"/>
+          </AutoCompleteBox.ValueMemberBinding>
+          <AutoCompleteBox.ItemTemplate>
+            <DataTemplate DataType="m:Tiers">
+              <TextBlock Text="{Binding Nom}"/>
+            </DataTemplate>
+          </AutoCompleteBox.ItemTemplate>
+        </AutoCompleteBox>
+        <TextBlock Grid.Column="3" Text="{Binding LblDateBr}" VerticalAlignment="Center" Opacity="0.7" Margin="0,0,10,0"/>
+        <DatePicker Grid.Column="4" SelectedDate="{Binding Date}" VerticalAlignment="Center"/>
+      </Grid>
+      <StackPanel Orientation="Horizontal" Spacing="8">
+        <TextBlock Text="{Binding LblAddProduct}" VerticalAlignment="Center" Opacity="0.7"/>
+        <AutoCompleteBox MinWidth="360" MaxWidth="520" VerticalAlignment="Center"
+                         MinimumPrefixLength="1" MaxDropDownHeight="320"
+                         Watermark="{Binding WmAddProduct}"
+                         ItemsSource="{Binding Produits}"
+                         ItemFilter="{Binding ProduitAutocompleteFilter}"
+                         Text="{Binding AddLineSearchText, Mode=TwoWay}"
+                         SelectedItem="{Binding AddLineCatalogPick, Mode=TwoWay}"
+                         IsEnabled="{Binding CanEdit}">
+          <AutoCompleteBox.ValueMemberBinding>
+            <Binding Path="Reference"/>
+          </AutoCompleteBox.ValueMemberBinding>
+          <AutoCompleteBox.ItemTemplate>
+            <DataTemplate DataType="stock:Produit">
+              <TextBlock TextWrapping="Wrap">
+                <TextBlock.Text>
+                  <MultiBinding StringFormat="{}{0} — {1}">
+                    <Binding Path="Reference"/>
+                    <Binding Path="Designation"/>
+                  </MultiBinding>
+                </TextBlock.Text>
+              </TextBlock>
+            </DataTemplate>
+          </AutoCompleteBox.ItemTemplate>
+        </AutoCompleteBox>
+        <Button Content="{Binding BtnRemoveLine}" Command="{Binding RemoveSelectedLineCommand}" IsEnabled="{Binding CanEdit}"/>
+      </StackPanel>
+      <ListBox ItemsSource="{Binding Lignes}" SelectedItem="{Binding SelectedLine}" MinHeight="140">
+        <ListBox.ItemTemplate>
+          <DataTemplate DataType="vm:BRLineRow">
+            <TextBlock Text="{Binding Designation}" TextWrapping="Wrap"/>
+          </DataTemplate>
+        </ListBox.ItemTemplate>
+      </ListBox>
+      <Border IsVisible="{Binding SelectedLine, Converter={x:Static conv:IsNotNullConverter.Instance}}" Padding="8" Background="#08000000">
+        <StackPanel Spacing="6" DataContext="{Binding SelectedLine}">
+          <NumericUpDown Value="{Binding ProduitId}" Minimum="0"/>
+          <TextBox Text="{Binding Designation}"/>
+          <StackPanel Orientation="Horizontal" Spacing="8">
+            <NumericUpDown Value="{Binding QuantiteRecue}" FormatString="N2" Width="120"/>
+            <NumericUpDown Value="{Binding PrixUnitaireHt}" FormatString="N4" Width="120"/>
+            <NumericUpDown Value="{Binding TauxTva}" FormatString="N2" Width="100"/>
+          </StackPanel>
+        </StackPanel>
+      </Border>
+    </StackPanel>
+  </ScrollViewer>
+</UserControl>

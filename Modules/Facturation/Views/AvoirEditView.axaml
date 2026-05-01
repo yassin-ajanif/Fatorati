@@ -1,0 +1,38 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:GestionCommerciale.Modules.Facturation.ViewModels"
+             x:Class="GestionCommerciale.Modules.Facturation.Views.AvoirEditView"
+             x:DataType="vm:AvoirEditViewModel">
+  <ScrollViewer>
+    <StackPanel Spacing="10">
+      <Button Content="{Binding BtnBackFacture}" Command="{Binding BackCommand}"/>
+      <TextBlock Text="{Binding Numero}" FontWeight="Bold"/>
+      <StackPanel Orientation="Horizontal" Spacing="8">
+        <TextBlock Text="{Binding LblDateAvoir}" VerticalAlignment="Center" Opacity="0.7"/>
+        <DatePicker SelectedDate="{Binding Date}"/>
+      </StackPanel>
+      <TextBox Text="{Binding Motif}" Watermark="{Binding WmMotif}" AcceptsReturn="True" Height="60"/>
+      <CheckBox Content="{Binding ChkRetourStock}" IsChecked="{Binding RetourMarchandise}"/>
+      <Button Content="{Binding BtnAddLine}" Command="{Binding AddLineCommand}"/>
+      <Button Content="{Binding BtnApplyLastProduct}" Command="{Binding ApplyProductLastCommand}"/>
+      <ItemsControl ItemsSource="{Binding Lignes}">
+        <ItemsControl.ItemTemplate>
+          <DataTemplate DataType="vm:AvoirLineRow">
+            <Border Padding="4" Margin="0,2,0,0" BorderBrush="#22000000" BorderThickness="1">
+              <StackPanel Spacing="4">
+                <TextBox Text="{Binding Designation}"/>
+                <StackPanel Orientation="Horizontal" Spacing="8">
+                  <NumericUpDown Value="{Binding Quantite}" FormatString="N2" Width="120"/>
+                  <NumericUpDown Value="{Binding PrixUnitaireHt}" FormatString="N4" Width="120"/>
+                  <NumericUpDown Value="{Binding TauxTva}" FormatString="N2" Width="100"/>
+                </StackPanel>
+              </StackPanel>
+            </Border>
+          </DataTemplate>
+        </ItemsControl.ItemTemplate>
+      </ItemsControl>
+      <Button Content="{Binding BtnSave}" Command="{Binding SaveCommand}"/>
+      <Button Content="{Binding BtnValidateAvoir}" Command="{Binding ValiderCommand}"/>
+    </StackPanel>
+  </ScrollViewer>
+</UserControl>

@@ -1,0 +1,721 @@
+using System.Collections.ObjectModel;
+using System.ComponentModel;
+using System.Linq;
+using Avalonia.Controls;
+using CommunityToolkit.Mvvm.ComponentModel;
+using CommunityToolkit.Mvvm.Input;
+using GestionCommerciale.Modules.Auth.Services;
+using GestionCommerciale.Modules.Stock;
+using GestionCommerciale.Modules.Facturation.Models;
+using GestionCommerciale.Modules.Livraison.Models;
+using GestionCommerciale.Modules.Facturation.Services;
+using GestionCommerciale.Modules.Tiers.Models;
+using GestionCommerciale.Shared.Database;
+using GestionCommerciale.Shared.Helpers;
+using GestionCommerciale.Shared.Services;
+using GestionCommerciale.Shared.ViewModels;
+using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.DependencyInjection;
+
+namespace GestionCommerciale.Modules.Facturation.ViewModels;
+
+public partial class FactureEditViewModel : BaseViewModel
+{
+    private readonly IDbContextFactory<AppDbContext> _dbFactory;
+    private readonly IDocumentNumberService _numbers;
+    private readonly IAppSettingsService _settings;
+    private readonly IFactureWorkflowService _factureWorkflow;
+    private readonly IDialogService _dialog;
+    private readonly WorkspaceNavigator _workspace;
+    private readonly IServiceProvider _sp;
+    private readonly ICurrentUserSession _session;
+    private readonly ILocaleService _locale;
+    private readonly IUiPreferencesService _uiPreferences;
+
+    public FactureEditViewModel(
+        IDbContextFactory<AppDbContext> dbFactory,
+        IDocumentNumberService numbers,
+        IAppSettingsService settings,
+        IFactureWorkflowService factureWorkflow,
+        IDialogService dialog,
+        WorkspaceNavigator workspaceNavigator,
+        IServiceProvider sp,
+        ICurrentUserSession session,
+        ILocaleService locale,
+        IUiPreferencesService uiPreferences)
+    {
+        _dbFactory = dbFactory;
+        _numbers = numbers;
+        _settings = settings;
+        _factureWorkflow = factureWorkflow;
+        _dialog = dialog;
+        _workspace = workspaceNavigator;
+        _sp = sp;
+        _session = session;
+        _locale = locale;
+        _uiPreferences = uiPreferences;
+        _locale.CultureApplied += (_, _) =>
+        {
+            RefreshFactureUi();
+            UpdateFactureTotalLines();
+        };
+        LineGridColumns.PropertyChanged += OnLineGridColumnsPropertyChanged;
+        _uiPreferences.LoadDocumentLineColumns("facture", LineGridColumns);
+        Title = _locale.T("Fact_Title");
+        RefreshFactureUi();
+    }
+
+    public ObservableCollection<GestionCommerciale.Modules.Tiers.Models.Tiers> Clients { get; } = [];
+    public ObservableCollection<GestionCommerciale.Modules.Stock.Models.Produit> Produits { get; } = [];
+    public ObservableCollection<FactureLineRow> Lignes { get; } = [];
+    public ObservableCollection<FacturePaiementRowViewModel> Paiements { get; } = [];
+
+    [ObservableProperty] private int? _factureId;
+    [ObservableProperty] private int? _blId;
+    [ObservableProperty] private int? _devisId;
+    [ObservableProperty] private int _clientId;
+    [ObservableProperty] private GestionCommerciale.Modules.Tiers.Models.Tiers? _selectedClient;
+    [ObservableProperty] private string _numero = string.Empty;
+    [ObservableProperty] private DateTimeOffset _date = new(DateTime.Today);
+    [ObservableProperty] private DateTimeOffset _dateEcheance = new(DateTime.Today.AddDays(30));
+    [ObservableProperty] private StatutFacture _statut = StatutFacture.Emise;
+    [ObservableProperty] private decimal _remiseGlobale;
+    [ObservableProperty] private string _note = string.Empty;
+    [ObservableProperty] private decimal _totalHt;
+    [ObservableProperty] private decimal _totalTva;
+    [ObservableProperty] private decimal _totalTtc;
+    [ObservableProperty] private decimal _montantPaye;
+    [ObservableProperty] private bool _canEditDraft;
+
+    [ObservableProperty] private decimal _paiementMontant;
+    [ObservableProperty] private DateTimeOffset _paiementDate = new(DateTime.Today);
+    [ObservableProperty] private ModePaiement _paiementMode = ModePaiement.Virement;
+    [ObservableProperty] private string _paiementReference = string.Empty;
+    [ObservableProperty] private FactureLineRow? _selectedLine;
+    [ObservableProperty] private string _addLineSearchText = string.Empty;
+    [ObservableProperty] private object? _addLineCatalogPick;
+
+    [ObservableProperty] private string _btnBack = string.Empty;
+    [ObservableProperty] private string _btnSave = string.Empty;
+    [ObservableProperty] private string _btnAvoir = string.Empty;
+    [ObservableProperty] private string _statutLabel = string.Empty;
+    [ObservableProperty] private string _lblClient = string.Empty;
+    [ObservableProperty] private string _wmClientSearch = string.Empty;
+    [ObservableProperty] private string _lblDateFacture = string.Empty;
+    [ObservableProperty] private string _lblDateEcheance = string.Empty;
+    [ObservableProperty] private string _btnRemoveLine = string.Empty;
+    [ObservableProperty] private string _lblCatalogHintFacture = string.Empty;
+    [ObservableProperty] private string _lblTotals = string.Empty;
+    [ObservableProperty] private string _devise = "MAD";
+    [ObservableProperty] private string _totalHtLabel = string.Empty;
+    [ObservableProperty] private string _totalTvaLabel = string.Empty;
+    [ObservableProperty] private string _totalTtcLabel = string.Empty;
+    [ObservableProperty] private string _montantPayeLine = string.Empty;
+    [ObservableProperty] private string _lblPaymentsRecorded = string.Empty;
+    [ObservableProperty] private string _lblMontant = string.Empty;
+    [ObservableProperty] private string _lblPaymentDate = string.Empty;
+    [ObservableProperty] private string _lblMode = string.Empty;
+    [ObservableProperty] private string _lblReference = string.Empty;
+    [ObservableProperty] private string _wmRefShort = string.Empty;
+    [ObservableProperty] private string _lblNewPayment = string.Empty;
+    [ObservableProperty] private string _btnAddPayment = string.Empty;
+    [ObservableProperty] private string _btnDelete = string.Empty;
+    [ObservableProperty] private string _btnCancel = string.Empty;
+    [ObservableProperty] private string _payEditTooltip = string.Empty;
+    [ObservableProperty] private string _lblDocLineColumnsHint = string.Empty;
+    [ObservableProperty] private string _lblDocColRef = string.Empty;
+    [ObservableProperty] private string _lblDocColDesignation = string.Empty;
+    [ObservableProperty] private string _lblDocColQte = string.Empty;
+    [ObservableProperty] private string _lblDocColCond = string.Empty;
+    [ObservableProperty] private string _wmDocLineUnite = string.Empty;
+    [ObservableProperty] private string _lblDocColPuHt = string.Empty;
+    [ObservableProperty] private string _lblDocColRemise = string.Empty;
+    [ObservableProperty] private string _lblDocColTva = string.Empty;
+    [ObservableProperty] private string _lblDocColMontantHt = string.Empty;
+    [ObservableProperty] private string _lblDocColMontantTtc = string.Empty;
+
+    public DocumentLineGridColumnState LineGridColumns { get; } = new();
+    public bool ShowTotalTva => LineGridColumns.ShowTva && LineGridColumns.ShowMontantTtc;
+    public bool ShowTotalTtc => LineGridColumns.ShowMontantTtc && LineGridColumns.ShowTva;
+    public bool HighlightHtTotal => !ShowTotalTtc;
+
+    public AutoCompleteFilterPredicate<object?> ProduitAutocompleteFilter => ProductAutoComplete.ItemFilter;
+    public AutoCompleteFilterPredicate<object?> PartyAutocompleteFilter => PartyAutoComplete.ItemFilter;
+
+    private bool _suppressAddLinePick;
+
+    private void OnLineGridColumnsPropertyChanged(object? sender, PropertyChangedEventArgs e)
+    {
+        if (e.PropertyName is nameof(DocumentLineGridColumnState.ShowTva) or nameof(DocumentLineGridColumnState.ShowMontantTtc))
+        {
+            OnPropertyChanged(nameof(ShowTotalTva));
+            OnPropertyChanged(nameof(ShowTotalTtc));
+            OnPropertyChanged(nameof(HighlightHtTotal));
+            RefreshTotals();
+        }
+        _uiPreferences.SaveDocumentLineColumns("facture", LineGridColumns);
+    }
+
+    private void RefreshFactureUi()
+    {
+        BtnBack = _locale.T("Btn_Back");
+        BtnSave = _locale.T("Btn_Save");
+        BtnAvoir = _locale.T("Btn_Avoir");
+        LblClient = _locale.T("Lbl_Client");
+        WmClientSearch = _locale.T("Wm_SearchClient");
+        LblDateFacture = _locale.T("Lbl_DateFacture");
+        LblDateEcheance = _locale.T("Lbl_DateEcheance");
+        BtnRemoveLine = _locale.T("Btn_RemoveLine");
+        LblCatalogHintFacture = _locale.T("Lbl_CatalogHintFacture");
+        LblTotals = _locale.T("Lbl_Totals");
+        LblPaymentsRecorded = _locale.T("Lbl_PaymentsRecorded");
+        LblMontant = _locale.T("Lbl_Montant");
+        LblPaymentDate = _locale.T("Lbl_PaymentDate");
+        LblMode = _locale.T("Lbl_Mode");
+        LblReference = _locale.T("Lbl_Reference");
+        WmRefShort = _locale.T("Lbl_RefShort");
+        LblNewPayment = _locale.T("Lbl_NewPayment");
+        BtnAddPayment = _locale.T("Btn_AddPayment");
+        BtnDelete = _locale.T("Btn_Delete");
+        BtnCancel = _locale.T("Btn_Cancel");
+        PayEditTooltip = _locale.T("Pay_EditTooltip");
+        StatutLabel = UiEnumStrings.FormatStatutFacture(_locale, Statut);
+        LblDocLineColumnsHint = _locale.T("DocLine_ColumnsHint");
+        LblDocColRef = _locale.T("DocLine_ColRef");
+        LblDocColDesignation = _locale.T("DocLine_ColDesignation");
+        LblDocColQte = _locale.T("DocLine_ColQte");
+        LblDocColCond = _locale.T("DocLine_ColCond");
+        WmDocLineUnite = _locale.T("DocLine_WmUnite");
+        LblDocColPuHt = _locale.T("DocLine_ColPuHt");
+        LblDocColRemise = _locale.T("DocLine_ColRemise");
+        LblDocColTva = _locale.T("DocLine_ColTva");
+        LblDocColMontantHt = _locale.T("DocLine_ColMontantHt");
+        LblDocColMontantTtc = _locale.T("DocLine_ColMontantTtc");
+    }
+
+    private void UpdateFactureTotalLines()
+    {
+        TotalHtLabel = _locale.Tf("Doc_FmtHt", TotalHt, Devise);
+        TotalTvaLabel = _locale.Tf("Doc_FmtTva", TotalTva, Devise);
+        TotalTtcLabel = _locale.Tf("Doc_FmtTtc", TotalTtc, Devise);
+        MontantPayeLine = _locale.Tf("Doc_FmtPaye", MontantPaye);
+    }
+
+    public Array ModesPaiement => Enum.GetValues(typeof(ModePaiement));
+
+    private bool CanExecuteAddPaiement() => FactureId.HasValue;
+
+    partial void OnStatutChanged(StatutFacture value) => AddPaiementCommand.NotifyCanExecuteChanged();
+
+    partial void OnMontantPayeChanged(decimal value) => UpdateFactureTotalLines();
+
+    partial void OnFactureIdChanged(int? value) => AddPaiementCommand.NotifyCanExecuteChanged();
+
+    private void ReloadPaiementsList(IEnumerable<Paiement> paiements)
+    {
+        Paiements.Clear();
+        foreach (var p in paiements.OrderByDescending(x => x.Date).ThenByDescending(x => x.Id))
+            Paiements.Add(new FacturePaiementRowViewModel(this, p));
+    }
+
+    public async Task CommitPaiementRowAsync(FacturePaiementRowViewModel row, CancellationToken cancellationToken = default)
+    {
+        if (IsBusy) return;
+        if (FactureId == null || row.Montant <= 0)
+        {
+            await _dialog.ShowErrorAsync(_locale.T("Pay_Title"), _locale.T("Pay_ErrAmount"), cancellationToken);
+            return;
+        }
+
+        try
+        {
+            IsBusy = true;
+            await _factureWorkflow.UpdatePaiementAsync(
+                FactureId.Value,
+                row.Id,
+                row.Montant,
+                row.Date.DateTime,
+                row.Mode,
+                row.Reference,
+                cancellationToken);
+            await LoadAsync(FactureId, cancellationToken);
+        }
+        catch (Exception ex)
+        {
+            await _dialog.ShowErrorAsync(_locale.T("Pay_Title"), ex.Message, cancellationToken);
+        }
+        finally
+        {
+            IsBusy = false;
+        }
+    }
+
+    public async Task DeletePaiementRowAsync(FacturePaiementRowViewModel row, CancellationToken cancellationToken = default)
+    {
+        if (IsBusy) return;
+        if (FactureId == null) return;
+        if (!await _dialog.ConfirmAsync(_locale.T("Pay_Title"), _locale.T("Pay_ConfirmDelete"), cancellationToken))
+            return;
+
+        try
+        {
+            IsBusy = true;
+            await _factureWorkflow.DeletePaiementAsync(FactureId.Value, row.Id, cancellationToken);
+            await LoadAsync(FactureId, cancellationToken);
+        }
+        catch (Exception ex)
+        {
+            await _dialog.ShowErrorAsync(_locale.T("Pay_Title"), ex.Message, cancellationToken);
+        }
+        finally
+        {
+            IsBusy = false;
+        }
+    }
+
+    private void HookLines()
+    {
+        foreach (var row in Lignes)
+            row.PropertyChanged += LineChanged;
+    }
+
+    private void LineChanged(object? sender, PropertyChangedEventArgs e)
+    {
+        RefreshTotals();
+        if (e.PropertyName == nameof(FactureLineRow.ProduitId) && sender is FactureLineRow changed && changed.ProduitId != 0)
+            ConsolidateDuplicateProductLines();
+    }
+
+    partial void OnAddLineCatalogPickChanged(object? value)
+    {
+        if (_suppressAddLinePick) return;
+        if (value is not GestionCommerciale.Modules.Stock.Models.Produit p) return;
+        _suppressAddLinePick = true;
+        var existing = Lignes.FirstOrDefault(l => l.ProduitId == p.Id && p.Id != 0);
+        if (existing != null)
+        {
+            existing.Quantite += 1;
+            SelectedLine = existing;
+        }
+        else
+        {
+            var row = new FactureLineRow();
+            row.ApplyCatalogProduct(p);
+            row.Quantite = 1;
+            row.PropertyChanged += LineChanged;
+            Lignes.Add(row);
+            SelectedLine = row;
+        }
+        AddLineCatalogPick = null;
+        AddLineSearchText = string.Empty;
+        _suppressAddLinePick = false;
+        RefreshTotals();
+    }
+
+    private void ConsolidateDuplicateProductLines()
+    {
+        foreach (var g in Lignes.Where(l => l.ProduitId != 0).GroupBy(l => l.ProduitId).ToList())
+        {
+            if (g.Count() < 2) continue;
+            var ordered = g.OrderBy(l => Lignes.IndexOf(l)).ToList();
+            var keep = ordered[0];
+            var extraQty = ordered.Skip(1).Sum(l => l.Quantite);
+            foreach (var line in ordered.Skip(1))
+            {
+                if (ReferenceEquals(SelectedLine, line))
+                    SelectedLine = keep;
+                line.PropertyChanged -= LineChanged;
+                Lignes.Remove(line);
+            }
+            keep.Quantite += extraQty;
+        }
+    }
+
+    private void RefreshTotals()
+    {
+        var includeTvaInTotals = ShowTotalTtc;
+        var lines = Lignes.Select(l => new FactureLigne
+        {
+            Quantite = l.Quantite,
+            PrixUnitaireHT = l.PrixUnitaireHt,
+            Remise = l.Remise,
+            TauxTVA = includeTvaInTotals ? l.TauxTva : 0
+        });
+        var (ht, tva, ttc) = DocumentTotalsHelper.FactureTotals(lines, RemiseGlobale);
+        TotalHt = ht;
+        TotalTva = tva;
+        TotalTtc = ttc;
+        UpdateFactureTotalLines();
+    }
+
+    partial void OnRemiseGlobaleChanged(decimal value) => RefreshTotals();
+
+    partial void OnSelectedClientChanged(GestionCommerciale.Modules.Tiers.Models.Tiers? value)
+    {
+        var id = value?.Id ?? 0;
+        if (ClientId == id) return;
+        ClientId = id;
+    }
+
+    partial void OnClientIdChanged(int value)
+    {
+        if (SelectedClient?.Id == value) return;
+        SelectedClient = Clients.FirstOrDefault(c => c.Id == value);
+    }
+
+    public async Task LoadAsync(int? id, CancellationToken cancellationToken = default)
+    {
+        FactureId = id;
+        var cfg = await _settings.GetAsync(cancellationToken);
+        Devise = string.IsNullOrWhiteSpace(cfg.Devise) ? "MAD" : cfg.Devise.Trim();
+        BlId = null;
+        DevisId = null;
+        Lignes.Clear();
+        await using var db = await _dbFactory.CreateDbContextAsync(cancellationToken);
+        await LoadLookupsAsync(db, cancellationToken);
+
+        if (id == null)
+        {
+            Numero = _locale.T("Fact_NewNumPlaceholder");
+            ClientId = Clients.FirstOrDefault()?.Id ?? 0;
+            Date = new DateTimeOffset(DateTime.Today);
+            DateEcheance = Date.AddDays(30);
+            Statut = StatutFacture.Emise;
+            CanEditDraft = true;
+            Title = _locale.T("Fact_NewTitle");
+            MontantPaye = 0;
+            Paiements.Clear();
+            RefreshTotals();
+            return;
+        }
+
+        var f = await db.Factures.Include(x => x.Lignes).Include(x => x.Paiements).FirstAsync(x => x.Id == id, cancellationToken);
+        BlId = f.BLId;
+        DevisId = f.DevisId;
+        Numero = f.Numero;
+        ClientId = f.ClientId;
+        Date = new DateTimeOffset(f.Date);
+        DateEcheance = new DateTimeOffset(f.DateEcheance);
+        Statut = f.Statut;
+        RemiseGlobale = f.RemiseGlobale;
+        Note = f.Note;
+        foreach (var l in f.Lignes)
+        {
+            var prod = Produits.FirstOrDefault(p => p.Id == l.ProduitId);
+            var row = new FactureLineRow
+            {
+                ProduitId = l.ProduitId,
+                Reference = prod?.Reference ?? string.Empty,
+                Designation = l.Designation,
+                Conditionnement = l.Conditionnement,
+                Quantite = l.Quantite,
+                PrixUnitaireHt = l.PrixUnitaireHT,
+                Remise = l.Remise,
+                TauxTva = l.TauxTVA
+            };
+            Lignes.Add(row);
+        }
+
+        HookLines();
+        MontantPaye = f.Paiements.Sum(p => p.Montant);
+        ReloadPaiementsList(f.Paiements);
+            CanEditDraft = true;
+        Title = _locale.Tf("Fact_TitleNum", Numero);
+        RefreshTotals();
+    }
+
+    private async Task LoadLookupsAsync(AppDbContext db, CancellationToken cancellationToken)
+    {
+        var clients = await db.Tiers.AsNoTracking()
+            .Where(t => t.Actif && (t.Type == TypeTiers.Client || t.Type == TypeTiers.LesDeux))
+            .OrderBy(t => t.Nom).ToListAsync(cancellationToken);
+        Clients.Clear();
+        foreach (var c in clients) Clients.Add(c);
+
+        var produits = await db.Produits.AsNoTracking().Where(p => p.Actif)
+            .SelectForListWithoutImageData().ToListAsync(cancellationToken);
+        Produits.Clear();
+        foreach (var p in produits) Produits.Add(p);
+    }
+
+    public void Load(int? id) => _ = LoadAsync(id, CancellationToken.None);
+
+    public async Task LoadFromBLAsync(int blId, CancellationToken cancellationToken = default)
+    {
+        var cfg = await _settings.GetAsync(cancellationToken);
+        Devise = string.IsNullOrWhiteSpace(cfg.Devise) ? "MAD" : cfg.Devise.Trim();
+        await using var db = await _dbFactory.CreateDbContextAsync(cancellationToken);
+        var b = await db.BonsLivraison.Include(x => x.Lignes).FirstAsync(x => x.Id == blId, cancellationToken);
+        BlId = b.Id;
+        DevisId = null;
+        FactureId = null;
+        ClientId = b.ClientId;
+        Date = new DateTimeOffset(DateTime.Today);
+        DateEcheance = Date.AddDays(30);
+        Statut = StatutFacture.Emise;
+        Numero = _locale.T("Fact_NewNumPlaceholder");
+        await LoadLookupsAsync(db, cancellationToken);
+        Lignes.Clear();
+        foreach (var l in b.Lignes)
+        {
+            var prod = Produits.FirstOrDefault(p => p.Id == l.ProduitId);
+            Lignes.Add(new FactureLineRow
+            {
+                ProduitId = l.ProduitId,
+                Reference = prod?.Reference ?? string.Empty,
+                Designation = l.Designation,
+                Conditionnement = string.Empty,
+                Quantite = l.QuantiteLivree,
+                PrixUnitaireHt = l.PrixUnitaireHT,
+                Remise = 0,
+                TauxTva = l.TauxTVA
+            });
+        }
+
+        HookLines();
+        CanEditDraft = true;
+        MontantPaye = 0;
+        Paiements.Clear();
+        Title = _locale.T("Fact_FromBl");
+        RefreshTotals();
+    }
+
+    public void LoadFromBL(int blId) => _ = LoadFromBLAsync(blId, CancellationToken.None);
+
+    public async Task LoadFromDevisAsync(int devisId, CancellationToken cancellationToken = default)
+    {
+        var cfg = await _settings.GetAsync(cancellationToken);
+        Devise = string.IsNullOrWhiteSpace(cfg.Devise) ? "MAD" : cfg.Devise.Trim();
+        await using var db = await _dbFactory.CreateDbContextAsync(cancellationToken);
+        var d = await db.Devis.Include(x => x.Lignes).FirstAsync(x => x.Id == devisId, cancellationToken);
+        DevisId = d.Id;
+        BlId = null;
+        FactureId = null;
+        ClientId = d.ClientId;
+        Date = new DateTimeOffset(DateTime.Today);
+        DateEcheance = Date.AddDays(30);
+        Statut = StatutFacture.Emise;
+        Numero = _locale.T("Fact_NewNumPlaceholder");
+        RemiseGlobale = d.RemiseGlobale;
+        await LoadLookupsAsync(db, cancellationToken);
+        Lignes.Clear();
+        foreach (var l in d.Lignes)
+        {
+            var prod = Produits.FirstOrDefault(p => p.Id == l.ProduitId);
+            Lignes.Add(new FactureLineRow
+            {
+                ProduitId = l.ProduitId,
+                Reference = prod?.Reference ?? string.Empty,
+                Designation = l.Designation,
+                Conditionnement = l.Conditionnement,
+                Quantite = l.Quantite,
+                PrixUnitaireHt = l.PrixUnitaireHT,
+                Remise = l.Remise,
+                TauxTva = l.TauxTVA
+            });
+        }
+
+        HookLines();
+        CanEditDraft = true;
+        MontantPaye = 0;
+        Paiements.Clear();
+        Title = _locale.T("Fact_FromDevis");
+        RefreshTotals();
+    }
+
+    public void LoadFromDevis(int devisId) => _ = LoadFromDevisAsync(devisId, CancellationToken.None);
+
+    [RelayCommand]
+    private void AddLine()
+    {
+        var p = Produits.FirstOrDefault();
+        var row = new FactureLineRow
+        {
+            ProduitId = p?.Id ?? 0,
+            Reference = p?.Reference ?? string.Empty,
+            Designation = p?.Designation ?? string.Empty,
+            Conditionnement = p?.Unite ?? string.Empty,
+            Quantite = 1,
+            PrixUnitaireHt = p?.PrixVenteHT ?? 0,
+            Remise = 0,
+            TauxTva = p?.TauxTVA ?? 20
+        };
+        row.PropertyChanged += LineChanged;
+        Lignes.Add(row);
+        RefreshTotals();
+    }
+
+    [RelayCommand]
+    private void RemoveLine(FactureLineRow? row)
+    {
+        if (row == null) return;
+        row.PropertyChanged -= LineChanged;
+        Lignes.Remove(row);
+        RefreshTotals();
+    }
+
+    [RelayCommand]
+    private void RemoveSelectedLine()
+    {
+        if (SelectedLine == null) return;
+        RemoveLine(SelectedLine);
+        SelectedLine = null;
+    }
+
+    [RelayCommand]
+    private async Task SaveDraftAsync(CancellationToken cancellationToken)
+    {
+        if (ClientId == 0 || !Lignes.Any())
+        {
+            await _dialog.ShowErrorAsync(_locale.T("Fact_Title"), _locale.T("Fact_ErrClientLines"), cancellationToken);
+            return;
+        }
+
+        IsBusy = true;
+        try
+        {
+            await using var db = await _dbFactory.CreateDbContextAsync(cancellationToken);
+            Facture entity;
+            if (FactureId == null)
+            {
+                var num = await _numbers.NextFactureAsync(cancellationToken);
+                entity = new Facture
+                {
+                    Numero = num,
+                    ClientId = ClientId,
+                    BLId = BlId,
+                    DevisId = DevisId,
+                    Date = Date.DateTime,
+                    DateEcheance = DateEcheance.DateTime,
+                    Statut = StatutFacture.Emise,
+                    RemiseGlobale = RemiseGlobale,
+                    Note = Note,
+                    CreatedByUserId = _session.UserId
+                };
+                foreach (var l in Lignes)
+                {
+                    entity.Lignes.Add(new FactureLigne
+                    {
+                        ProduitId = l.ProduitId,
+                        Designation = l.Designation,
+                        Conditionnement = l.Conditionnement,
+                        Quantite = l.Quantite,
+                        PrixUnitaireHT = l.PrixUnitaireHt,
+                        Remise = l.Remise,
+                        TauxTVA = l.TauxTva
+                    });
+                }
+
+                db.Factures.Add(entity);
+                await db.SaveChangesAsync(cancellationToken);
+                FactureId = entity.Id;
+            }
+            else
+            {
+                entity = await db.Factures.Include(f => f.Lignes).FirstAsync(f => f.Id == FactureId, cancellationToken);
+                entity.Statut = StatutFacture.Emise;
+
+                entity.ClientId = ClientId;
+                entity.BLId = BlId;
+                entity.DevisId = DevisId;
+                entity.Date = Date.DateTime;
+                entity.DateEcheance = DateEcheance.DateTime;
+                entity.RemiseGlobale = RemiseGlobale;
+                entity.Note = Note;
+                db.FactureLignes.RemoveRange(entity.Lignes);
+                foreach (var l in Lignes)
+                {
+                    entity.Lignes.Add(new FactureLigne
+                    {
+                        ProduitId = l.ProduitId,
+                        Designation = l.Designation,
+                        Conditionnement = l.Conditionnement,
+                        Quantite = l.Quantite,
+                        PrixUnitaireHT = l.PrixUnitaireHt,
+                        Remise = l.Remise,
+                        TauxTVA = l.TauxTva
+                    });
+                }
+
+                await db.SaveChangesAsync(cancellationToken);
+            }
+
+            if (BlId.HasValue)
+            {
+                var bl = await db.BonsLivraison.FirstAsync(b => b.Id == BlId.Value, cancellationToken);
+                bl.Statut = StatutBL.Facture;
+                await db.SaveChangesAsync(cancellationToken);
+            }
+
+            await _factureWorkflow.RecalculateStatutAsync(entity.Id, cancellationToken);
+
+            Numero = entity.Numero;
+            await _dialog.ShowInfoAsync(_locale.T("Fact_Title"), _locale.T("Fact_Saved"), cancellationToken);
+            await LoadAsync(FactureId, cancellationToken);
+        }
+        finally
+        {
+            IsBusy = false;
+        }
+    }
+
+    [RelayCommand(CanExecute = nameof(CanExecuteAddPaiement))]
+    private async Task AddPaiementAsync(CancellationToken cancellationToken)
+    {
+        if (IsBusy) return;
+
+        if (!FactureId.HasValue)
+        {
+            await _dialog.ShowErrorAsync(_locale.T("Pay_Title"), _locale.T("Pay_ErrSaveFirst"), cancellationToken);
+            return;
+        }
+
+        if (PaiementMontant <= 0)
+        {
+            await _dialog.ShowErrorAsync(_locale.T("Pay_Title"), _locale.T("Pay_ErrAmount"), cancellationToken);
+            return;
+        }
+
+        try
+        {
+            IsBusy = true;
+            await _factureWorkflow.AddPaiementAsync(FactureId.Value, new Paiement
+            {
+                Montant = PaiementMontant,
+                Date = PaiementDate.DateTime,
+                Mode = PaiementMode,
+                Reference = PaiementReference,
+                CreatedByUserId = _session.UserId
+            }, cancellationToken);
+            PaiementMontant = 0;
+            PaiementReference = string.Empty;
+            PaiementDate = new DateTimeOffset(DateTime.Today);
+            await LoadAsync(FactureId, cancellationToken);
+        }
+        catch (Exception ex)
+        {
+            await _dialog.ShowErrorAsync(_locale.T("Pay_Title"), ex.Message, cancellationToken);
+        }
+        finally
+        {
+            IsBusy = false;
+        }
+    }
+
+    [RelayCommand]
+    private void ToAvoir()
+    {
+        if (FactureId == null) return;
+        var vm = _sp.GetRequiredService<AvoirEditViewModel>();
+        vm.LoadNew(FactureId.Value);
+        _workspace.Open(vm);
+    }
+
+    [RelayCommand]
+    private void Back()
+    {
+        var list = _sp.GetRequiredService<FactureListViewModel>();
+        _workspace.Open(list);
+        list.LoadCommand.Execute(null);
+    }
+}

@@ -1,0 +1,258 @@
+using System.Globalization;
+using System.Text.Json;
+using CommunityToolkit.Mvvm.ComponentModel;
+using CommunityToolkit.Mvvm.Input;
+using GestionCommerciale.Modules.Auth.Services;
+using GestionCommerciale.Shared.Database;
+using GestionCommerciale.Shared.Services;
+using GestionCommerciale.Shared.ViewModels;
+using Microsoft.EntityFrameworkCore;
+
+namespace GestionCommerciale.Modules.Auth.ViewModels;
+
+public partial class SettingsViewModel : BaseViewModel
+{
+    private readonly IAppSettingsService _settings;
+    private readonly IDialogService _dialog;
+    private readonly ICurrentUserSession _session;
+    private readonly ILocaleService _locale;
+    private readonly IDbContextFactory<AppDbContext> _dbFactory;
+
+    public UiLanguageOption[] LanguageOptions { get; } =
+    [
+        new() { Code = "fr", Label = "Français" },
+        new() { Code = "ar", Label = "العربية" }
+    ];
+
+    public SettingsViewModel(
+        IAppSettingsService settings,
+        IDialogService dialog,
+        ICurrentUserSession session,
+        ILocaleService locale,
+        IDbContextFactory<AppDbContext> dbFactory)
+    {
+        _settings = settings;
+        _dialog = dialog;
+        _session = session;
+        _locale = locale;
+        _dbFactory = dbFactory;
+        _locale.CultureApplied += (_, _) => RefreshSettingsLabels();
+        RefreshSettingsLabels();
+    }
+
+    [ObservableProperty] private string _societeNom = string.Empty;
+    [ObservableProperty] private string _societeAdresse = string.Empty;
+    [ObservableProperty] private string _societeIce = string.Empty;
+    [ObservableProperty] private string? _societeLogoPath;
+    [ObservableProperty] private string _societeMentionsLegales = string.Empty;
+    [ObservableProperty] private string _tauxTvaText = "20";
+    [ObservableProperty] private bool _blocageStock = true;
+    [ObservableProperty] private int _devisValiditeJours = 30;
+    [ObservableProperty] private string _devise = "MAD";
+    [ObservableProperty] private UiLanguageOption? _selectedLanguageOption;
+
+    [ObservableProperty] private string _lblLoad = string.Empty;
+    [ObservableProperty] private string _lblSave = string.Empty;
+    [ObservableProperty] private string _lblSocieteNom = string.Empty;
+    [ObservableProperty] private string _lblAdresse = string.Empty;
+    [ObservableProperty] private string _lblIce = string.Empty;
+    [ObservableProperty] private string _lblMentionsLegales = string.Empty;
+    [ObservableProperty] private string _lblLogo = string.Empty;
+    [ObservableProperty] private string _lblPickLogo = string.Empty;
+    [ObservableProperty] private string _lblTva = string.Empty;
+    [ObservableProperty] private string _lblBl = string.Empty;
+    [ObservableProperty] private string _lblBlocageStock = string.Empty;
+    [ObservableProperty] private string _lblDevisJours = string.Empty;
+    [ObservableProperty] private string _lblDevise = string.Empty;
+    [ObservableProperty] private string _lblUiLanguage = string.Empty;
+    [ObservableProperty] private string _lblDangerZone = string.Empty;
+    [ObservableProperty] private string _btnFormatSystem = string.Empty;
+    [ObservableProperty] private string _wmSociete = string.Empty;
+    [ObservableProperty] private string _wmAdresse = string.Empty;
+    [ObservableProperty] private string _wmIce = string.Empty;
+    [ObservableProperty] private string _wmMentionsLegales = string.Empty;
+    [ObservableProperty] private string _wmLogoPath = string.Empty;
+    [ObservableProperty] private string _wmTva = string.Empty;
+    [ObservableProperty] private string _wmDevise = string.Empty;
+
+    private void RefreshSettingsLabels()
+    {
+        Title = _locale.T("Settings_Title");
+        LblLoad = _locale.T("Settings_Load");
+        LblSave = _locale.T("Settings_Save");
+        LblSocieteNom = _locale.T("Settings_SocieteNom");
+        LblAdresse = _locale.T("Settings_Adresse");
+        LblIce = _locale.T("Settings_Ice");
+        LblMentionsLegales = _locale.T("Settings_MentionsLegales");
+        LblLogo = _locale.T("Settings_Logo");
+        LblPickLogo = _locale.T("Settings_PickLogo");
+        LblTva = _locale.T("Settings_Tva");
+        LblBl = _locale.T("Settings_BL");
+        LblBlocageStock = _locale.T("Settings_BlocageStock");
+        LblDevisJours = _locale.T("Settings_DevisJours");
+        LblDevise = _locale.T("Settings_Devise");
+        LblUiLanguage = _locale.T("Settings_UiLanguage");
+        LblDangerZone = _locale.T("Settings_DangerZone");
+        BtnFormatSystem = _locale.T("Settings_BtnFormatSystem");
+        WmSociete = _locale.T("Settings_WmSociete");
+        WmAdresse = _locale.T("Settings_WmAdresse");
+        WmIce = _locale.T("Settings_WmIce");
+        WmMentionsLegales = _locale.T("Settings_WmMentionsLegales");
+        WmLogoPath = _locale.T("Settings_WmLogoPath");
+        WmTva = _locale.T("Settings_WmTva");
+        WmDevise = _locale.T("Settings_WmDevise");
+    }
+
+    [RelayCommand]
+    private async Task LoadAsync(CancellationToken cancellationToken)
+    {
+        if (!_session.CanAccessSettings)
+        {
+            await _dialog.ShowErrorAsync(_locale.T("Settings_Title"), _locale.T("Settings_ErrAdmin"), cancellationToken);
+            return;
+        }
+
+        var row = await _settings.GetAsync(cancellationToken);
+        SocieteNom = row.SocieteNom;
+        SocieteAdresse = row.SocieteAdresse;
+        SocieteIce = row.SocieteICE;
+        SocieteMentionsLegales = row.SocieteMentionsLegales ?? string.Empty;
+        SocieteLogoPath = row.SocieteLogoPath;
+        BlocageStock = row.BlocageSiStockInsuffisant;
+        DevisValiditeJours = row.DevisValiditeJoursDefaut;
+        Devise = row.Devise;
+        SelectedLanguageOption = LanguageOptions.FirstOrDefault(o =>
+                                     string.Equals(o.Code, row.UiLanguage, StringComparison.OrdinalIgnoreCase))
+                                 ?? LanguageOptions[0];
+        try
+        {
+            var arr = JsonSerializer.Deserialize<List<decimal>>(row.TauxTVAJson);
+            TauxTvaText = arr == null ? "20" : string.Join(",", arr.Select(x => x.ToString(CultureInfo.InvariantCulture)));
+        }
+        catch
+        {
+            TauxTvaText = "20";
+        }
+
+        RefreshSettingsLabels();
+    }
+
+    [RelayCommand]
+    private async Task SaveAsync(CancellationToken cancellationToken)
+    {
+        if (!_session.CanAccessSettings) return;
+        List<decimal> taux;
+        try
+        {
+            taux = TauxTvaText.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
+                .Select(s => decimal.Parse(s, CultureInfo.InvariantCulture)).ToList();
+            if (taux.Count == 0) taux = [20];
+        }
+        catch
+        {
+            await _dialog.ShowErrorAsync(_locale.T("Settings_Title"), _locale.T("Settings_ErrTva"), cancellationToken);
+            return;
+        }
+
+        var lang = SelectedLanguageOption?.Code ?? "fr";
+        var row = new AppSettingsRow
+        {
+            Id = 1,
+            SocieteNom = SocieteNom,
+            SocieteAdresse = SocieteAdresse,
+            SocieteICE = SocieteIce,
+            SocieteMentionsLegales = string.IsNullOrWhiteSpace(SocieteMentionsLegales) ? null : SocieteMentionsLegales.Trim(),
+            SocieteLogoPath = SocieteLogoPath,
+            TauxTVAJson = JsonSerializer.Serialize(taux),
+            BlocageSiStockInsuffisant = BlocageStock,
+            DevisValiditeJoursDefaut = DevisValiditeJours,
+            Devise = Devise,
+            UiLanguage = lang
+        };
+        await _settings.SaveAsync(row, cancellationToken);
+        _locale.ApplyLanguage(lang);
+        RefreshSettingsLabels();
+        await _dialog.ShowInfoAsync(_locale.T("Settings_Title"), _locale.T("Settings_Saved"), cancellationToken);
+    }
+
+    [RelayCommand]
+    private async Task PickLogoAsync(CancellationToken cancellationToken)
+    {
+        var path = await _dialog.PickOpenFileAsync(_locale.T("Settings_Logo"), new[] { "*.png", "*.jpg", "*.jpeg" }, cancellationToken);
+        SocieteLogoPath = path;
+    }
+
+    [RelayCommand]
+    private async Task FormatSystemAsync(CancellationToken cancellationToken)
+    {
+        if (!_session.CanAccessSettings)
+        {
+            await _dialog.ShowErrorAsync(_locale.T("Settings_Title"), _locale.T("Settings_ErrAdmin"), cancellationToken);
+            return;
+        }
+
+        var password = await _dialog.PromptPasswordAsync(
+            _locale.T("Settings_Title"),
+            _locale.T("Settings_FormatAskPassword"),
+            cancellationToken);
+        if (string.IsNullOrWhiteSpace(password))
+            return;
+
+        await using var db = await _dbFactory.CreateDbContextAsync(cancellationToken);
+        var admin = await db.Users.AsNoTracking()
+            .FirstOrDefaultAsync(
+                x => x.Id == _session.UserId && x.Actif && x.Role == Modules.Auth.Models.Role.Admin,
+                cancellationToken);
+        if (admin is null || !BCrypt.Net.BCrypt.Verify(password, admin.PasswordHash))
+        {
+            await _dialog.ShowErrorAsync(_locale.T("Settings_Title"), _locale.T("Settings_FormatBadPassword"), cancellationToken);
+            return;
+        }
+
+        var confirm = await _dialog.ConfirmAsync(_locale.T("Settings_Title"), _locale.T("Settings_FormatConfirm"), cancellationToken);
+        if (!confirm)
+            return;
+
+        await ResetDatabaseAsync(cancellationToken);
+        CleanupAppDataFiles();
+        await _dialog.ShowInfoAsync(_locale.T("Settings_Title"), _locale.T("Settings_FormatDone"), cancellationToken);
+        await LoadAsync(cancellationToken);
+    }
+
+    private async Task ResetDatabaseAsync(CancellationToken cancellationToken)
+    {
+        await using var db = await _dbFactory.CreateDbContextAsync(cancellationToken);
+        await db.Database.EnsureDeletedAsync(cancellationToken);
+        await db.Database.EnsureCreatedAsync(cancellationToken);
+        DbSeeder.Seed(db);
+    }
+
+    private static void CleanupAppDataFiles()
+    {
+        var root = DatabasePath.GetDirectory();
+        var dbPath = Path.Combine(root, "data.db");
+
+        if (!Directory.Exists(root))
+            return;
+
+        foreach (var file in Directory.GetFiles(root, "*", SearchOption.AllDirectories))
+        {
+            if (string.Equals(file, dbPath, StringComparison.OrdinalIgnoreCase))
+                continue;
+
+            try { File.Delete(file); }
+            catch { }
+        }
+
+        foreach (var dir in Directory.GetDirectories(root, "*", SearchOption.AllDirectories)
+                     .OrderByDescending(x => x.Length))
+        {
+            try
+            {
+                if (!Directory.EnumerateFileSystemEntries(dir).Any())
+                    Directory.Delete(dir, false);
+            }
+            catch { }
+        }
+    }
+}
