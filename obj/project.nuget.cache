@@ -1,8 +1,8 @@
 {
   "version": 2,
-  "dgSpecHash": "TOnZQopTUmY=",
+  "dgSpecHash": "LBSk4X85Cv4=",
   "success": true,
-  "projectFilePath": "d:\\Fatorati\\GestionCommerciale\\GestionCommerciale.csproj",
+  "projectFilePath": "D:\\Fatorati\\GestionCommerciale\\GestionCommerciale.csproj",
   "expectedPackageFiles": [
     "C:\\Users\\yassin\\.nuget\\packages\\avalonia\\11.1.0\\avalonia.11.1.0.nupkg.sha512",
     "C:\\Users\\yassin\\.nuget\\packages\\avalonia.angle.windows.natives\\2.1.22045.20230930\\avalonia.angle.windows.natives.2.1.22045.20230930.nupkg.sha512",
