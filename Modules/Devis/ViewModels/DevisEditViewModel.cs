@@ -273,11 +273,10 @@ public partial class DevisEditViewModel : BaseViewModel
         try
         {
             await using var db = await _dbFactory.CreateDbContextAsync(cancellationToken);
-            var referenced = await db.BonsLivraison.AsNoTracking().AnyAsync(b => b.DevisId == id, cancellationToken)
-                || await db.Factures.AsNoTracking().AnyAsync(f => f.DevisId == id, cancellationToken);
-            if (referenced)
+            var blockedMsg = await DevisDeleteReferencedMessage.BuildIfBlockedAsync(db, id, _locale, cancellationToken);
+            if (blockedMsg != null)
             {
-                await _dialog.ShowErrorAsync(_locale.T("Devis_Title"), _locale.T("Devis_ErrDeleteReferenced"), cancellationToken);
+                await _dialog.ShowErrorAsync(_locale.T("Devis_Title"), blockedMsg, cancellationToken);
                 return;
             }
 

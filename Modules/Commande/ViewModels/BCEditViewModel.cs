@@ -7,6 +7,7 @@ using CommunityToolkit.Mvvm.Input;
 using GestionCommerciale.Modules.Auth.Services;
 using GestionCommerciale.Modules.Stock;
 using GestionCommerciale.Modules.Commande.Models;
+using GestionCommerciale.Modules.Reception.ViewModels;
 using GestionCommerciale.Modules.Tiers.Models;
 using GestionCommerciale.Shared.Database;
 using GestionCommerciale.Shared.Helpers;
@@ -56,6 +57,7 @@ public partial class BCEditViewModel : BaseViewModel
 
     [ObservableProperty] private string _btnBack = string.Empty;
     [ObservableProperty] private string _btnSave = string.Empty;
+    [ObservableProperty] private string _btnToBr = string.Empty;
     [ObservableProperty] private string _menuDeleteBc = string.Empty;
     [ObservableProperty] private string _lblSupplier = string.Empty;
     [ObservableProperty] private string _wmSupplierSearch = string.Empty;
@@ -118,6 +120,7 @@ public partial class BCEditViewModel : BaseViewModel
     {
         BtnBack = _locale.T("Btn_Back");
         BtnSave = _locale.T("Btn_Save");
+        BtnToBr = _locale.T("Btn_ToBR");
         MenuDeleteBc = _locale.T("BC_MenuDelete");
         LblSupplier = _locale.T("Lbl_Supplier");
         WmSupplierSearch = _locale.T("Wm_SearchSupplier");
@@ -173,9 +176,10 @@ public partial class BCEditViewModel : BaseViewModel
         try
         {
             await using var db = await _dbFactory.CreateDbContextAsync(cancellationToken);
-            if (await db.BonsReception.AsNoTracking().AnyAsync(r => r.BonCommandeId == id, cancellationToken))
+            var blockedMsg = await BonCommandeDeleteReferencedMessage.BuildIfBlockedAsync(db, id, _locale, cancellationToken);
+            if (blockedMsg != null)
             {
-                await _dialog.ShowErrorAsync(_locale.T("BC_Title"), _locale.T("BC_ErrDeleteReferenced"), cancellationToken);
+                await _dialog.ShowErrorAsync(_locale.T("BC_Title"), blockedMsg, cancellationToken);
                 return;
             }
 
@@ -423,6 +427,20 @@ public partial class BCEditViewModel : BaseViewModel
         {
             IsBusy = false;
         }
+    }
+
+    [RelayCommand]
+    private async Task ToBrAsync(CancellationToken cancellationToken)
+    {
+        if (BcId is not { } id)
+        {
+            await _dialog.ShowErrorAsync(_locale.T("BC_Title"), _locale.T("BC_ToBrNeedSave"), cancellationToken);
+            return;
+        }
+
+        var vm = _sp.GetRequiredService<BREditViewModel>();
+        await vm.LoadNewFromBonCommandeAsync(id, cancellationToken);
+        _workspace.Open(vm);
     }
 
     [RelayCommand]

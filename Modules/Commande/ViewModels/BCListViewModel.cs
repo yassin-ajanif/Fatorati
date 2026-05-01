@@ -147,9 +147,10 @@ public partial class BCListViewModel : BaseViewModel
         try
         {
             await using var db = await _dbFactory.CreateDbContextAsync(cancellationToken);
-            if (await db.BonsReception.AsNoTracking().AnyAsync(r => r.BonCommandeId == item.Id, cancellationToken))
+            var blockedMsg = await BonCommandeDeleteReferencedMessage.BuildIfBlockedAsync(db, item.Id, _locale, cancellationToken);
+            if (blockedMsg != null)
             {
-                await _dialog.ShowErrorAsync(_locale.T("BC_Title"), _locale.T("BC_ErrDeleteReferenced"), cancellationToken);
+                await _dialog.ShowErrorAsync(_locale.T("BC_Title"), blockedMsg, cancellationToken);
                 return;
             }
 

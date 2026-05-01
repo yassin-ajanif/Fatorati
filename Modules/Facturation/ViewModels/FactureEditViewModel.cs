@@ -96,7 +96,6 @@ public partial class FactureEditViewModel : BaseViewModel
 
     [ObservableProperty] private string _btnBack = string.Empty;
     [ObservableProperty] private string _btnSave = string.Empty;
-    [ObservableProperty] private string _btnAvoir = string.Empty;
     [ObservableProperty] private string _menuDeleteFacture = string.Empty;
     [ObservableProperty] private string _lblFactPayee = string.Empty;
     [ObservableProperty] private string _lblPaid = string.Empty;
@@ -162,7 +161,6 @@ public partial class FactureEditViewModel : BaseViewModel
     {
         BtnBack = _locale.T("Btn_Back");
         BtnSave = _locale.T("Btn_Save");
-        BtnAvoir = _locale.T("Btn_Avoir");
         MenuDeleteFacture = _locale.T("Fact_MenuDelete");
         LblClient = _locale.T("Lbl_Client");
         WmClientSearch = _locale.T("Wm_SearchClient");
@@ -735,15 +733,6 @@ public partial class FactureEditViewModel : BaseViewModel
         {
             IsBusy = false;
         }
-    }
-
-    [RelayCommand]
-    private void ToAvoir()
-    {
-        if (FactureId == null) return;
-        var vm = _sp.GetRequiredService<AvoirEditViewModel>();
-        vm.LoadNew(FactureId.Value);
-        _workspace.Open(vm);
     }
 
     [RelayCommand]

@@ -46,7 +46,6 @@ public partial class FactureListViewModel : BaseViewModel
 
     [ObservableProperty] private string _btnRefresh = string.Empty;
     [ObservableProperty] private string _btnNew = string.Empty;
-    [ObservableProperty] private string _btnExportCsv = string.Empty;
     [ObservableProperty] private string _btnPdf = string.Empty;
     [ObservableProperty] private string _wmFilterPayee = string.Empty;
     [ObservableProperty] private string _menuDeleteFacture = string.Empty;
@@ -69,7 +68,6 @@ public partial class FactureListViewModel : BaseViewModel
     {
         BtnRefresh = _locale.T("Btn_Refresh");
         BtnNew = _locale.T("Btn_NewFacture");
-        BtnExportCsv = _locale.T("Export_CsvPicker");
         BtnPdf = _locale.T("Btn_Pdf");
         WmFilterPayee = _locale.T("Fact_FilterPayee");
         LblPayeeFilterAll = _locale.T("Fact_FilterAll");
@@ -157,20 +155,6 @@ public partial class FactureListViewModel : BaseViewModel
         var vm = _sp.GetRequiredService<FactureEditViewModel>();
         vm.Load(Selected.Facture.Id);
         _workspace.Open(vm);
-    }
-
-    [RelayCommand]
-    private async Task ExportCsvAsync(CancellationToken cancellationToken)
-    {
-        var path = await _dialog.PickSaveFileAsync(_locale.T("Export_CsvPicker"), "factures.csv", new[] { "*.csv" }, cancellationToken);
-        if (path == null) return;
-        await using var db = await _dbFactory.CreateDbContextAsync(cancellationToken);
-        var list = await db.Factures.AsNoTracking().OrderByDescending(f => f.Date).Take(2000).ToListAsync(cancellationToken);
-        await using var w = new StreamWriter(path);
-        await w.WriteLineAsync("Numero;Date;ClientId;EstPayee");
-        foreach (var f in list)
-            await w.WriteLineAsync($"{f.Numero};{f.Date:yyyy-MM-dd};{f.ClientId};{f.EstPayee}");
-        await _dialog.ShowInfoAsync(_locale.T("Export_Csv"), _locale.T("Export_Done"), cancellationToken);
     }
 
     [RelayCommand]

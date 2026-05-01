@@ -152,9 +152,10 @@ public partial class BLListViewModel : BaseViewModel
         try
         {
             await using var db = await _dbFactory.CreateDbContextAsync(cancellationToken);
-            if (await db.Factures.AsNoTracking().AnyAsync(f => f.BLId == item.Id, cancellationToken))
+            var blockedMsg = await BonLivraisonDeleteReferencedMessage.BuildIfBlockedAsync(db, item.Id, _locale, cancellationToken);
+            if (blockedMsg != null)
             {
-                await _dialog.ShowErrorAsync(_locale.T("BL_DlgShort"), _locale.T("BL_ErrDeleteReferenced"), cancellationToken);
+                await _dialog.ShowErrorAsync(_locale.T("BL_DlgShort"), blockedMsg, cancellationToken);
                 return;
             }
 

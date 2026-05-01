@@ -9,7 +9,6 @@
     <StackPanel Orientation="Horizontal" Spacing="8">
       <Button Content="{Binding BtnRefresh}" Command="{Binding LoadCommand}"/>
       <Button Content="{Binding BtnNew}" Command="{Binding NewFactureCommand}"/>
-      <Button Content="{Binding BtnExportCsv}" Command="{Binding ExportCsvCommand}"/>
       <Button Content="{Binding BtnPdf}" Command="{Binding ExportPdfCommand}"/>
       <ComboBox Width="220" PlaceholderText="{Binding WmFilterPayee}" SelectedIndex="{Binding PayeeFilterIndex}">
         <ComboBoxItem>
