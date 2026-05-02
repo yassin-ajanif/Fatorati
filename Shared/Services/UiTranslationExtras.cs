@@ -164,7 +164,7 @@ internal static class UiTranslationExtras
         ["Fact_NewNumPlaceholder"] = ("(nouvelle)", "(جديدة)"),
         ["Avoir_DraftPlaceholder"] = ("(brouillon)", "(مسودة)"),
 
-        ["Login_AppTitle"] = ("Gestion commerciale", "إدارة تجارية"),
+        ["Login_AppTitle"] = ("faturati", "faturati"),
         ["Login_Subtitle"] = ("Connexion", "تسجيل الدخول"),
         ["Users_FormHint"] = ("Nouvel utilisateur ou modifier la sélection", "مستخدم جديد أو تعديل المحدد"),
 

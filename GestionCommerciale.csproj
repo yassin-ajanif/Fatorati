@@ -8,6 +8,7 @@
     <ApplicationManifest>app.manifest</ApplicationManifest>
     <AvaloniaUseCompiledBindingsByDefault>true</AvaloniaUseCompiledBindingsByDefault>
     <RootNamespace>GestionCommerciale</RootNamespace>
+    <ApplicationIcon>Assets\faturati.ico</ApplicationIcon>
   </PropertyGroup>
 
   <!-- IDE / dotnet-watch C# hot reload (XAML uses HotAvalonia in Debug). -->

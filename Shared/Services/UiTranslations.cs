@@ -53,7 +53,7 @@ public static class UiTranslations
 
     private static readonly IReadOnlyDictionary<string, (string Fr, string Ar)> Vm = new Dictionary<string, (string, string)>
     {
-        ["Win_AppTitle"] = ("Gestion commerciale", "إدارة تجارية"),
+        ["Win_AppTitle"] = ("faturati", "faturati"),
         ["Home_Welcome"] = ("Bienvenue. Utilisez le menu pour accéder aux modules.", "مرحباً. استخدم القائمة للوصول إلى الوحدات."),
         ["Login_Title"] = ("Connexion", "تسجيل الدخول"),
         ["Login_ErrBadCreds"] = ("Email ou mot de passe incorrect.", "البريد أو كلمة المرور غير صحيحة."),
