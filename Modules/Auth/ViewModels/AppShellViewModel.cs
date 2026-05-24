@@ -5,6 +5,7 @@ using GestionCommerciale.Modules.Devis.ViewModels;
 using GestionCommerciale.Modules.Facturation.ViewModels;
 using GestionCommerciale.Modules.Livraison.ViewModels;
 using GestionCommerciale.Modules.Commande.ViewModels;
+using GestionCommerciale.Modules.Pos.ViewModels;
 using GestionCommerciale.Modules.Reception.ViewModels;
 using GestionCommerciale.Modules.Stock.ViewModels;
 using GestionCommerciale.Modules.Tiers.Models;
@@ -49,6 +50,7 @@ public partial class AppShellViewModel : BaseViewModel
     [ObservableProperty] private string _userLabel = string.Empty;
 
     [ObservableProperty] private string _navHome = string.Empty;
+    [ObservableProperty] private string _navPos = string.Empty;
     [ObservableProperty] private string _navVente = string.Empty;
     [ObservableProperty] private string _navAchat = string.Empty;
     [ObservableProperty] private string _navClients = string.Empty;
@@ -64,6 +66,7 @@ public partial class AppShellViewModel : BaseViewModel
     [ObservableProperty] private string _navSettings = string.Empty;
 
     [ObservableProperty] private bool _isNavHomeActive;
+    [ObservableProperty] private bool _isNavPosActive;
     [ObservableProperty] private bool _isNavClientsActive;
     [ObservableProperty] private bool _isNavFournisseursActive;
     [ObservableProperty] private bool _isNavDevisActive;
@@ -78,6 +81,7 @@ public partial class AppShellViewModel : BaseViewModel
     private void RefreshShellLabels()
     {
         NavHome = _locale.T("Nav_Home");
+        NavPos = _locale.T("Nav_Pos");
         NavVente = _locale.T("Nav_Vente");
         NavAchat = _locale.T("Nav_Achat");
         NavClients = _locale.T("Nav_Clients");
@@ -130,6 +134,9 @@ public partial class AppShellViewModel : BaseViewModel
     private void GoHome() => _workspace.Open(_sp.GetRequiredService<HomeViewModel>());
 
     [RelayCommand]
+    private void GoPos() => _workspace.Open(_sp.GetRequiredService<PosViewModel>());
+
+    [RelayCommand]
     private void GoClients()
     {
         var vm = _sp.GetRequiredService<TiersListViewModel>();
@@ -178,6 +185,7 @@ public partial class AppShellViewModel : BaseViewModel
     {
         var p = _workspace.CurrentPage;
         IsNavHomeActive = p is HomeViewModel;
+        IsNavPosActive = p is PosViewModel;
         IsNavClientsActive = p is TiersListViewModel tl && tl.Scope == TiersListScope.Clients
             || p is TiersDetailViewModel td && td.ListScope == TiersListScope.Clients;
         IsNavFournisseursActive = p is TiersListViewModel tiersList && tiersList.Scope == TiersListScope.Fournisseurs

@@ -6,6 +6,7 @@ using GestionCommerciale.Modules.Facturation.ViewModels;
 using GestionCommerciale.Modules.Livraison.Services;
 using GestionCommerciale.Modules.Livraison.ViewModels;
 using GestionCommerciale.Modules.Commande.ViewModels;
+using GestionCommerciale.Modules.Pos.ViewModels;
 using GestionCommerciale.Modules.Reception.Services;
 using GestionCommerciale.Modules.Reception.ViewModels;
 using GestionCommerciale.Modules.Reporting.ViewModels;
@@ -49,6 +50,7 @@ public static class DependencyInjection
         services.AddTransient<LoginViewModel>();
         services.AddTransient<AppShellViewModel>();
         services.AddTransient<HomeViewModel>();
+        services.AddTransient<PosViewModel>();
         services.AddTransient<TiersListViewModel>();
         services.AddTransient<TiersDetailViewModel>();
         services.AddTransient<StockMainViewModel>();

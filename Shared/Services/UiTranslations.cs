@@ -8,6 +8,7 @@ public static class UiTranslations
     private static readonly IReadOnlyDictionary<string, (string Fr, string Ar)> Map = new Dictionary<string, (string, string)>
     {
         ["Nav_Home"] = ("Accueil", "الرئيسية"),
+        ["Nav_Pos"] = ("Point de vente", "نقطة البيع"),
         ["Nav_Vente"] = ("Vente", "المبيعات"),
         ["Nav_Achat"] = ("Achat", "المشتريات"),
         ["Nav_Clients"] = ("Clients", "العملاء"),
