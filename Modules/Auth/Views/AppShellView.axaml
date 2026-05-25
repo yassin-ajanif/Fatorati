@@ -89,6 +89,10 @@
                     Background="{Binding IsNavProduitsActive, Converter={x:Static conv:NavTabHighlightConverter.Instance}, ConverterParameter=bg}"
                     Foreground="{Binding IsNavProduitsActive, Converter={x:Static conv:NavTabHighlightConverter.Instance}, ConverterParameter=fg}"
                     BorderBrush="{Binding IsNavProduitsActive, Converter={x:Static conv:NavTabHighlightConverter.Instance}, ConverterParameter=border}"/>
+            <Button Content="{Binding NavReports}" Command="{Binding GoReportsCommand}" HorizontalAlignment="Stretch" IsVisible="{Binding ShowNavReports}"
+                    Background="{Binding IsNavReportsActive, Converter={x:Static conv:NavTabHighlightConverter.Instance}, ConverterParameter=bg}"
+                    Foreground="{Binding IsNavReportsActive, Converter={x:Static conv:NavTabHighlightConverter.Instance}, ConverterParameter=fg}"
+                    BorderBrush="{Binding IsNavReportsActive, Converter={x:Static conv:NavTabHighlightConverter.Instance}, ConverterParameter=border}"/>
             <Button Content="{Binding NavSettings}" Command="{Binding GoSettingsCommand}" HorizontalAlignment="Stretch" IsVisible="{Binding ShowNavSettings}"
                     Background="{Binding IsNavSettingsActive, Converter={x:Static conv:NavTabHighlightConverter.Instance}, ConverterParameter=bg}"
                     Foreground="{Binding IsNavSettingsActive, Converter={x:Static conv:NavTabHighlightConverter.Instance}, ConverterParameter=fg}"

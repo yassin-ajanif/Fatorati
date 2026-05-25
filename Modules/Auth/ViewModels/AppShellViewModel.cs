@@ -7,6 +7,7 @@ using GestionCommerciale.Modules.Livraison.ViewModels;
 using GestionCommerciale.Modules.Commande.ViewModels;
 using GestionCommerciale.Modules.Pos.ViewModels;
 using GestionCommerciale.Modules.Reception.ViewModels;
+using GestionCommerciale.Modules.Reporting.ViewModels;
 using GestionCommerciale.Modules.Stock.ViewModels;
 using GestionCommerciale.Modules.Tiers.Models;
 using GestionCommerciale.Modules.Tiers.ViewModels;
@@ -64,6 +65,7 @@ public partial class AppShellViewModel : BaseViewModel
     [ObservableProperty] private string _navStockAdmin = string.Empty;
     [ObservableProperty] private string _navStock = string.Empty;
     [ObservableProperty] private string _navProduits = string.Empty;
+    [ObservableProperty] private string _navReports = string.Empty;
     [ObservableProperty] private string _navSettings = string.Empty;
 
     [ObservableProperty] private bool _isNavHomeActive;
@@ -78,6 +80,7 @@ public partial class AppShellViewModel : BaseViewModel
     [ObservableProperty] private bool _isNavBrActive;
     [ObservableProperty] private bool _isNavStockActive;
     [ObservableProperty] private bool _isNavProduitsActive;
+    [ObservableProperty] private bool _isNavReportsActive;
     [ObservableProperty] private bool _isNavSettingsActive;
 
     private void RefreshShellLabels()
@@ -97,6 +100,7 @@ public partial class AppShellViewModel : BaseViewModel
         NavStockAdmin = _locale.T("Nav_StockAdmin");
         NavStock = _locale.T("Nav_Stock");
         NavProduits = _locale.T("Nav_Produits");
+        NavReports = _locale.T("Nav_Reports");
         NavSettings = _locale.T("Nav_Settings");
         Title = NavHome;
     }
@@ -132,6 +136,7 @@ public partial class AppShellViewModel : BaseViewModel
     public bool ShowNavBC => _session.CanAccessBC;
     public bool ShowNavFactures => _session.CanAccessFacturation;
     public bool ShowNavAvoirs => _session.CanAccessAvoir;
+    public bool ShowNavReports => _session.CanAccessReporting;
     public bool ShowNavSettings => _session.CanAccessSettings;
 
     [RelayCommand]
@@ -161,6 +166,14 @@ public partial class AppShellViewModel : BaseViewModel
 
     [RelayCommand]
     private void GoProduits() => _workspace.Open(_sp.GetRequiredService<ProduitsViewModel>());
+
+    [RelayCommand]
+    private void GoReports()
+    {
+        var vm = _sp.GetRequiredService<ReportsListViewModel>();
+        _workspace.Open(vm);
+        vm.GoSaleByProductCommand.Execute(null);
+    }
 
     [RelayCommand]
     private void GoDevis() => _workspace.Open(_sp.GetRequiredService<DevisListViewModel>());
@@ -205,6 +218,7 @@ public partial class AppShellViewModel : BaseViewModel
         IsNavBrActive = p is BRListViewModel or BREditViewModel;
         IsNavStockActive = p is StockMainViewModel;
         IsNavProduitsActive = p is ProduitsViewModel;
+        IsNavReportsActive = p is ReportsListViewModel;
         IsNavSettingsActive = p is SettingsViewModel;
     }
 }

@@ -10,6 +10,7 @@ using GestionCommerciale.Modules.Pos.Services;
 using GestionCommerciale.Modules.Pos.ViewModels;
 using GestionCommerciale.Modules.Reception.Services;
 using GestionCommerciale.Modules.Reception.ViewModels;
+using GestionCommerciale.Modules.Reporting.Services;
 using GestionCommerciale.Modules.Reporting.ViewModels;
 using GestionCommerciale.Modules.Stock.Services;
 using GestionCommerciale.Modules.Stock.ViewModels;
@@ -46,6 +47,7 @@ public static class DependencyInjection
         services.AddSingleton<IBonReceptionWorkflowService, BonReceptionWorkflowService>();
         services.AddSingleton<IFactureWorkflowService, FactureWorkflowService>();
         services.AddSingleton<IAvoirWorkflowService, AvoirWorkflowService>();
+        services.AddSingleton<IReportService, ReportService>();
         services.AddSingleton<ILicenseService, LicenseService>();
         services.AddSingleton<IPdfService, PdfService>();
         services.AddTransient<MainWindowViewModel>();
@@ -70,6 +72,7 @@ public static class DependencyInjection
         services.AddTransient<AvoirListViewModel>();
         services.AddTransient<AvoirEditViewModel>();
         services.AddTransient<ReportingViewModel>();
+        services.AddTransient<ReportsListViewModel>();
         services.AddTransient<SettingsViewModel>();
 
         return services;
