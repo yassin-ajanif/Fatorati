@@ -18,6 +18,9 @@ public class AppSettingsRow
     /// <summary>Interface language: <c>fr</c> (default) or <c>ar</c> (RTL).</summary>
     public string UiLanguage { get; set; } = "fr";
 
+    /// <summary>Enables the on-screen virtual keyboard for touch-screen POS use.</summary>
+    public bool EnableVirtualKeyboard { get; set; }
+
     /// <summary>UTC date when the 3-day trial was first started (null = not started).</summary>
     public DateTime? TrialStartedAt { get; set; }
 

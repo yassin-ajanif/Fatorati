@@ -57,6 +57,15 @@ public partial class PosViewModel : BaseViewModel
             OnPropertyChanged(nameof(WmClientSearch));
         };
         _ = LoadClientsAsync();
+        _ = LoadSettingsAsync();
+    }
+
+    [ObservableProperty] private bool _showKeyboard;
+
+    private async Task LoadSettingsAsync()
+    {
+        var cfg = await _settings.GetAsync();
+        ShowKeyboard = cfg.EnableVirtualKeyboard;
     }
 
     public ObservableCollection<ProductSearchRow> SearchResults { get; } = [];

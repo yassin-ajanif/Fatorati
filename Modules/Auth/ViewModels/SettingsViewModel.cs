@@ -47,6 +47,7 @@ public partial class SettingsViewModel : BaseViewModel
     [ObservableProperty] private string _societeMentionsLegales = string.Empty;
     [ObservableProperty] private string _tauxTvaText = "20";
     [ObservableProperty] private bool _blocageStock = true;
+    [ObservableProperty] private bool _enableVirtualKeyboard;
     [ObservableProperty] private int _devisValiditeJours = 30;
     [ObservableProperty] private string _devise = "MAD";
     [ObservableProperty] private UiLanguageOption? _selectedLanguageOption;
@@ -63,6 +64,7 @@ public partial class SettingsViewModel : BaseViewModel
     [ObservableProperty] private string _lblBl = string.Empty;
     [ObservableProperty] private string _lblBlocageStock = string.Empty;
     [ObservableProperty] private string _lblDevisJours = string.Empty;
+    [ObservableProperty] private string _lblEnableVirtualKeyboard = string.Empty;
     [ObservableProperty] private string _lblDevise = string.Empty;
     [ObservableProperty] private string _lblUiLanguage = string.Empty;
     [ObservableProperty] private string _lblDangerZone = string.Empty;
@@ -90,6 +92,7 @@ public partial class SettingsViewModel : BaseViewModel
         LblBl = _locale.T("Settings_BL");
         LblBlocageStock = _locale.T("Settings_BlocageStock");
         LblDevisJours = _locale.T("Settings_DevisJours");
+        LblEnableVirtualKeyboard = _locale.T("Settings_EnableVirtualKeyboard");
         LblDevise = _locale.T("Settings_Devise");
         LblUiLanguage = _locale.T("Settings_UiLanguage");
         LblDangerZone = _locale.T("Settings_DangerZone");
@@ -119,6 +122,7 @@ public partial class SettingsViewModel : BaseViewModel
         SocieteMentionsLegales = row.SocieteMentionsLegales ?? string.Empty;
         SocieteLogoPath = row.SocieteLogoPath;
         BlocageStock = row.BlocageSiStockInsuffisant;
+        EnableVirtualKeyboard = row.EnableVirtualKeyboard;
         DevisValiditeJours = row.DevisValiditeJoursDefaut;
         Devise = row.Devise;
         SelectedLanguageOption = LanguageOptions.FirstOrDefault(o =>
@@ -165,6 +169,7 @@ public partial class SettingsViewModel : BaseViewModel
             SocieteLogoPath = SocieteLogoPath,
             TauxTVAJson = JsonSerializer.Serialize(taux),
             BlocageSiStockInsuffisant = BlocageStock,
+            EnableVirtualKeyboard = EnableVirtualKeyboard,
             DevisValiditeJoursDefaut = DevisValiditeJours,
             Devise = Devise,
             UiLanguage = lang

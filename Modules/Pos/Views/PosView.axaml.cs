@@ -1,5 +1,7 @@
+using System.ComponentModel;
 using Avalonia.Controls;
 using Avalonia.Input;
+using Avalonia.Interactivity;
 using Avalonia.Markup.Xaml;
 using GestionCommerciale.Modules.Pos.ViewModels;
 
@@ -7,12 +9,54 @@ namespace GestionCommerciale.Modules.Pos.Views;
 
 public partial class PosView : UserControl
 {
+    private InputElement? _focusedInput;
+    private bool _keyboardEnabled;
+    private bool _isNumericTarget;
+    private string _numBuffer = string.Empty;
+
     public PosView()
     {
         InitializeComponent();
     }
 
     private void InitializeComponent() => AvaloniaXamlLoader.Load(this);
+
+    private void OnOverlayPointerPressed(object? sender, Avalonia.Input.PointerPressedEventArgs e)
+    {
+        HideKeyboard();
+    }
+
+    private void OnSearchGotFocus(object? sender, GotFocusEventArgs e)
+    {
+        _isNumericTarget = false;
+        _numBuffer = string.Empty;
+        ShowKeyboard();
+    }
+
+    private void OnNumericGotFocus(object? sender, GotFocusEventArgs e)
+    {
+        _isNumericTarget = true;
+        _focusedInput = sender as InputElement;
+        _numBuffer = string.Empty;
+        ShowKeyboard();
+    }
+
+    private void ShowKeyboard()
+    {
+        if (!_keyboardEnabled) return;
+        var kb = this.FindControl<Shared.Controls.VirtualKeyboard>("PosKeyboard");
+        if (kb == null) return;
+        kb.IsAlphaVisible = !_isNumericTarget;
+        var overlay = this.FindControl<Grid>("KeyboardOverlay");
+        if (overlay != null) overlay.IsVisible = true;
+    }
+
+    private void HideKeyboard()
+    {
+        var overlay = this.FindControl<Grid>("KeyboardOverlay");
+        if (overlay != null) overlay.IsVisible = false;
+        _focusedInput = null;
+    }
 
     private void OnSearchTextChanged(object? sender, TextChangedEventArgs e)
     {
@@ -34,4 +78,76 @@ public partial class PosView : UserControl
         vm.SearchText = string.Empty;
     }
 
+    protected override void OnDataContextChanged(EventArgs e)
+    {
+        base.OnDataContextChanged(e);
+        if (DataContext is PosViewModel vm)
+        {
+            _keyboardEnabled = vm.ShowKeyboard;
+            vm.PropertyChanged += OnVmPropertyChanged;
+        }
+    }
+
+    private void OnVmPropertyChanged(object? sender, PropertyChangedEventArgs e)
+    {
+        if (e.PropertyName == nameof(PosViewModel.ShowKeyboard) && DataContext is PosViewModel vm)
+            _keyboardEnabled = vm.ShowKeyboard;
+    }
+
+    private void OnKeyboardKeyPressed(string ch)
+    {
+        if (_isNumericTarget && _focusedInput is NumericUpDown nud)
+        {
+            if (ch == "." && _numBuffer.Contains("."))
+                return;
+            if (_numBuffer.Length < 16)
+                _numBuffer += ch;
+            if (decimal.TryParse(_numBuffer, System.Globalization.NumberStyles.Any,
+                    System.Globalization.CultureInfo.InvariantCulture, out var val))
+                nud.Value = val;
+        }
+        else if (!_isNumericTarget && DataContext is PosViewModel vm)
+        {
+            vm.SearchText += ch;
+        }
+    }
+
+    private void OnKeyboardBackspace()
+    {
+        if (_isNumericTarget && _focusedInput is NumericUpDown nud)
+        {
+            if (_numBuffer.Length > 0)
+                _numBuffer = _numBuffer[..^1];
+            if (_numBuffer.Length == 0)
+            {
+                nud.Value = 0;
+                return;
+            }
+            if (decimal.TryParse(_numBuffer, System.Globalization.NumberStyles.Any,
+                    System.Globalization.CultureInfo.InvariantCulture, out var val))
+                nud.Value = val;
+        }
+        else if (!_isNumericTarget && DataContext is PosViewModel vm && vm.SearchText.Length > 0)
+        {
+            vm.SearchText = vm.SearchText[..^1];
+        }
+    }
+
+    private void OnKeyboardClear()
+    {
+        if (_isNumericTarget && _focusedInput is NumericUpDown nud)
+        {
+            _numBuffer = string.Empty;
+            nud.Value = 0;
+        }
+        else if (!_isNumericTarget && DataContext is PosViewModel vm)
+        {
+            vm.SearchText = string.Empty;
+        }
+    }
+
+    private void OnKeyboardClose()
+    {
+        HideKeyboard();
+    }
 }

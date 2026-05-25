@@ -41,6 +41,7 @@ public static class UiTranslations
         ["Settings_BlocageStock"] = ("Bloquer BL si stock insuffisant", "منع التسليم عند نقص المخزون"),
         ["Settings_DevisJours"] = ("Validité des devis (jours)", "صلاحية العروض (أيام)"),
         ["Settings_Devise"] = ("Devise", "العملة"),
+        ["Settings_EnableVirtualKeyboard"] = ("Clavier virtuel tactile (POS)", "لوحة مفاتيح تعمل باللمس (نقطة البيع)"),
         ["Settings_UiLanguage"] = ("Langue de l'interface", "لغة الواجهة"),
         ["Settings_DangerZone"] = ("Zone dangereuse", "منطقة خطرة"),
         ["Settings_BtnFormatSystem"] = ("Formater tout le système", "تهيئة النظام بالكامل"),
