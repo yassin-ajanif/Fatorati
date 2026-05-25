@@ -45,7 +45,7 @@
             <ItemsControl.ItemTemplate>
               <DataTemplate x:DataType="vm:CartLineRow">
                 <Border Padding="6 4" Margin="0 0 0 4" CornerRadius="6" BorderThickness="1">
-                  <Grid ColumnDefinitions="*,Auto,Auto,Auto,Auto" VerticalAlignment="Center">
+                  <Grid ColumnDefinitions="*,Auto,Auto,Auto,Auto,Auto" VerticalAlignment="Center">
                     <StackPanel Grid.Column="0" Margin="0,0,8,0">
                       <TextBlock Text="{Binding Designation}" FontWeight="SemiBold" FontSize="13"/>
                       <TextBlock Text="{Binding Reference}" Classes="subtle" FontSize="11"/>
@@ -57,16 +57,24 @@
                       <Button Content="-" FontSize="20" FontWeight="Bold" Classes="primary" Padding="8,0"
                               Command="{Binding $parent[UserControl].((vm:PosViewModel)DataContext).DecreaseQtyCommand}"
                               CommandParameter="{Binding .}"/>
-                      <TextBlock Text="{Binding Quantite}" VerticalAlignment="Center" HorizontalAlignment="Center"
-                                 FontWeight="SemiBold" Width="36" TextAlignment="Center" FontSize="15"/>
-<Button Content="+" FontSize="20" FontWeight="Bold" Classes="primary" Padding="8,0"
+                      <NumericUpDown Value="{Binding Quantite}" FormatString="N2" Minimum="0" ShowButtonSpinner="False"
+                                     MinWidth="60" MinHeight="28" FontSize="14" FontWeight="SemiBold"
+                                     HorizontalAlignment="Center"/>
+                      <Button Content="+" FontSize="20" FontWeight="Bold" Classes="primary" Padding="8,0"
                               Command="{Binding $parent[UserControl].((vm:PosViewModel)DataContext).IncreaseQtyCommand}"
                               CommandParameter="{Binding .}"/>
                     </StackPanel>
-                    <TextBlock Grid.Column="3" Text="{Binding MontantTtc, StringFormat='{}{0:N2} DH'}"
+                    <StackPanel Grid.Column="3" Orientation="Horizontal" Spacing="2" VerticalAlignment="Center" Margin="0,0,4,0">
+                      <NumericUpDown Value="{Binding RemisePct}" FormatString="N0" Minimum="0" Maximum="100"
+                                     MinWidth="40" MinHeight="28" FontSize="11"/>
+                      <TextBlock Text="%" VerticalAlignment="Center" FontSize="11" Classes="subtle"/>
+                      <NumericUpDown Value="{Binding RemiseMontant}" FormatString="N2" Minimum="0"
+                                     MinWidth="60" MinHeight="28" FontSize="11"/>
+                    </StackPanel>
+                    <TextBlock Grid.Column="4" Text="{Binding MontantTtc, StringFormat='{}{0:N2} DH'}"
                                VerticalAlignment="Center" FontWeight="Bold" FontSize="14"
                                HorizontalAlignment="Right" Margin="0,0,8,0"/>
-<Button Grid.Column="4" MinWidth="32" Height="32" FontSize="16" Padding="6,0"
+<Button Grid.Column="5" MinWidth="32" Height="32" FontSize="16" Padding="6,0"
         Content="🗑"
                             Command="{Binding $parent[UserControl].((vm:PosViewModel)DataContext).RemoveProductCommand}"
                             CommandParameter="{Binding .}"/>
@@ -137,28 +145,40 @@
                   MinWidth="100" MinHeight="28" Margin="8,0,0,0" FontSize="12"/>
         </Grid>
 
-        <!-- Row 1: Total + change + actions -->
-        <Grid Grid.Row="1" ColumnDefinitions="Auto,Auto,Auto,*,Auto,Auto,Auto">
-          <StackPanel Grid.Column="0" VerticalAlignment="Center" Margin="0,0,16,0">
+        <!-- Row 1: Discount + Total + change + actions -->
+        <Grid Grid.Row="1" ColumnDefinitions="Auto,Auto,Auto,Auto,Auto,*,Auto,Auto,Auto">
+          <StackPanel Grid.Column="0" VerticalAlignment="Center" Margin="0,0,12,0">
+            <TextBlock Text="{Binding LabelRemiseGlobale}" FontSize="11" Classes="subtle"/>
+            <NumericUpDown Value="{Binding RemiseGlobale}" FormatString="N2" Minimum="0" Maximum="100"
+                           MinWidth="70" MinHeight="32" FontSize="14" FontWeight="SemiBold"/>
+          </StackPanel>
+
+          <StackPanel Grid.Column="1" VerticalAlignment="Center" Margin="0,0,16,0">
+            <TextBlock Text="{Binding LabelRemiseGlobaleMontant}" FontSize="11" Classes="subtle"/>
+            <NumericUpDown Value="{Binding RemiseGlobaleMontant}" FormatString="N2" Minimum="0"
+                           MinWidth="90" MinHeight="32" FontSize="14" FontWeight="SemiBold"/>
+          </StackPanel>
+
+          <StackPanel Grid.Column="2" VerticalAlignment="Center" Margin="0,0,16,0">
             <TextBlock Text="{Binding TotalLabel}" FontSize="13" Classes="subtle"/>
             <TextBlock Text="{Binding TotalTtc, StringFormat='{}{0:N2} DH'}" FontWeight="Bold" FontSize="22"/>
           </StackPanel>
 
-          <StackPanel Grid.Column="1" VerticalAlignment="Center" Margin="0,0,16,0">
+          <StackPanel Grid.Column="3" VerticalAlignment="Center" Margin="0,0,16,0">
             <TextBlock Text="{Binding LabelMontantRecu}" FontSize="11" Classes="subtle"/>
             <NumericUpDown Value="{Binding MontantRecu}" FormatString="N2" Minimum="0"
                            MinWidth="110" MinHeight="32" FontSize="14" FontWeight="SemiBold"/>
           </StackPanel>
 
-          <StackPanel Grid.Column="2" VerticalAlignment="Center" Margin="0,0,24,0">
+          <StackPanel Grid.Column="4" VerticalAlignment="Center" Margin="0,0,24,0">
             <TextBlock Text="{Binding LabelResteARendre}" FontSize="11" Classes="subtle"/>
             <TextBlock Text="{Binding ResteARendre, StringFormat='{}{0:N2} DH'}"
                        FontWeight="Bold" FontSize="20"/>
           </StackPanel>
 
-          <Button Grid.Column="4" Content="{Binding BtnClearCart}" Command="{Binding ClearCartCommand}"
+          <Button Grid.Column="6" Content="{Binding BtnClearCart}" Command="{Binding ClearCartCommand}"
                   MinWidth="100" Margin="0,0,12,0"/>
-          <Button Grid.Column="5" Content="{Binding BtnCheckout}" Command="{Binding CheckoutCommand}"
+          <Button Grid.Column="7" Content="{Binding BtnCheckout}" Command="{Binding CheckoutCommand}"
                   MinWidth="100" Classes="primary" IsEnabled="{Binding HasItems}"/>
         </Grid>
       </Grid>

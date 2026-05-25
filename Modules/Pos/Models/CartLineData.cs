@@ -7,4 +7,5 @@ public class CartLineData
     public decimal Quantite { get; set; }
     public decimal PrixUnitaireHt { get; set; }
     public decimal TauxTva { get; set; }
+    public decimal Remise { get; set; }
 }

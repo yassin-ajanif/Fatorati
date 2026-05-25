@@ -63,7 +63,7 @@ public sealed class PosService : IPosService
         return db.Tiers.Local.First(t => t.Nom == DbSeeder.DefaultClientName).Id;
     }
 
-    public async Task<Facture> CheckoutAsync(int clientId, List<CartLineData> cart, IReadOnlyList<(ModePaiement Mode, decimal Montant)> payments, CancellationToken cancellationToken = default)
+    public async Task<Facture> CheckoutAsync(int clientId, List<CartLineData> cart, IReadOnlyList<(ModePaiement Mode, decimal Montant)> payments, decimal remiseGlobale = 0, CancellationToken cancellationToken = default)
     {
         await using var db = await _dbFactory.CreateDbContextAsync(cancellationToken);
         await using var trx = await db.Database.BeginTransactionAsync(cancellationToken);
@@ -108,6 +108,7 @@ public sealed class PosService : IPosService
             Date = DateTime.Today,
             DateEcheance = DateTime.Today.AddDays(30),
             EstPayee = payments.All(p => p.Mode == ModePaiement.Especes),
+            RemiseGlobale = remiseGlobale,
             Note = "Vente POS"
         };
         db.Factures.Add(facture);
@@ -122,7 +123,7 @@ public sealed class PosService : IPosService
                 Designation = line.Designation,
                 Quantite = line.Quantite,
                 PrixUnitaireHT = line.PrixUnitaireHt,
-                Remise = 0,
+                Remise = line.Remise,
                 TauxTVA = line.TauxTva,
                 Conditionnement = string.Empty
             });

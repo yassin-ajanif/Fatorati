@@ -71,9 +71,6 @@ public partial class PosViewModel : BaseViewModel
 
     public bool HasItems => Cart.Count > 0;
 
-    public decimal TotalHt => Cart.Sum(l => l.MontantHt);
-    public decimal TotalTtc => Cart.Sum(l => l.MontantTtc);
-
     public string SearchWatermark => _locale.T("Wm_SearchProducts");
     public string CartTitle => _locale.T("Nav_Pos");
     public string TotalLabel => "Total TTC";
@@ -85,8 +82,25 @@ public partial class PosViewModel : BaseViewModel
     public string LabelResteARendre => "Reste à rendre";
 
     [ObservableProperty] private decimal _montantRecu;
+    [ObservableProperty] private decimal _remiseGlobale;
+    [ObservableProperty] private decimal _remiseGlobaleMontant;
 
+    public decimal TotalHtBrut => Cart.Sum(l => l.MontantHt);
+    public decimal TotalTtcBrut => Cart.Sum(l => l.MontantTtc);
+    public decimal TotalHt => AjusterRemiseGlobale(TotalHtBrut);
+    public decimal TotalTtc => AjusterRemiseGlobale(TotalTtcBrut);
     public decimal ResteARendre => MontantRecu >= TotalTtc ? MontantRecu - TotalTtc : 0;
+    public string LabelRemiseGlobale => "Remise %";
+    public string LabelRemiseGlobaleMontant => "Remise montant";
+
+    private decimal AjusterRemiseGlobale(decimal montant)
+    {
+        if (RemiseGlobale > 0)
+            montant *= 1 - RemiseGlobale / 100m;
+        if (RemiseGlobaleMontant > 0)
+            montant -= RemiseGlobaleMontant;
+        return Math.Max(montant, 0);
+    }
 
     private void SyncPaymentSplits()
     {
@@ -195,6 +209,8 @@ public partial class PosViewModel : BaseViewModel
     {
         Cart.Clear();
         MontantRecu = 0;
+        RemiseGlobale = 0;
+        RemiseGlobaleMontant = 0;
         NotifyTotals();
     }
 
@@ -218,7 +234,8 @@ public partial class PosViewModel : BaseViewModel
             Designation = l.Designation,
             Quantite = l.Quantite,
             PrixUnitaireHt = l.PrixUnitaireHt,
-            TauxTva = l.TauxTva
+            TauxTva = l.TauxTva,
+            Remise = l.EffectiveRemisePct
         }).ToList();
 
         var totalPaiements = PaymentSplits.Sum(p => p.Montant);
@@ -229,12 +246,14 @@ public partial class PosViewModel : BaseViewModel
         }
 
         var payments = PaymentSplits.Where(p => p.Montant > 0).Select(p => (p.Mode, p.Montant)).ToList();
-        var facture = await _posService.CheckoutAsync(clientId, cartData, payments);
+        var facture = await _posService.CheckoutAsync(clientId, cartData, payments, RemiseGlobale);
 
         Cart.Clear();
         SelectedClient = null;
         PaymentSplits.Clear();
         MontantRecu = 0;
+        RemiseGlobale = 0;
+        RemiseGlobaleMontant = 0;
         NotifyTotals();
 
         await _dialog.ShowInfoAsync("POS", $"Facture #{facture.Id} créée avec succès.", autoCloseMs: 1000);
@@ -245,9 +264,27 @@ public partial class PosViewModel : BaseViewModel
         OnPropertyChanged(nameof(ResteARendre));
     }
 
+    partial void OnRemiseGlobaleChanged(decimal value)
+    {
+        OnPropertyChanged(nameof(TotalHt));
+        OnPropertyChanged(nameof(TotalTtc));
+        OnPropertyChanged(nameof(ResteARendre));
+        SyncPaymentSplits();
+    }
+
+    partial void OnRemiseGlobaleMontantChanged(decimal value)
+    {
+        OnPropertyChanged(nameof(TotalHt));
+        OnPropertyChanged(nameof(TotalTtc));
+        OnPropertyChanged(nameof(ResteARendre));
+        SyncPaymentSplits();
+    }
+
     private void NotifyTotals()
     {
         OnPropertyChanged(nameof(HasItems));
+        OnPropertyChanged(nameof(TotalHtBrut));
+        OnPropertyChanged(nameof(TotalTtcBrut));
         OnPropertyChanged(nameof(TotalHt));
         OnPropertyChanged(nameof(TotalTtc));
         OnPropertyChanged(nameof(ResteARendre));
