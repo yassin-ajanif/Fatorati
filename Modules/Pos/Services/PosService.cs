@@ -107,7 +107,7 @@ public sealed class PosService : IPosService
             BLId = bl.Id,
             Date = DateTime.Today,
             DateEcheance = DateTime.Today.AddDays(30),
-            EstPayee = false,
+            EstPayee = payments.All(p => p.Mode == ModePaiement.Especes),
             Note = "Vente POS"
         };
         db.Factures.Add(facture);

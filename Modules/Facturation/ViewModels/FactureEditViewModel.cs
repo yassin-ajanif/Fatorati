@@ -88,7 +88,7 @@ public partial class FactureEditViewModel : BaseViewModel
 
     [ObservableProperty] private decimal _paiementMontant;
     [ObservableProperty] private DateTimeOffset _paiementDate = new(DateTime.Today);
-    [ObservableProperty] private ModePaiement _paiementMode = ModePaiement.Virement;
+    [ObservableProperty] private ModePaiement _paiementMode = ModePaiement.Especes;
     [ObservableProperty] private string _paiementReference = string.Empty;
     [ObservableProperty] private FactureLineRow? _selectedLine;
     [ObservableProperty] private string _addLineSearchText = string.Empty;

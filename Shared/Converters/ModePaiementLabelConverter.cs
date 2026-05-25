@@ -17,10 +17,11 @@ public sealed class ModePaiementLabelConverter : IValueConverter
         var lang = culture.TwoLetterISOLanguageName.Equals("ar", StringComparison.OrdinalIgnoreCase) ? "ar" : "fr";
         var key = m switch
         {
-            ModePaiement.Virement => "ModePaiement_Virement",
+            ModePaiement.Credit => "ModePaiement_Credit",
             ModePaiement.Cheque => "ModePaiement_Cheque",
             ModePaiement.Especes => "ModePaiement_Especes",
-            _ => "ModePaiement_Virement"
+            ModePaiement.TPE => "ModePaiement_TPE",
+            _ => "ModePaiement_Especes"
         };
         return UiTranslations.Get(key, lang);
     }

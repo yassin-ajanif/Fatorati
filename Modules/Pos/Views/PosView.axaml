@@ -137,16 +137,28 @@
                   MinWidth="100" MinHeight="28" Margin="8,0,0,0" FontSize="12"/>
         </Grid>
 
-        <!-- Row 1: Total + actions -->
-        <Grid Grid.Row="1" ColumnDefinitions="*,Auto,Auto,Auto">
-          <StackPanel Grid.Column="0" VerticalAlignment="Center">
+        <!-- Row 1: Total + change + actions -->
+        <Grid Grid.Row="1" ColumnDefinitions="Auto,Auto,Auto,*,Auto,Auto,Auto">
+          <StackPanel Grid.Column="0" VerticalAlignment="Center" Margin="0,0,16,0">
             <TextBlock Text="{Binding TotalLabel}" FontSize="13" Classes="subtle"/>
             <TextBlock Text="{Binding TotalTtc, StringFormat='{}{0:N2} DH'}" FontWeight="Bold" FontSize="22"/>
           </StackPanel>
 
-          <Button Grid.Column="1" Content="{Binding BtnClearCart}" Command="{Binding ClearCartCommand}"
+          <StackPanel Grid.Column="1" VerticalAlignment="Center" Margin="0,0,16,0">
+            <TextBlock Text="{Binding LabelMontantRecu}" FontSize="11" Classes="subtle"/>
+            <NumericUpDown Value="{Binding MontantRecu}" FormatString="N2" Minimum="0"
+                           MinWidth="110" MinHeight="32" FontSize="14" FontWeight="SemiBold"/>
+          </StackPanel>
+
+          <StackPanel Grid.Column="2" VerticalAlignment="Center" Margin="0,0,24,0">
+            <TextBlock Text="{Binding LabelResteARendre}" FontSize="11" Classes="subtle"/>
+            <TextBlock Text="{Binding ResteARendre, StringFormat='{}{0:N2} DH'}"
+                       FontWeight="Bold" FontSize="20"/>
+          </StackPanel>
+
+          <Button Grid.Column="4" Content="{Binding BtnClearCart}" Command="{Binding ClearCartCommand}"
                   MinWidth="100" Margin="0,0,12,0"/>
-          <Button Grid.Column="2" Content="{Binding BtnCheckout}" Command="{Binding CheckoutCommand}"
+          <Button Grid.Column="5" Content="{Binding BtnCheckout}" Command="{Binding CheckoutCommand}"
                   MinWidth="100" Classes="primary" IsEnabled="{Binding HasItems}"/>
         </Grid>
       </Grid>

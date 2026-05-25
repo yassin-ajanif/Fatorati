@@ -231,7 +231,7 @@ internal static class UiTranslationExtras
         ["Fact_FilterPayee"] = ("Filtre paiement", "تصفية الدفع"),
         ["Fact_FilterAll"] = ("Toutes", "الكل"),
         ["FactList_ColPayee"] = ("Paiement", "الدفع"),
-        ["ModePaiement_Virement"] = ("Virement", "تحويل بنكي"),
+        ["ModePaiement_Credit"] = ("Crédit", "ائتمان"),
         ["ModePaiement_Cheque"] = ("Chèque", "شيك"),
         ["ModePaiement_Especes"] = ("Espèces", "نقداً"),
 
@@ -239,7 +239,7 @@ internal static class UiTranslationExtras
         ["TypeMvt_Sortie"] = ("Sortie", "إخراج"),
         ["TypeMvt_Ajustement"] = ("Ajustement", "تسوية"),
         ["Stock_DefaultMotif"] = ("Inventaire", "جرد"),
-        ["ModePaiement_Carte"] = ("Carte", "بطاقة"),
+        ["ModePaiement_TPE"] = ("TPE", "محطة دفع"),
     };
 
     internal static bool TryGet(string key, out (string Fr, string Ar) pair) => Map.TryGetValue(key, out pair);

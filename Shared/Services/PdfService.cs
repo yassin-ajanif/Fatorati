@@ -545,9 +545,10 @@ public sealed class PdfService : IPdfService
 
     private static string ModeFr(ModePaiement m) => m switch
     {
-        ModePaiement.Virement => "Virement",
+        ModePaiement.Credit => "Crédit",
         ModePaiement.Cheque => "Chèque",
         ModePaiement.Especes => "Espèces",
+        ModePaiement.TPE => "TPE",
         _ => m.ToString()
     };
 

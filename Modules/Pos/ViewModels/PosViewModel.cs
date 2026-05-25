@@ -81,6 +81,12 @@ public partial class PosViewModel : BaseViewModel
     public string BtnCheckout => "Encaisser";
     public string BtnAddPaymentSplit => "Ajouter mode";
     public bool CanRemovePaymentSplit => PaymentSplits.Count > 1;
+    public string LabelMontantRecu => "Montant reçu";
+    public string LabelResteARendre => "Reste à rendre";
+
+    [ObservableProperty] private decimal _montantRecu;
+
+    public decimal ResteARendre => MontantRecu >= TotalTtc ? MontantRecu - TotalTtc : 0;
 
     private void SyncPaymentSplits()
     {
@@ -107,7 +113,7 @@ public partial class PosViewModel : BaseViewModel
     [RelayCommand]
     private void AddPaymentSplit()
     {
-        PaymentSplits.Add(new PaymentSplitRow { Mode = ModePaiement.Carte, Montant = 0 });
+        PaymentSplits.Add(new PaymentSplitRow { Mode = ModePaiement.TPE, Montant = 0 });
         SyncPaymentSplits();
     }
 
@@ -188,6 +194,7 @@ public partial class PosViewModel : BaseViewModel
     private void ClearCart()
     {
         Cart.Clear();
+        MontantRecu = 0;
         NotifyTotals();
     }
 
@@ -195,6 +202,13 @@ public partial class PosViewModel : BaseViewModel
     private async Task Checkout()
     {
         if (!HasItems) return;
+
+        var requiresNamedClient = PaymentSplits.Any(p => p.Montant > 0 && (p.Mode == ModePaiement.Credit || p.Mode == ModePaiement.Cheque));
+        if (requiresNamedClient && SelectedClient is null)
+        {
+            await _dialog.ShowErrorAsync("POS", "Veuillez sélectionner un client pour les paiements par Crédit ou Chèque.");
+            return;
+        }
 
         var clientId = SelectedClient?.Id ?? await _posService.GetDefaultClientIdAsync();
 
@@ -220,9 +234,15 @@ public partial class PosViewModel : BaseViewModel
         Cart.Clear();
         SelectedClient = null;
         PaymentSplits.Clear();
+        MontantRecu = 0;
         NotifyTotals();
 
         await _dialog.ShowInfoAsync("POS", $"Facture #{facture.Id} créée avec succès.", autoCloseMs: 1000);
+    }
+
+    partial void OnMontantRecuChanged(decimal value)
+    {
+        OnPropertyChanged(nameof(ResteARendre));
     }
 
     private void NotifyTotals()
@@ -230,6 +250,7 @@ public partial class PosViewModel : BaseViewModel
         OnPropertyChanged(nameof(HasItems));
         OnPropertyChanged(nameof(TotalHt));
         OnPropertyChanged(nameof(TotalTtc));
+        OnPropertyChanged(nameof(ResteARendre));
         SyncPaymentSplits();
     }
 }

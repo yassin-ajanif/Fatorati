@@ -7,10 +7,10 @@ public static class UiEnumStrings
     public static string FormatModePaiement(ILocaleService locale, ModePaiement m) =>
         locale.T(m switch
         {
-            ModePaiement.Virement => "ModePaiement_Virement",
+            ModePaiement.Credit => "ModePaiement_Credit",
             ModePaiement.Cheque => "ModePaiement_Cheque",
             ModePaiement.Especes => "ModePaiement_Especes",
-            ModePaiement.Carte => "ModePaiement_Carte",
-            _ => "ModePaiement_Virement"
+            ModePaiement.TPE => "ModePaiement_TPE",
+            _ => "ModePaiement_Especes"
         });
 }

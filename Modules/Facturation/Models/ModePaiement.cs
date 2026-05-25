@@ -2,8 +2,8 @@ namespace GestionCommerciale.Modules.Facturation.Models;
 
 public enum ModePaiement
 {
-    Virement,
-    Cheque,
-    Especes,
-    Carte
+    Credit = 0,
+    Cheque = 1,
+    Especes = 2,
+    TPE = 3
 }
