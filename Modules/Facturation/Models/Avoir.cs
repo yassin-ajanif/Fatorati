@@ -5,7 +5,7 @@ namespace GestionCommerciale.Modules.Facturation.Models;
 public class Avoir : BaseEntity
 {
     public string Numero { get; set; } = string.Empty;
-    public int FactureId { get; set; }
+    public int? FactureId { get; set; }
     public Facture? Facture { get; set; }
     public int ClientId { get; set; }
     public DateTime Date { get; set; }

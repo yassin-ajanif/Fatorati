@@ -57,6 +57,7 @@ public partial class AppShellViewModel : BaseViewModel
     [ObservableProperty] private string _navDevis = string.Empty;
     [ObservableProperty] private string _navBl = string.Empty;
     [ObservableProperty] private string _navFactures = string.Empty;
+    [ObservableProperty] private string _navAvoirs = string.Empty;
     [ObservableProperty] private string _navFournisseurs = string.Empty;
     [ObservableProperty] private string _navBc = string.Empty;
     [ObservableProperty] private string _navBr = string.Empty;
@@ -72,6 +73,7 @@ public partial class AppShellViewModel : BaseViewModel
     [ObservableProperty] private bool _isNavDevisActive;
     [ObservableProperty] private bool _isNavBlActive;
     [ObservableProperty] private bool _isNavFacturesActive;
+    [ObservableProperty] private bool _isNavAvoirsActive;
     [ObservableProperty] private bool _isNavBcActive;
     [ObservableProperty] private bool _isNavBrActive;
     [ObservableProperty] private bool _isNavStockActive;
@@ -88,6 +90,7 @@ public partial class AppShellViewModel : BaseViewModel
         NavDevis = _locale.T("Nav_Devis");
         NavBl = _locale.T("Nav_BL");
         NavFactures = _locale.T("Nav_Factures");
+        NavAvoirs = _locale.T("Nav_Avoirs");
         NavFournisseurs = _locale.T("Nav_Fournisseurs");
         NavBc = _locale.T("Nav_BC");
         NavBr = _locale.T("Nav_BR");
@@ -128,6 +131,7 @@ public partial class AppShellViewModel : BaseViewModel
     public bool ShowNavBR => _session.CanAccessBR;
     public bool ShowNavBC => _session.CanAccessBC;
     public bool ShowNavFactures => _session.CanAccessFacturation;
+    public bool ShowNavAvoirs => _session.CanAccessAvoir;
     public bool ShowNavSettings => _session.CanAccessSettings;
 
     [RelayCommand]
@@ -179,6 +183,9 @@ public partial class AppShellViewModel : BaseViewModel
     private void GoFactures() => _workspace.Open(_sp.GetRequiredService<FactureListViewModel>());
 
     [RelayCommand]
+    private void GoAvoirs() => _workspace.Open(_sp.GetRequiredService<AvoirListViewModel>());
+
+    [RelayCommand]
     private void GoSettings() => _workspace.Open(_sp.GetRequiredService<SettingsViewModel>());
 
     private void UpdateActiveNav()
@@ -192,7 +199,8 @@ public partial class AppShellViewModel : BaseViewModel
             || p is TiersDetailViewModel tiersDetail && tiersDetail.ListScope == TiersListScope.Fournisseurs;
         IsNavDevisActive = p is DevisListViewModel or DevisEditViewModel;
         IsNavBlActive = p is BLListViewModel or BLEditViewModel;
-        IsNavFacturesActive = p is FactureListViewModel or FactureEditViewModel or AvoirEditViewModel;
+        IsNavFacturesActive = p is FactureListViewModel or FactureEditViewModel;
+        IsNavAvoirsActive = p is AvoirListViewModel or AvoirEditViewModel;
         IsNavBcActive = p is BCListViewModel or BCEditViewModel;
         IsNavBrActive = p is BRListViewModel or BREditViewModel;
         IsNavStockActive = p is StockMainViewModel;

@@ -2,8 +2,8 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:vm="using:GestionCommerciale.Modules.Pos.ViewModels"
              xmlns:models="using:GestionCommerciale.Modules.Stock.Models"
-             xmlns:tiers="using:GestionCommerciale.Modules.Tiers.Models"
-             x:Class="GestionCommerciale.Modules.Pos.Views.PosView"
+              xmlns:tiers="using:GestionCommerciale.Modules.Tiers.Models"
+              x:Class="GestionCommerciale.Modules.Pos.Views.PosView"
              x:DataType="vm:PosViewModel"
              x:Name="ThisControl">
   <Grid RowDefinitions="Auto,Auto,*,Auto" Margin="16">
@@ -177,8 +177,10 @@
           </StackPanel>
 
           <Button Grid.Column="6" Content="{Binding BtnClearCart}" Command="{Binding ClearCartCommand}"
-                  MinWidth="100" Margin="0,0,12,0"/>
-          <Button Grid.Column="7" Content="{Binding BtnCheckout}" Command="{Binding CheckoutCommand}"
+                  MinWidth="100" Margin="0,0,8,0"/>
+          <Button Grid.Column="7" Content="{Binding BtnRefund}" Command="{Binding RefundCommand}"
+                  MinWidth="100" Margin="0,0,8,0"/>
+          <Button Grid.Column="8" Content="{Binding BtnCheckout}" Command="{Binding CheckoutCommand}"
                   MinWidth="100" Classes="primary" IsEnabled="{Binding HasItems}"/>
         </Grid>
       </Grid>

@@ -33,4 +33,5 @@ public partial class PosView : UserControl
 
         vm.SearchText = string.Empty;
     }
+
 }

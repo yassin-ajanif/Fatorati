@@ -27,24 +27,27 @@ public sealed class AvoirWorkflowService : IAvoirWorkflowService
             .Include(a => a.Lignes)
             .FirstAsync(a => a.Id == avoirId, cancellationToken);
 
-        var facture = await db.Factures
-            .Include(f => f.Lignes)
-            .Include(f => f.Paiements)
-            .FirstAsync(f => f.Id == avoir.FactureId, cancellationToken);
+        if (avoir.FactureId.HasValue)
+        {
+            var facture = await db.Factures
+                .Include(f => f.Lignes)
+                .Include(f => f.Paiements)
+                .FirstAsync(f => f.Id == avoir.FactureId.Value, cancellationToken);
 
-        var (_, _, ttcFacture) = DocumentTotalsHelper.FactureTotals(facture.Lignes, facture.RemiseGlobale);
-        var (_, _, ttcAvoir) = DocumentTotalsHelper.AvoirTotals(avoir.Lignes);
+            var (_, _, ttcFacture) = DocumentTotalsHelper.FactureTotals(facture.Lignes, facture.RemiseGlobale);
+            var (_, _, ttcAvoir) = DocumentTotalsHelper.AvoirTotals(avoir.Lignes);
 
-        var existingAvoirs = await db.Avoirs
-            .Where(a => a.FactureId == facture.Id && a.Id != avoir.Id)
-            .Include(a => a.Lignes)
-            .ToListAsync(cancellationToken);
-        decimal deja = 0;
-        foreach (var a in existingAvoirs)
-            deja += DocumentTotalsHelper.AvoirTotals(a.Lignes).ttc;
+            var existingAvoirs = await db.Avoirs
+                .Where(a => a.FactureId == facture.Id && a.Id != avoir.Id)
+                .Include(a => a.Lignes)
+                .ToListAsync(cancellationToken);
+            decimal deja = 0;
+            foreach (var a in existingAvoirs)
+                deja += DocumentTotalsHelper.AvoirTotals(a.Lignes).ttc;
 
-        if (deja + ttcAvoir > ttcFacture + 0.01m)
-            throw new InvalidOperationException("Montant avoir supérieur au reste disponible sur la facture.");
+            if (deja + ttcAvoir > ttcFacture + 0.01m)
+                throw new InvalidOperationException("Montant avoir supérieur au reste disponible sur la facture.");
+        }
 
         if (avoir.RetourMarchandise)
         {

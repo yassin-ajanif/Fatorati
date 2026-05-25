@@ -34,6 +34,19 @@ public sealed class PosService : IPosService
             .ToListAsync(cancellationToken);
     }
 
+    public async Task<List<Facture>> SearchFacturesAsync(string query, CancellationToken cancellationToken = default)
+    {
+        var q = query?.Trim().ToLowerInvariant() ?? string.Empty;
+        if (q.Length < 1) return [];
+
+        await using var db = await _dbFactory.CreateDbContextAsync(cancellationToken);
+        return await db.Factures
+            .Where(f => f.Numero.ToLower().Contains(q))
+            .OrderByDescending(f => f.Date)
+            .Take(20)
+            .ToListAsync(cancellationToken);
+    }
+
     public async Task<List<TiersEntity>> GetActiveClientsAsync(CancellationToken cancellationToken = default)
     {
         await using var db = await _dbFactory.CreateDbContextAsync(cancellationToken);

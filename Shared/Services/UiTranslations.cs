@@ -15,6 +15,7 @@ public static class UiTranslations
         ["Nav_Devis"] = ("Devis", "عروض الأسعار"),
         ["Nav_BL"] = ("Bons de livraison", "أذون التسليم"),
         ["Nav_Factures"] = ("Facturation", "الفواتير"),
+        ["Nav_Avoirs"] = ("Avoirs", "الإشعارات الدائنة"),
         ["Nav_Fournisseurs"] = ("Fournisseurs", "الموردون"),
         ["Nav_BC"] = ("Bons de commande", "أوامر الشراء"),
         ["Nav_BR"] = ("Bons de réception", "أذون الاستلام"),
@@ -169,6 +170,7 @@ public static class UiTranslations
         ["Avoir_ErrLines"] = ("Ajoutez au moins une ligne.", "أضف سطراً واحداً على الأقل."),
         ["Avoir_Saved"] = ("Avoir enregistré. Validez pour appliquer le retour stock.", "تم الحفظ. أكمل التحقق لتطبيق المخزون."),
         ["Avoir_Validated"] = ("Avoir validé.", "تم التحقق من الإشعار الدائن."),
+
         ["TiersList_Clients"] = ("Clients", "العملاء"),
         ["TiersList_Fournisseurs"] = ("Fournisseurs", "الموردون"),
         ["TiersDetail_Title"] = ("Fiche tiers", "بطاقة طرف"),

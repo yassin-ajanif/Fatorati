@@ -86,7 +86,7 @@ public class AppDbContext : DbContext
 
         modelBuilder.Entity<Avoir>(e =>
         {
-            e.HasOne(a => a.Facture).WithMany().HasForeignKey(a => a.FactureId).OnDelete(DeleteBehavior.Restrict);
+            e.HasOne(a => a.Facture).WithMany().HasForeignKey(a => a.FactureId).IsRequired(false).OnDelete(DeleteBehavior.SetNull);
             e.HasMany(a => a.Lignes).WithOne(l => l.Avoir).HasForeignKey(l => l.AvoirId).OnDelete(DeleteBehavior.Cascade);
         });
 

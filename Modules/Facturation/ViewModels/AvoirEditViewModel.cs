@@ -82,14 +82,47 @@ public partial class AvoirEditViewModel : BaseViewModel
     public ObservableCollection<AvoirLineRow> Lignes { get; } = [];
 
     [ObservableProperty] private int? _avoirId;
-    [ObservableProperty] private int _factureId;
+    [ObservableProperty] private int? _factureId;
     [ObservableProperty] private int _clientId;
     [ObservableProperty] private string _numero = string.Empty;
     [ObservableProperty] private DateTimeOffset _date = new(DateTime.Today);
     [ObservableProperty] private string _motif = string.Empty;
     [ObservableProperty] private bool _retourMarchandise;
 
+    public void Load(int? id)
+    {
+        if (id == null)
+            _ = LoadNewAsync(CancellationToken.None);
+        else
+            _ = LoadExistingAsync(id.Value, CancellationToken.None);
+    }
+
     public void LoadNew(int factureId) => _ = LoadNewAsync(factureId, CancellationToken.None);
+
+    private async Task LoadNewAsync(CancellationToken cancellationToken)
+    {
+        if (!_session.CanAccessAvoir)
+        {
+            await _dialog.ShowErrorAsync(_locale.T("Avoir_Title"), _locale.T("Avoir_ErrDenied"), cancellationToken);
+            return;
+        }
+
+        AvoirId = null;
+        FactureId = null;
+        ClientId = 0;
+        Lignes.Clear();
+        Numero = _locale.T("Avoir_DraftPlaceholder");
+        Date = new DateTimeOffset(DateTime.Today);
+        Motif = string.Empty;
+        RetourMarchandise = false;
+
+        await using var db = await _dbFactory.CreateDbContextAsync(cancellationToken);
+        var produits = await db.Produits.AsNoTracking().Where(p => p.Actif)
+            .SelectForListWithoutImageData().ToListAsync(cancellationToken);
+        Produits.Clear();
+        foreach (var p in produits) Produits.Add(p);
+        Title = _locale.T("Avoir_NewTitle");
+    }
 
     private async Task LoadNewAsync(int factureId, CancellationToken cancellationToken)
     {

@@ -67,6 +67,7 @@ public static class DependencyInjection
         services.AddTransient<BCEditViewModel>();
         services.AddTransient<FactureListViewModel>();
         services.AddTransient<FactureEditViewModel>();
+        services.AddTransient<AvoirListViewModel>();
         services.AddTransient<AvoirEditViewModel>();
         services.AddTransient<ReportingViewModel>();
         services.AddTransient<SettingsViewModel>();

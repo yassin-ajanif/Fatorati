@@ -4,11 +4,14 @@ using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using GestionCommerciale.Modules.Facturation.Models;
 using GestionCommerciale.Modules.Pos.Models;
+using GestionCommerciale.Modules.Stock.Services;
 using GestionCommerciale.Modules.Pos.Services;
 using GestionCommerciale.Modules.Stock.Models;
+using GestionCommerciale.Shared.Database;
 using GestionCommerciale.Shared.Helpers;
 using GestionCommerciale.Shared.Services;
 using GestionCommerciale.Shared.ViewModels;
+using Microsoft.EntityFrameworkCore;
 using TiersEntity = GestionCommerciale.Modules.Tiers.Models.Tiers;
 
 namespace GestionCommerciale.Modules.Pos.ViewModels;
@@ -20,19 +23,28 @@ public partial class PosViewModel : BaseViewModel
     private readonly IDialogService _dialog;
     private readonly IAppSettingsService _settings;
     private readonly WorkspaceNavigator _workspace;
+    private readonly IDbContextFactory<AppDbContext> _dbFactory;
+    private readonly IDocumentNumberService _numbers;
+    private readonly IStockMovementService _stock;
 
     public PosViewModel(
         IPosService posService,
         ILocaleService locale,
         IDialogService dialog,
         IAppSettingsService settings,
-        WorkspaceNavigator workspaceNavigator)
+        WorkspaceNavigator workspaceNavigator,
+        IDbContextFactory<AppDbContext> dbFactory,
+        IDocumentNumberService numbers,
+        IStockMovementService stock)
     {
         _posService = posService;
         _locale = locale;
         _dialog = dialog;
         _settings = settings;
         _workspace = workspaceNavigator;
+        _dbFactory = dbFactory;
+        _numbers = numbers;
+        _stock = stock;
         Title = _locale.T("Nav_Pos");
         _locale.CultureApplied += (_, _) =>
         {
@@ -75,6 +87,7 @@ public partial class PosViewModel : BaseViewModel
     public string CartTitle => _locale.T("Nav_Pos");
     public string TotalLabel => "Total TTC";
     public string BtnClearCart => "Vider";
+    public string BtnRefund => "Rembourser";
     public string BtnCheckout => "Encaisser";
     public string BtnAddPaymentSplit => "Ajouter mode";
     public bool CanRemovePaymentSplit => PaymentSplits.Count > 1;
@@ -257,6 +270,79 @@ public partial class PosViewModel : BaseViewModel
         NotifyTotals();
 
         await _dialog.ShowInfoAsync("POS", $"Facture #{facture.Id} créée avec succès.", autoCloseMs: 1000);
+    }
+
+    [RelayCommand]
+    private async Task RefundAsync(CancellationToken cancellationToken)
+    {
+        if (!HasItems) return;
+
+        var confirm = await _dialog.ConfirmAsync(
+            _locale.T("Avoir_Title"),
+            $"Rembourser {Cart.Count} article(s) pour un total de {TotalTtc:N2} DH ? Cette action retournera les produits au stock.",
+            cancellationToken);
+        if (!confirm) return;
+
+        IsBusy = true;
+        try
+        {
+            await using var db = await _dbFactory.CreateDbContextAsync(cancellationToken);
+            await using var trx = await db.Database.BeginTransactionAsync(cancellationToken);
+
+            var clientId = SelectedClient?.Id ?? await _posService.GetDefaultClientIdAsync(cancellationToken);
+            var num = await _numbers.NextAvoirAsync(cancellationToken);
+            var avoir = new Avoir
+            {
+                Numero = num,
+                ClientId = clientId,
+                FactureId = null,
+                Date = DateTime.Today,
+                Motif = "Remboursement POS",
+                RetourMarchandise = true
+            };
+            foreach (var l in Cart)
+            {
+                avoir.Lignes.Add(new AvoirLigne
+                {
+                    ProduitId = l.ProduitId,
+                    Designation = l.Designation,
+                    Quantite = l.Quantite,
+                    PrixUnitaireHT = l.PrixUnitaireHt,
+                    TauxTVA = l.TauxTva
+                });
+
+                await _stock.ApplyMovementAsync(
+                    db,
+                    l.ProduitId,
+                    TypeMouvement.Entree,
+                    l.Quantite,
+                    "Avoir",
+                    null,
+                    $"Avoir {num}",
+                    null,
+                    cancellationToken);
+            }
+
+            db.Avoirs.Add(avoir);
+            await db.SaveChangesAsync(cancellationToken);
+            await trx.CommitAsync(cancellationToken);
+
+            Cart.Clear();
+            MontantRecu = 0;
+            RemiseGlobale = 0;
+            RemiseGlobaleMontant = 0;
+            NotifyTotals();
+
+            await _dialog.ShowInfoAsync(
+                _locale.T("Avoir_Title"),
+                $"Avoir créé : {num}",
+                cancellationToken,
+                autoCloseMs: 1000);
+        }
+        finally
+        {
+            IsBusy = false;
+        }
     }
 
     partial void OnMontantRecuChanged(decimal value)

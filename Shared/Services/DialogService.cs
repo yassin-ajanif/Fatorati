@@ -223,6 +223,65 @@ public sealed class DialogService : IDialogService
         return licenseKey;
     }
 
+    public async Task<string?> ShowPromptAsync(string title, string message, CancellationToken cancellationToken = default)
+    {
+        var owner = GetMainWindow();
+        var w = new Window
+        {
+            Title = title,
+            MinWidth = 300,
+            MaxWidth = 460,
+            SizeToContent = SizeToContent.WidthAndHeight,
+            WindowStartupLocation = WindowStartupLocation.CenterOwner,
+            CanResize = false
+        };
+
+        string? result = null;
+        var panel = new StackPanel { Margin = new Avalonia.Thickness(16), Spacing = 12 };
+        panel.Children.Add(new TextBlock
+        {
+            Text = message,
+            TextWrapping = Avalonia.Media.TextWrapping.Wrap,
+            MaxWidth = 420
+        });
+
+        var input = new TextBox
+        {
+            MinWidth = 260
+        };
+        panel.Children.Add(input);
+
+        var buttons = new StackPanel
+        {
+            Orientation = Orientation.Horizontal,
+            HorizontalAlignment = HorizontalAlignment.Right,
+            Spacing = 8
+        };
+        var cancel = new Button { Content = "Annuler" };
+        cancel.Click += (_, _) =>
+        {
+            result = null;
+            w.Close();
+        };
+        var ok = new Button { Content = "Valider", IsDefault = true };
+        ok.Click += (_, _) =>
+        {
+            result = input.Text;
+            w.Close();
+        };
+        buttons.Children.Add(cancel);
+        buttons.Children.Add(ok);
+        panel.Children.Add(buttons);
+        w.Content = panel;
+
+        if (owner != null)
+            await w.ShowDialog(owner);
+        else
+            w.Show();
+
+        return result;
+    }
+
     public async Task<string?> PickOpenFileAsync(string title, IReadOnlyList<string> patterns, CancellationToken cancellationToken = default)
     {
         var owner = GetMainWindow();

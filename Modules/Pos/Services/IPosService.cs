@@ -11,4 +11,5 @@ public interface IPosService
     Task<Facture> CheckoutAsync(int clientId, List<CartLineData> cart, IReadOnlyList<(ModePaiement Mode, decimal Montant)> payments, decimal remiseGlobale = 0, CancellationToken cancellationToken = default);
     Task<int> GetDefaultClientIdAsync(CancellationToken cancellationToken = default);
     Task<List<TiersEntity>> GetActiveClientsAsync(CancellationToken cancellationToken = default);
+    Task<List<Facture>> SearchFacturesAsync(string query, CancellationToken cancellationToken = default);
 }

@@ -48,6 +48,7 @@ internal static class UiTranslationExtras
         ["Btn_AddPayment"] = ("Ajouter paiement", "إضافة دفعة"),
         ["Btn_Delete"] = ("Supprimer", "حذف"),
         ["Btn_NewFacture"] = ("Nouvelle", "فاتورة جديدة"),
+        ["Btn_NewAvoir"] = ("Nouvel avoir", "إشعار دائن جديد"),
         ["Btn_BackList"] = ("Retour liste", "العودة للقائمة"),
 
         ["Lbl_Client"] = ("Client", "العميل"),

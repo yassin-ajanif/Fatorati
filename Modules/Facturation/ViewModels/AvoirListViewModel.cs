@@ -50,6 +50,7 @@ public partial class AvoirListViewModel : BaseViewModel
     }
 
     [ObservableProperty] private string _btnRefresh = string.Empty;
+    [ObservableProperty] private string _btnNew = string.Empty;
     [ObservableProperty] private string _btnPdf = string.Empty;
     [ObservableProperty] private string _searchText = string.Empty;
     [ObservableProperty] private string _wmSearch = string.Empty;
@@ -64,6 +65,7 @@ public partial class AvoirListViewModel : BaseViewModel
     private void RefreshListToolbar()
     {
         BtnRefresh = _locale.T("Btn_Refresh");
+        BtnNew = _locale.T("Btn_NewAvoir");
         BtnPdf = _locale.T("Btn_Pdf");
         WmSearch = _locale.T("Wm_SearchAvoirList");
         ColNumero = _locale.T("DevisList_ColNumero");
@@ -96,10 +98,12 @@ public partial class AvoirListViewModel : BaseViewModel
             var cfg = await db.AppSettings.AsNoTracking().FirstAsync(cancellationToken);
             var devise = string.IsNullOrWhiteSpace(cfg.Devise) ? "MAD" : cfg.Devise.Trim();
 
-            var joined = db.Avoirs.AsNoTracking()
-                .Include(a => a.Lignes)
-                .Join(db.Tiers.AsNoTracking(), a => a.ClientId, t => t.Id, (a, t) => new { a, t })
-                .Join(db.Factures.AsNoTracking(), x => x.a.FactureId, f => f.Id, (x, f) => new { x.a, x.t, f });
+            var joined = from a in db.Avoirs.AsNoTracking().Include(a => a.Lignes)
+                          join t in db.Tiers.AsNoTracking() on a.ClientId equals t.Id into tj
+                          from t in tj.DefaultIfEmpty()
+                          join f in db.Factures.AsNoTracking() on a.FactureId equals f.Id into fj
+                          from f in fj.DefaultIfEmpty()
+                          select new { a, nom = t != null ? t.Nom : string.Empty, factNum = f != null ? f.Numero : string.Empty };
 
             List<(Avoir a, string nom, string factNum)> raw;
             if (string.IsNullOrWhiteSpace(SearchText))
@@ -107,7 +111,7 @@ public partial class AvoirListViewModel : BaseViewModel
                 var rows = await joined
                     .OrderByDescending(x => x.a.Date)
                     .Take(DocumentNumberSearchHelper.ResultCap)
-                    .Select(x => new { x.a, nom = x.t.Nom, factNum = x.f.Numero })
+                    .Select(x => new { x.a, nom = x.nom, factNum = x.factNum })
                     .ToListAsync(cancellationToken);
                 raw = rows.Select(r => (r.a, r.nom, r.factNum)).ToList();
             }
@@ -119,7 +123,7 @@ public partial class AvoirListViewModel : BaseViewModel
                     var rows = await joined
                         .OrderByDescending(x => x.a.Date)
                         .Take(DocumentNumberSearchHelper.NumericScanCap)
-                        .Select(x => new { x.a, nom = x.t.Nom, factNum = x.f.Numero })
+                        .Select(x => new { x.a, nom = x.nom, factNum = x.factNum })
                         .ToListAsync(cancellationToken);
                     raw = rows
                         .Where(r => DocumentNumberSearchHelper.MatchesNumeroAndParty(r.a.Numero, r.nom, term)
@@ -132,13 +136,13 @@ public partial class AvoirListViewModel : BaseViewModel
                 {
                     var filtered = joined.Where(x =>
                         x.a.Numero.Contains(term)
-                        || x.t.Nom.Contains(term)
-                        || x.f.Numero.Contains(term)
+                        || x.nom.Contains(term)
+                        || x.factNum.Contains(term)
                         || (x.a.Motif ?? string.Empty).Contains(term));
                     var textRows = await filtered
                         .OrderByDescending(x => x.a.Date)
                         .Take(DocumentNumberSearchHelper.ResultCap)
-                        .Select(x => new { x.a, nom = x.t.Nom, factNum = x.f.Numero })
+                        .Select(x => new { x.a, nom = x.nom, factNum = x.factNum })
                         .ToListAsync(cancellationToken);
                     raw = textRows.Select(r => (r.a, r.nom, r.factNum)).ToList();
                 }
@@ -155,6 +159,15 @@ public partial class AvoirListViewModel : BaseViewModel
         {
             IsBusy = false;
         }
+    }
+
+    [RelayCommand]
+    private void NewAvoir()
+    {
+        if (!_session.CanAccessAvoir) return;
+        var vm = _sp.GetRequiredService<AvoirEditViewModel>();
+        vm.Load(null);
+        _workspace.Open(vm);
     }
 
     [RelayCommand]
