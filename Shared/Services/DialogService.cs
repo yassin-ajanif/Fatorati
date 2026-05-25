@@ -11,7 +11,7 @@ public sealed class DialogService : IDialogService
             ? d.MainWindow
             : null;
 
-    public async Task ShowInfoAsync(string title, string message, CancellationToken cancellationToken = default)
+    public async Task ShowInfoAsync(string title, string message, CancellationToken cancellationToken = default, int autoCloseMs = 0)
     {
         var owner = GetMainWindow();
         var w = new Window
@@ -36,6 +36,9 @@ public sealed class DialogService : IDialogService
         ok.Click += (_, _) => w.Close();
         panel.Children.Add(ok);
         w.Content = panel;
+
+        if (autoCloseMs > 0)
+            _ = Task.Delay(autoCloseMs, cancellationToken).ContinueWith(_ => w.Close(), TaskScheduler.FromCurrentSynchronizationContext());
 
         if (owner != null)
             await w.ShowDialog(owner);

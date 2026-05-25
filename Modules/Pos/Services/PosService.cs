@@ -34,6 +34,15 @@ public sealed class PosService : IPosService
             .ToListAsync(cancellationToken);
     }
 
+    public async Task<List<TiersEntity>> GetActiveClientsAsync(CancellationToken cancellationToken = default)
+    {
+        await using var db = await _dbFactory.CreateDbContextAsync(cancellationToken);
+        return await db.Tiers
+            .Where(t => t.Actif && (t.Type == TypeTiers.Client || t.Type == TypeTiers.LesDeux))
+            .OrderBy(t => t.Nom)
+            .ToListAsync(cancellationToken);
+    }
+
     public async Task<int> GetDefaultClientIdAsync(CancellationToken cancellationToken = default)
     {
         await using var db = await _dbFactory.CreateDbContextAsync(cancellationToken);
@@ -54,7 +63,7 @@ public sealed class PosService : IPosService
         return db.Tiers.Local.First(t => t.Nom == DbSeeder.DefaultClientName).Id;
     }
 
-    public async Task<Facture> CheckoutAsync(int clientId, List<CartLineData> cart, CancellationToken cancellationToken = default)
+    public async Task<Facture> CheckoutAsync(int clientId, List<CartLineData> cart, IReadOnlyList<(ModePaiement Mode, decimal Montant)> payments, CancellationToken cancellationToken = default)
     {
         await using var db = await _dbFactory.CreateDbContextAsync(cancellationToken);
         await using var trx = await db.Database.BeginTransactionAsync(cancellationToken);
@@ -116,6 +125,19 @@ public sealed class PosService : IPosService
                 Remise = 0,
                 TauxTVA = line.TauxTva,
                 Conditionnement = string.Empty
+            });
+        }
+        await db.SaveChangesAsync(cancellationToken);
+
+        foreach (var (mode, montant) in payments.Where(p => p.Montant > 0))
+        {
+            db.Paiements.Add(new Paiement
+            {
+                FactureId = facture.Id,
+                Montant = montant,
+                Date = DateTime.Today,
+                Mode = mode,
+                Reference = string.Empty
             });
         }
         await db.SaveChangesAsync(cancellationToken);

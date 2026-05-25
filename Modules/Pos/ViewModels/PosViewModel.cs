@@ -1,13 +1,15 @@
 using System.Collections.ObjectModel;
+using Avalonia.Controls;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
-using GestionCommerciale.Modules.Facturation.ViewModels;
+using GestionCommerciale.Modules.Facturation.Models;
 using GestionCommerciale.Modules.Pos.Models;
 using GestionCommerciale.Modules.Pos.Services;
 using GestionCommerciale.Modules.Stock.Models;
+using GestionCommerciale.Shared.Helpers;
 using GestionCommerciale.Shared.Services;
 using GestionCommerciale.Shared.ViewModels;
-using Microsoft.Extensions.DependencyInjection;
+using TiersEntity = GestionCommerciale.Modules.Tiers.Models.Tiers;
 
 namespace GestionCommerciale.Modules.Pos.ViewModels;
 
@@ -40,14 +42,32 @@ public partial class PosViewModel : BaseViewModel
             OnPropertyChanged(nameof(TotalLabel));
             OnPropertyChanged(nameof(BtnClearCart));
             OnPropertyChanged(nameof(BtnCheckout));
+            OnPropertyChanged(nameof(WmClientSearch));
         };
+        _ = LoadClientsAsync();
     }
 
     public ObservableCollection<ProductSearchRow> SearchResults { get; } = [];
     public ObservableCollection<CartLineRow> Cart { get; } = [];
+    public ObservableCollection<TiersEntity> Clients { get; } = [];
 
     [ObservableProperty] private string _searchText = string.Empty;
     [ObservableProperty] private ProductSearchRow? _selectedProduct;
+    [ObservableProperty] private TiersEntity? _selectedClient;
+
+    public AutoCompleteFilterPredicate<object?> PartyAutocompleteFilter => PartyAutoComplete.ItemFilter;
+    public string WmClientSearch => _locale.T("Wm_SearchClient");
+    public decimal TotalPaiements => PaymentSplits.Sum(p => p.Montant);
+
+    public ObservableCollection<PaymentSplitRow> PaymentSplits { get; } = [];
+
+    private async Task LoadClientsAsync()
+    {
+        var clients = await _posService.GetActiveClientsAsync();
+        Clients.Clear();
+        foreach (var c in clients)
+            Clients.Add(c);
+    }
 
     public bool HasItems => Cart.Count > 0;
 
@@ -59,6 +79,45 @@ public partial class PosViewModel : BaseViewModel
     public string TotalLabel => "Total TTC";
     public string BtnClearCart => "Vider";
     public string BtnCheckout => "Encaisser";
+    public string BtnAddPaymentSplit => "Ajouter mode";
+    public bool CanRemovePaymentSplit => PaymentSplits.Count > 1;
+
+    private void SyncPaymentSplits()
+    {
+        if (PaymentSplits.Count == 0)
+        {
+            PaymentSplits.Add(new PaymentSplitRow { Mode = ModePaiement.Especes, Montant = TotalTtc });
+        }
+        else if (PaymentSplits.Count == 1)
+        {
+            PaymentSplits[0].Montant = TotalTtc;
+        }
+
+        var allocated = PaymentSplits.Sum(p => p.Montant);
+        if (PaymentSplits.Count > 1 && allocated != TotalTtc)
+        {
+            var diff = TotalTtc - allocated;
+            PaymentSplits[^1].Montant += diff;
+        }
+
+        OnPropertyChanged(nameof(TotalPaiements));
+        OnPropertyChanged(nameof(CanRemovePaymentSplit));
+    }
+
+    [RelayCommand]
+    private void AddPaymentSplit()
+    {
+        PaymentSplits.Add(new PaymentSplitRow { Mode = ModePaiement.Carte, Montant = 0 });
+        SyncPaymentSplits();
+    }
+
+    [RelayCommand]
+    private void RemovePaymentSplit(PaymentSplitRow? row)
+    {
+        if (row is null || PaymentSplits.Count <= 1) return;
+        PaymentSplits.Remove(row);
+        SyncPaymentSplits();
+    }
 
     [RelayCommand]
     private async Task SearchProducts()
@@ -137,7 +196,7 @@ public partial class PosViewModel : BaseViewModel
     {
         if (!HasItems) return;
 
-        var clientId = await _posService.GetDefaultClientIdAsync();
+        var clientId = SelectedClient?.Id ?? await _posService.GetDefaultClientIdAsync();
 
         var cartData = Cart.Select(l => new CartLineData
         {
@@ -148,16 +207,22 @@ public partial class PosViewModel : BaseViewModel
             TauxTva = l.TauxTva
         }).ToList();
 
-        var facture = await _posService.CheckoutAsync(clientId, cartData);
+        var totalPaiements = PaymentSplits.Sum(p => p.Montant);
+        if (totalPaiements > TotalTtc)
+        {
+            await _dialog.ShowErrorAsync("POS", "Le total des paiements ne peut pas dépasser le montant total TTC.");
+            return;
+        }
+
+        var payments = PaymentSplits.Where(p => p.Montant > 0).Select(p => (p.Mode, p.Montant)).ToList();
+        var facture = await _posService.CheckoutAsync(clientId, cartData, payments);
 
         Cart.Clear();
+        SelectedClient = null;
+        PaymentSplits.Clear();
         NotifyTotals();
 
-        await _dialog.ShowInfoAsync("POS", $"Facture #{facture.Id} créée avec succès.");
-
-        var factureVm = App.Services.GetRequiredService<FactureEditViewModel>();
-        factureVm.Load(facture.Id);
-        _workspace.Open(factureVm);
+        await _dialog.ShowInfoAsync("POS", $"Facture #{facture.Id} créée avec succès.", autoCloseMs: 1000);
     }
 
     private void NotifyTotals()
@@ -165,5 +230,6 @@ public partial class PosViewModel : BaseViewModel
         OnPropertyChanged(nameof(HasItems));
         OnPropertyChanged(nameof(TotalHt));
         OnPropertyChanged(nameof(TotalTtc));
+        SyncPaymentSplits();
     }
 }

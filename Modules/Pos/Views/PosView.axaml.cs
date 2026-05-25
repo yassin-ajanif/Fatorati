@@ -30,5 +30,7 @@ public partial class PosView : UserControl
             vm.AddProductCommand.Execute(vm.SelectedProduct);
         else if (vm.SearchResults.Count > 0)
             vm.AddProductCommand.Execute(vm.SearchResults[0]);
+
+        vm.SearchText = string.Empty;
     }
 }

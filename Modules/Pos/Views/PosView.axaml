@@ -2,6 +2,7 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:vm="using:GestionCommerciale.Modules.Pos.ViewModels"
              xmlns:models="using:GestionCommerciale.Modules.Stock.Models"
+             xmlns:tiers="using:GestionCommerciale.Modules.Tiers.Models"
              x:Class="GestionCommerciale.Modules.Pos.Views.PosView"
              x:DataType="vm:PosViewModel"
              x:Name="ThisControl">
@@ -78,18 +79,76 @@
       </Grid>
     </Border>
 
-    <!-- Footer: total + actions -->
+    <!-- Footer: client + split payments + total + actions -->
     <Border Grid.Row="3" CornerRadius="8" BorderThickness="1"
             Background="{DynamicResource CourseraSurfaceBrush}" Padding="14">
-      <Grid ColumnDefinitions="*,Auto,Auto,Auto">
-        <StackPanel Grid.Column="0">
-          <TextBlock Text="{Binding TotalLabel}" FontSize="13" Classes="subtle"/>
-          <TextBlock Text="{Binding TotalTtc, StringFormat='{}{0:N2} DH'}" FontWeight="Bold" FontSize="22"/>
-        </StackPanel>
-        <Button Grid.Column="1" Content="{Binding BtnClearCart}" Command="{Binding ClearCartCommand}"
-                MinWidth="100" Margin="0,0,12,0"/>
-        <Button Grid.Column="2" Content="{Binding BtnCheckout}" Command="{Binding CheckoutCommand}"
-                MinWidth="100" Classes="primary" IsEnabled="{Binding HasItems}"/>
+      <Grid RowDefinitions="Auto,Auto">
+        <!-- Row 0: Client + payment splits -->
+        <Grid Grid.Row="0" ColumnDefinitions="Auto,*,Auto" Margin="0,0,0,8">
+          <AutoCompleteBox Grid.Column="0"
+                           MinWidth="200" Margin="0,0,16,0"
+                           MinimumPrefixLength="1" MaxDropDownHeight="200"
+                           Watermark="{Binding WmClientSearch}"
+                           ItemsSource="{Binding Clients}"
+                           ItemFilter="{Binding PartyAutocompleteFilter}"
+                           SelectedItem="{Binding SelectedClient, Mode=TwoWay}">
+            <AutoCompleteBox.ValueMemberBinding>
+              <Binding Path="Nom"/>
+            </AutoCompleteBox.ValueMemberBinding>
+            <AutoCompleteBox.ItemTemplate>
+              <DataTemplate DataType="tiers:Tiers">
+                <TextBlock Text="{Binding Nom}"/>
+              </DataTemplate>
+            </AutoCompleteBox.ItemTemplate>
+          </AutoCompleteBox>
+
+          <ScrollViewer Grid.Column="1" MaxHeight="60" HorizontalScrollBarVisibility="Auto" VerticalScrollBarVisibility="Disabled">
+            <ItemsControl ItemsSource="{Binding PaymentSplits}">
+              <ItemsControl.ItemsPanel>
+                <ItemsPanelTemplate>
+                  <StackPanel Orientation="Horizontal" Spacing="8"/>
+                </ItemsPanelTemplate>
+              </ItemsControl.ItemsPanel>
+              <ItemsControl.ItemTemplate>
+                <DataTemplate x:DataType="vm:PaymentSplitRow">
+                  <Border BorderThickness="1" CornerRadius="6" Padding="6" Background="{DynamicResource CourseraSurfaceBrush}">
+                    <StackPanel Orientation="Horizontal" Spacing="4">
+                      <ComboBox ItemsSource="{Binding ModesPaiement}" SelectedItem="{Binding Mode}"
+                                MinWidth="90" MinHeight="28" FontSize="12">
+                        <ComboBox.ItemTemplate>
+                          <DataTemplate>
+                            <TextBlock Text="{Binding ., Converter={StaticResource ModePaiementLabelConverter}}" FontSize="12"/>
+                          </DataTemplate>
+                        </ComboBox.ItemTemplate>
+                      </ComboBox>
+                      <NumericUpDown Value="{Binding Montant}" FormatString="N2" Minimum="0"
+                                     MinWidth="90" MinHeight="28" FontSize="12"/>
+                      <Button Content="×" MinWidth="24" MinHeight="28" Padding="0" FontSize="14"
+                              Command="{Binding $parent[UserControl].((vm:PosViewModel)DataContext).RemovePaymentSplitCommand}"
+                              CommandParameter="{Binding .}"/>
+                    </StackPanel>
+                  </Border>
+                </DataTemplate>
+              </ItemsControl.ItemTemplate>
+            </ItemsControl>
+          </ScrollViewer>
+
+          <Button Grid.Column="2" Content="{Binding BtnAddPaymentSplit}" Command="{Binding AddPaymentSplitCommand}"
+                  MinWidth="100" MinHeight="28" Margin="8,0,0,0" FontSize="12"/>
+        </Grid>
+
+        <!-- Row 1: Total + actions -->
+        <Grid Grid.Row="1" ColumnDefinitions="*,Auto,Auto,Auto">
+          <StackPanel Grid.Column="0" VerticalAlignment="Center">
+            <TextBlock Text="{Binding TotalLabel}" FontSize="13" Classes="subtle"/>
+            <TextBlock Text="{Binding TotalTtc, StringFormat='{}{0:N2} DH'}" FontWeight="Bold" FontSize="22"/>
+          </StackPanel>
+
+          <Button Grid.Column="1" Content="{Binding BtnClearCart}" Command="{Binding ClearCartCommand}"
+                  MinWidth="100" Margin="0,0,12,0"/>
+          <Button Grid.Column="2" Content="{Binding BtnCheckout}" Command="{Binding CheckoutCommand}"
+                  MinWidth="100" Classes="primary" IsEnabled="{Binding HasItems}"/>
+        </Grid>
       </Grid>
     </Border>
   </Grid>
