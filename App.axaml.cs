@@ -41,16 +41,15 @@ public partial class App : Application
             try
             {
                 db = Services.GetRequiredService<IDbContextFactory<AppDbContext>>().CreateDbContext();
-                try { db.Database.Migrate(); }
-                catch (SqliteException ex) when (
-                    ex.SqliteErrorCode == 1 &&
-                    ex.Message.Contains("already exists", StringComparison.OrdinalIgnoreCase)) { }
-
+                db.Database.Migrate();
                 EnsureSocieteMentionsLegalesColumn(db);
                 EnsureFactureEstPayeeColumn(db);
                 EnsureTrialLicenseColumns(db);
                 DbSeeder.Seed(db);
             }
+            catch (SqliteException ex) when (
+                ex.SqliteErrorCode == 1 &&
+                ex.Message.Contains("already exists", StringComparison.OrdinalIgnoreCase)) { }
             finally { db?.Dispose(); }
 
             var mainVm = Services.GetRequiredService<MainWindowViewModel>();

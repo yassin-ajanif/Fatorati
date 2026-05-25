@@ -24,7 +24,7 @@
                 <TextBlock Text="{Binding Designation}" Classes="subtle" FontSize="12"/>
               </StackPanel>
               <TextBlock Grid.Column="1" Text="{Binding PrixVenteTtc, StringFormat='{}{0:N2} DH TTC'}"
-                         VerticalAlignment="Center" FontWeight="SemiBold" Margin="0,0,12,0"/>
+                         VerticalAlignment="Center" FontWeight="SemiBold" Margin="0,0,12,0" />
               <Button Grid.Column="2" Content="+" VerticalAlignment="Center" Classes="primary"
                       Command="{Binding $parent[UserControl].((vm:PosViewModel)DataContext).AddProductCommand}"
                       CommandParameter="{Binding .}"/>
@@ -39,7 +39,7 @@
             Background="{DynamicResource CourseraSurfaceBrush}">
       <Grid RowDefinitions="Auto,*" Margin="8">
         <TextBlock Grid.Row="0" Text="{Binding CartTitle}" FontWeight="SemiBold" FontSize="15" Margin="0 0 0 6"/>
-        <ScrollViewer Grid.Row="1">
+        <ScrollViewer Grid.Row="1" HorizontalScrollBarVisibility="Auto">
           <ItemsControl ItemsSource="{Binding Cart}">
             <ItemsControl.ItemTemplate>
               <DataTemplate x:DataType="vm:CartLineRow">
@@ -53,20 +53,20 @@
                       <TextBlock Text="{Binding PrixUnitaireTtc, StringFormat='{}{0:N2} DH'}" FontSize="12"/>
                     </StackPanel>
                     <StackPanel Grid.Column="2" VerticalAlignment="Center" Orientation="Horizontal" Spacing="4" Margin="0,0,8,0">
-                      <Button Content="&#x2212;" Width="32" Height="32" FontSize="20" FontWeight="Bold" Classes="primary" Padding="0"
+                      <Button Content="-" FontSize="20" FontWeight="Bold" Classes="primary" Padding="8,0"
                               Command="{Binding $parent[UserControl].((vm:PosViewModel)DataContext).DecreaseQtyCommand}"
                               CommandParameter="{Binding .}"/>
                       <TextBlock Text="{Binding Quantite}" VerticalAlignment="Center" HorizontalAlignment="Center"
                                  FontWeight="SemiBold" Width="36" TextAlignment="Center" FontSize="15"/>
-                      <Button Content="+" Width="32" Height="32" FontSize="20" FontWeight="Bold" Classes="primary" Padding="0"
+<Button Content="+" FontSize="20" FontWeight="Bold" Classes="primary" Padding="8,0"
                               Command="{Binding $parent[UserControl].((vm:PosViewModel)DataContext).IncreaseQtyCommand}"
                               CommandParameter="{Binding .}"/>
                     </StackPanel>
                     <TextBlock Grid.Column="3" Text="{Binding MontantTtc, StringFormat='{}{0:N2} DH'}"
                                VerticalAlignment="Center" FontWeight="Bold" FontSize="14"
                                HorizontalAlignment="Right" Margin="0,0,8,0"/>
-                    <Button Grid.Column="4" MinWidth="32" Height="32" FontSize="16" Padding="6,0"
-                            Content="&#x1F5D1;"
+<Button Grid.Column="4" MinWidth="32" Height="32" FontSize="16" Padding="6,0"
+        Content="🗑"
                             Command="{Binding $parent[UserControl].((vm:PosViewModel)DataContext).RemoveProductCommand}"
                             CommandParameter="{Binding .}"/>
                   </Grid>

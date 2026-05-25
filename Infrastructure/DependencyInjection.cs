@@ -6,6 +6,7 @@ using GestionCommerciale.Modules.Facturation.ViewModels;
 using GestionCommerciale.Modules.Livraison.Services;
 using GestionCommerciale.Modules.Livraison.ViewModels;
 using GestionCommerciale.Modules.Commande.ViewModels;
+using GestionCommerciale.Modules.Pos.Services;
 using GestionCommerciale.Modules.Pos.ViewModels;
 using GestionCommerciale.Modules.Reception.Services;
 using GestionCommerciale.Modules.Reception.ViewModels;
@@ -40,6 +41,7 @@ public static class DependencyInjection
         services.AddSingleton<ILocaleService, LocaleService>();
         services.AddSingleton<IDocumentNumberService, DocumentNumberService>();
         services.AddSingleton<IStockMovementService, StockMovementService>();
+        services.AddSingleton<IPosService, PosService>();
         services.AddSingleton<IBonLivraisonWorkflowService, BonLivraisonWorkflowService>();
         services.AddSingleton<IBonReceptionWorkflowService, BonReceptionWorkflowService>();
         services.AddSingleton<IFactureWorkflowService, FactureWorkflowService>();

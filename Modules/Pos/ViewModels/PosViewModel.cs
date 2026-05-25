@@ -1,33 +1,32 @@
 using System.Collections.ObjectModel;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
-using GestionCommerciale.Modules.Facturation.Models;
 using GestionCommerciale.Modules.Facturation.ViewModels;
+using GestionCommerciale.Modules.Pos.Models;
+using GestionCommerciale.Modules.Pos.Services;
 using GestionCommerciale.Modules.Stock.Models;
-using GestionCommerciale.Shared.Database;
 using GestionCommerciale.Shared.Services;
 using GestionCommerciale.Shared.ViewModels;
-using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 
 namespace GestionCommerciale.Modules.Pos.ViewModels;
 
 public partial class PosViewModel : BaseViewModel
 {
-    private readonly IDbContextFactory<AppDbContext> _dbFactory;
+    private readonly IPosService _posService;
     private readonly ILocaleService _locale;
     private readonly IDialogService _dialog;
     private readonly IAppSettingsService _settings;
     private readonly WorkspaceNavigator _workspace;
 
     public PosViewModel(
-        IDbContextFactory<AppDbContext> dbFactory,
+        IPosService posService,
         ILocaleService locale,
         IDialogService dialog,
         IAppSettingsService settings,
         WorkspaceNavigator workspaceNavigator)
     {
-        _dbFactory = dbFactory;
+        _posService = posService;
         _locale = locale;
         _dialog = dialog;
         _settings = settings;
@@ -64,18 +63,7 @@ public partial class PosViewModel : BaseViewModel
     [RelayCommand]
     private async Task SearchProducts()
     {
-        var q = SearchText?.Trim().ToLowerInvariant() ?? string.Empty;
-        if (q.Length < 1)
-        {
-            SearchResults.Clear();
-            return;
-        }
-
-        await using var db = await _dbFactory.CreateDbContextAsync();
-        var list = await db.Produits
-            .Where(p => p.Actif && (p.Reference.ToLower().Contains(q) || p.Designation.ToLower().Contains(q) || p.CodeBarre!.ToLower().Contains(q)))
-            .Take(20)
-            .ToListAsync();
+        var list = await _posService.SearchProductsAsync(SearchText);
         SearchResults.Clear();
         foreach (var p in list)
             SearchResults.Add(new ProductSearchRow(p));
@@ -149,46 +137,18 @@ public partial class PosViewModel : BaseViewModel
     {
         if (!HasItems) return;
 
-        var clientChoice = await _dialog.PromptPasswordAsync(
-            _locale.T("Nav_Pos"),
-            "Saisissez l'ID du client (laisser vide pour client par défaut) :");
+        var clientId = await _posService.GetDefaultClientIdAsync();
 
-        if (clientChoice is null) return;
-
-        int clientId = 1;
-        if (int.TryParse(clientChoice, out var parsed) && parsed > 0)
-            clientId = parsed;
-
-        var cfg = await _settings.GetAsync();
-
-        await using var db = await _dbFactory.CreateDbContextAsync();
-        var facture = new Facture
+        var cartData = Cart.Select(l => new CartLineData
         {
-            Numero = "POS-" + DateTime.Now.ToString("yyyyMMdd-HHmmss"),
-            ClientId = clientId,
-            Date = DateTime.Today,
-            DateEcheance = DateTime.Today.AddDays(30),
-            EstPayee = false,
-            Note = "Vente POS"
-        };
-        db.Factures.Add(facture);
-        await db.SaveChangesAsync();
+            ProduitId = l.ProduitId,
+            Designation = l.Designation,
+            Quantite = l.Quantite,
+            PrixUnitaireHt = l.PrixUnitaireHt,
+            TauxTva = l.TauxTva
+        }).ToList();
 
-        foreach (var line in Cart)
-        {
-            db.FactureLignes.Add(new FactureLigne
-            {
-                FactureId = facture.Id,
-                ProduitId = line.ProduitId,
-                Designation = line.Designation,
-                Quantite = line.Quantite,
-                PrixUnitaireHT = line.PrixUnitaireHt,
-                Remise = 0,
-                TauxTVA = line.TauxTva,
-                Conditionnement = string.Empty
-            });
-        }
-        await db.SaveChangesAsync();
+        var facture = await _posService.CheckoutAsync(clientId, cartData);
 
         Cart.Clear();
         NotifyTotals();
