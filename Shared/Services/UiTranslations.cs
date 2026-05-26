@@ -184,6 +184,7 @@ public static class UiTranslations
         ["Avf_LblFournisseur"] = ("Fournisseur", "المورد"),
         ["Avf_LblDate"] = ("Date", "التاريخ"),
         ["Avf_ColFournisseur"] = ("Fournisseur", "المورد"),
+        ["Lbl_Motif"] = ("Motif", "السبب"),
 
         ["TiersList_Clients"] = ("Clients", "العملاء"),
         ["TiersList_Fournisseurs"] = ("Fournisseurs", "الموردون"),

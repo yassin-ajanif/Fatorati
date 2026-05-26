@@ -64,12 +64,12 @@ public partial class AvoirFournisseurListViewModel : BaseViewModel
         BtnRefresh = _locale.T("Btn_Refresh");
         BtnPdf = _locale.T("Btn_Pdf");
         BtnFilterDate = _locale.T("Btn_FilterDate");
-        ColNumero = _locale.T("Lbl_ColRef");
+        ColNumero = _locale.T("DevisList_ColRef");
         ColFournisseur = _locale.T("Avf_ColFournisseur");
-        ColDate = _locale.T("Lbl_ColDateDoc");
-        ColHt = _locale.T("Lbl_ColHt");
-        ColTtc = _locale.T("Lbl_ColTtc");
-        ColMotif = _locale.T("Lbl_ColMotif");
+        ColDate = _locale.T("DevisList_ColDate");
+        ColHt = _locale.T("DevisList_ColHt");
+        ColTtc = _locale.T("DevisList_ColTtc");
+        ColMotif = _locale.T("Lbl_Motif");
     }
 
     partial void OnSearchTextChanged(string value) => ApplyFilter();
