@@ -145,6 +145,10 @@ internal static class UiTranslationExtras
         ["Lbl_StockMinField"] = ("Stock minimum", "الحد الأدنى للمخزون"),
 
         ["Wm_SearchProducts"] = ("Rechercher : réf., nom ou code-barres…", "بحث: مرجع، اسم، باركود…"),
+        ["Pos_ShowDiscounts"] = ("Remise", "خصم"),
+        ["Pos_HideDiscounts"] = ("Masquer remises", "إخفاء الخصومات"),
+        ["Pos_LabelRemisePct"] = ("Remise %", "خصم %"),
+        ["Pos_LabelRemiseMontant"] = ("Remise montant", "خصم مبلغ"),
         ["Wm_SearchTiers"] = ("Recherche", "بحث"),
         ["Wm_SearchClient"] = ("Rechercher un client…", "ابحث عن عميل…"),
         ["Wm_SearchSupplier"] = ("Rechercher un fournisseur…", "ابحث عن مورد…"),

@@ -55,12 +55,16 @@ public partial class PosViewModel : BaseViewModel
             OnPropertyChanged(nameof(BtnClearCart));
             OnPropertyChanged(nameof(BtnCheckout));
             OnPropertyChanged(nameof(WmClientSearch));
+            OnPropertyChanged(nameof(BtnDiscounts));
+            OnPropertyChanged(nameof(LabelRemiseGlobale));
+            OnPropertyChanged(nameof(LabelRemiseGlobaleMontant));
         };
         _ = LoadClientsAsync();
         _ = LoadSettingsAsync();
     }
 
     [ObservableProperty] private bool _showKeyboard;
+    [ObservableProperty] private bool _showDiscounts;
 
     private async Task LoadSettingsAsync()
     {
@@ -112,8 +116,9 @@ public partial class PosViewModel : BaseViewModel
     public decimal TotalHt => AjusterRemiseGlobale(TotalHtBrut);
     public decimal TotalTtc => AjusterRemiseGlobale(TotalTtcBrut);
     public decimal ResteARendre => MontantRecu >= TotalTtc ? MontantRecu - TotalTtc : 0;
-    public string LabelRemiseGlobale => "Remise %";
-    public string LabelRemiseGlobaleMontant => "Remise montant";
+    public string LabelRemiseGlobale => _locale.T("Pos_LabelRemisePct");
+    public string LabelRemiseGlobaleMontant => _locale.T("Pos_LabelRemiseMontant");
+    public string BtnDiscounts => ShowDiscounts ? _locale.T("Pos_HideDiscounts") : _locale.T("Pos_ShowDiscounts");
 
     private decimal AjusterRemiseGlobale(decimal montant)
     {
@@ -144,6 +149,31 @@ public partial class PosViewModel : BaseViewModel
 
         OnPropertyChanged(nameof(TotalPaiements));
         OnPropertyChanged(nameof(CanRemovePaymentSplit));
+    }
+
+    [RelayCommand]
+    private void ToggleDiscounts()
+    {
+        ShowDiscounts = !ShowDiscounts;
+    }
+
+    partial void OnShowDiscountsChanged(bool value)
+    {
+        if (!value)
+            ClearDiscounts();
+        OnPropertyChanged(nameof(BtnDiscounts));
+    }
+
+    private void ClearDiscounts()
+    {
+        RemiseGlobale = 0;
+        RemiseGlobaleMontant = 0;
+        foreach (var line in Cart)
+        {
+            line.RemisePct = 0;
+            line.RemiseMontant = 0;
+        }
+        NotifyTotals();
     }
 
     [RelayCommand]
@@ -231,8 +261,7 @@ public partial class PosViewModel : BaseViewModel
     {
         Cart.Clear();
         MontantRecu = 0;
-        RemiseGlobale = 0;
-        RemiseGlobaleMontant = 0;
+        ShowDiscounts = false;
         NotifyTotals();
     }
 
@@ -274,8 +303,7 @@ public partial class PosViewModel : BaseViewModel
         SelectedClient = null;
         PaymentSplits.Clear();
         MontantRecu = 0;
-        RemiseGlobale = 0;
-        RemiseGlobaleMontant = 0;
+        ShowDiscounts = false;
         NotifyTotals();
 
         await _dialog.ShowInfoAsync("POS", $"Facture #{facture.Id} créée avec succès.", autoCloseMs: 1000);
@@ -338,8 +366,7 @@ public partial class PosViewModel : BaseViewModel
 
             Cart.Clear();
             MontantRecu = 0;
-            RemiseGlobale = 0;
-            RemiseGlobaleMontant = 0;
+            ShowDiscounts = false;
             NotifyTotals();
 
             await _dialog.ShowInfoAsync(
