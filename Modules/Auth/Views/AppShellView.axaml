@@ -2,10 +2,12 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:vm="using:GestionCommerciale.Modules.Auth.ViewModels"
              xmlns:conv="using:GestionCommerciale.Shared.Converters"
+             xmlns:controls="using:GestionCommerciale.Shared.Controls"
              x:Class="GestionCommerciale.Modules.Auth.Views.AppShellView"
              x:DataType="vm:AppShellViewModel">
-  <Grid ColumnDefinitions="240,*" Margin="12">
-    <Border Grid.Column="0" Padding="12" Background="{DynamicResource CourseraSurfaceBrush}" CornerRadius="12" BorderThickness="1">
+  <Grid>
+    <Grid ColumnDefinitions="240,*" Margin="12">
+      <Border Grid.Column="0" Padding="12" Background="{DynamicResource CourseraSurfaceBrush}" CornerRadius="12" BorderThickness="1">
       <ScrollViewer>
         <StackPanel Spacing="8">
           <TextBlock Text="{Binding UserLabel}" FontWeight="SemiBold" TextWrapping="Wrap" Margin="0,0,0,4"/>
@@ -106,5 +108,20 @@
       </ScrollViewer>
     </Border>
     <ContentControl Grid.Column="1" Content="{Binding WorkspaceCurrentPage}" Margin="14,0,0,0"/>
+    </Grid>
+
+    <!-- Global virtual keyboard overlay -->
+    <Grid x:Name="KeyboardOverlay" IsVisible="False" Background="#80000000" ZIndex="100"
+          PointerPressed="OnKeyboardOverlayPointerPressed">
+      <Border VerticalAlignment="Center" HorizontalAlignment="Center" MaxWidth="480" CornerRadius="12"
+              BorderThickness="1" Padding="8"
+              Background="{DynamicResource CourseraSurfaceBrush}" BorderBrush="{DynamicResource CourseraBorderBrush}">
+        <controls:VirtualKeyboard x:Name="AppKeyboard"
+                                  KeyPressed="OnKeyboardKeyPressed"
+                                  BackspacePressed="OnKeyboardBackspace"
+                                  Cleared="OnKeyboardClear"
+                                  Closed="OnKeyboardClose"/>
+      </Border>
+    </Grid>
   </Grid>
 </UserControl>

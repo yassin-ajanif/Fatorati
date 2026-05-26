@@ -71,6 +71,8 @@ public partial class App : Application
 
         var settings = await appSettingsService.GetAsync(default);
 
+        App.Services.GetRequiredService<VirtualKeyboardService>().IsEnabled = settings.EnableVirtualKeyboard;
+
         if (!licenseService.IsLicensed(settings))
         {
             if (settings.TrialStartedAt is null)

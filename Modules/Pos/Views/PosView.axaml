@@ -13,8 +13,7 @@
     <Grid RowDefinitions="Auto,Auto,*,Auto" Margin="16">
       <!-- Search -->
       <TextBox x:Name="SearchBox" Grid.Row="0" Watermark="{Binding SearchWatermark}" Text="{Binding SearchText}"
-               TextChanged="OnSearchTextChanged" KeyDown="OnSearchKeyDown" Margin="0,0,0,12"
-               DoubleTapped="OnSearchDoubleTapped"/>
+               TextChanged="OnSearchTextChanged" KeyDown="OnSearchKeyDown" Margin="0,0,0,12"/>
 
       <!-- Product quick list -->
       <ListBox Grid.Row="1" ItemsSource="{Binding SearchResults}" MaxHeight="180"
@@ -69,8 +68,8 @@
                                   CommandParameter="{Binding .}"/>
                           <Border Grid.Column="1" Classes="pos-inline-sep"/>
                           <NumericUpDown Grid.Column="2" x:Name="QtyInput" Classes="pos-qty-value"
-                                         Value="{Binding Quantite}" FormatString="N2" Minimum="0"
-                                         ShowButtonSpinner="False" DoubleTapped="OnNumericDoubleTapped"/>
+                                          Value="{Binding Quantite}" FormatString="N2" Minimum="0"
+                                          ShowButtonSpinner="False"/>
                           <Border Grid.Column="3" Classes="pos-inline-sep"/>
                           <Button Grid.Column="4" Content="+" Classes="pos-qty"
                                   Command="{Binding $parent[UserControl].((vm:PosViewModel)DataContext).IncreaseQtyCommand}"
@@ -80,15 +79,13 @@
                       <Border Grid.Column="3" Classes="pos-inline-group" Margin="0,0,12,0"
                               IsVisible="{Binding $parent[UserControl].((vm:PosViewModel)DataContext).ShowDiscounts}">
                         <Grid ColumnDefinitions="Auto,Auto,Auto,Auto,Auto,Auto">
-                          <NumericUpDown Grid.Column="0" Classes="pos-discount-pct" Value="{Binding RemisePct}"
-                                         FormatString="N0" Minimum="0" Maximum="100"
-                                         DoubleTapped="OnNumericDoubleTapped"/>
+                           <NumericUpDown Grid.Column="0" Classes="pos-discount-pct" Value="{Binding RemisePct}"
+                                          FormatString="N0" Minimum="0" Maximum="100"/>
                           <TextBlock Grid.Column="1" Text="%" Classes="pos-inline-label-tight"/>
                           <Border Grid.Column="2" Classes="pos-inline-sep"/>
                           <TextBlock Grid.Column="3" Text="−" Classes="pos-discount-minus"/>
-                          <NumericUpDown Grid.Column="4" Classes="pos-discount-amount" Value="{Binding RemiseMontant}"
-                                         FormatString="N2" Minimum="0"
-                                         DoubleTapped="OnNumericDoubleTapped"/>
+                           <NumericUpDown Grid.Column="4" Classes="pos-discount-amount" Value="{Binding RemiseMontant}"
+                                          FormatString="N2" Minimum="0"/>
                           <TextBlock Grid.Column="5" Text="DH" Classes="pos-inline-label-tight" Margin="0,0,8,0"/>
                         </Grid>
                       </Border>
@@ -124,8 +121,7 @@
                              Watermark="{Binding WmClientSearch}"
                              ItemsSource="{Binding Clients}"
                              ItemFilter="{Binding PartyAutocompleteFilter}"
-                             SelectedItem="{Binding SelectedClient, Mode=TwoWay}"
-                             DoubleTapped="OnClientDoubleTapped">
+                             SelectedItem="{Binding SelectedClient, Mode=TwoWay}">
               <AutoCompleteBox.ValueMemberBinding>
                 <Binding Path="Nom"/>
               </AutoCompleteBox.ValueMemberBinding>
@@ -158,8 +154,7 @@
                         <Border Grid.Column="1" Width="1" Height="20" Margin="6,0"
                                 Background="{DynamicResource CourseraBorderBrush}" VerticalAlignment="Center"/>
                         <NumericUpDown Grid.Column="2" x:Name="SplitMontantInput" Value="{Binding Montant}"
-                                       FormatString="N2" Minimum="0"
-                                       DoubleTapped="OnNumericDoubleTapped"/>
+                                       FormatString="N2" Minimum="0"/>
                         <TextBlock Grid.Column="3" Text="DH" Classes="pos-payment-suffix"/>
                         <Button Grid.Column="4" Classes="pos-delete" ToolTip.Tip="Retirer"
                                 IsVisible="{Binding $parent[UserControl].((vm:PosViewModel)DataContext).CanRemovePaymentSplit}"
@@ -192,14 +187,14 @@
                         IsVisible="{Binding ShowDiscounts}">
               <TextBlock Text="{Binding LabelRemiseGlobale}" FontSize="11" Classes="subtle"/>
               <NumericUpDown x:Name="RemiseGlobaleInput" Value="{Binding RemiseGlobale}" FormatString="N2" Minimum="0" Maximum="100"
-                             MinWidth="70" MinHeight="32" FontSize="14" FontWeight="SemiBold" DoubleTapped="OnNumericDoubleTapped"/>
+                             MinWidth="70" MinHeight="32" FontSize="14" FontWeight="SemiBold"/>
             </StackPanel>
 
             <StackPanel Grid.Column="1" VerticalAlignment="Center" Margin="0,0,16,0"
                         IsVisible="{Binding ShowDiscounts}">
               <TextBlock Text="{Binding LabelRemiseGlobaleMontant}" FontSize="11" Classes="subtle"/>
               <NumericUpDown x:Name="RemiseGlobaleMontantInput" Value="{Binding RemiseGlobaleMontant}" FormatString="N2" Minimum="0"
-                             MinWidth="90" MinHeight="32" FontSize="14" FontWeight="SemiBold" DoubleTapped="OnNumericDoubleTapped"/>
+                             MinWidth="90" MinHeight="32" FontSize="14" FontWeight="SemiBold"/>
             </StackPanel>
 
             <StackPanel Grid.Column="2" VerticalAlignment="Center" Margin="0,0,16,0">
@@ -210,7 +205,7 @@
             <StackPanel Grid.Column="3" VerticalAlignment="Center" Margin="0,0,16,0">
               <TextBlock Text="{Binding LabelMontantRecu}" FontSize="11" Classes="subtle"/>
               <NumericUpDown x:Name="MontantRecuInput" Value="{Binding MontantRecu}" FormatString="N2" Minimum="0"
-                             MinWidth="110" MinHeight="32" FontSize="14" FontWeight="SemiBold" DoubleTapped="OnNumericDoubleTapped"/>
+                             MinWidth="110" MinHeight="32" FontSize="14" FontWeight="SemiBold"/>
             </StackPanel>
 
             <StackPanel Grid.Column="4" VerticalAlignment="Center" Margin="0,0,24,0">
@@ -228,19 +223,6 @@
                     MinWidth="100" Classes="primary" IsEnabled="{Binding HasItems}"/>
           </Grid>
         </Grid>
-      </Border>
-    </Grid>
-
-    <!-- Keyboard overlay -->
-    <Grid x:Name="KeyboardOverlay" IsVisible="False" Background="#80000000" ZIndex="100"
-          PointerPressed="OnOverlayPointerPressed">
-      <Border VerticalAlignment="Center" HorizontalAlignment="Center" MaxWidth="480" CornerRadius="12" BorderThickness="1" Padding="8"
-              Background="{DynamicResource CourseraSurfaceBrush}" BorderBrush="{DynamicResource CourseraBorderBrush}">
-        <controls:VirtualKeyboard x:Name="PosKeyboard"
-                                  KeyPressed="OnKeyboardKeyPressed"
-                                  BackspacePressed="OnKeyboardBackspace"
-                                  Cleared="OnKeyboardClear"
-                                  Closed="OnKeyboardClose"/>
       </Border>
     </Grid>
   </Grid>

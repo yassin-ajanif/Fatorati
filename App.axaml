@@ -3,6 +3,7 @@
              x:Class="GestionCommerciale.App"
              xmlns:local="using:GestionCommerciale"
              xmlns:conv="using:GestionCommerciale.Shared.Converters"
+             xmlns:beh="using:GestionCommerciale.Shared.Behaviors"
              RequestedThemeVariant="Light">
              <!-- "Default" ThemeVariant follows system theme variant. "Dark" or "Light" are other available options. -->
 
@@ -19,5 +20,15 @@
     <Application.Styles>
         <FluentTheme />
         <StyleInclude Source="/Styles/AppTheme.axaml"/>
+
+        <Style Selector="TextBox">
+            <Setter Property="beh:KeyboardHelper.EnableKeyboard" Value="True"/>
+        </Style>
+        <Style Selector="NumericUpDown">
+            <Setter Property="beh:KeyboardHelper.EnableKeyboard" Value="True"/>
+        </Style>
+        <Style Selector="AutoCompleteBox">
+            <Setter Property="beh:KeyboardHelper.EnableKeyboard" Value="True"/>
+        </Style>
     </Application.Styles>
 </Application>
