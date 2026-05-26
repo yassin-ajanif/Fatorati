@@ -48,7 +48,7 @@ public sealed class ReportService : IReportService
         var prodIds = lignes.Select(l => l.ProduitId).Distinct().ToList();
         var produits = await db.Produits.AsNoTracking()
             .Where(p => prodIds.Contains(p.Id))
-            .Select(p => new { p.Id, p.Reference, p.Designation, Categorie = p.Categorie != null ? p.Categorie.Nom : "" })
+            .Select(p => new { p.Id, p.Reference, p.Designation, p.PrixAchatHT, Categorie = p.Categorie != null ? p.Categorie.Nom : "" })
             .ToListAsync(ct);
         var prodMap = produits.ToDictionary(p => p.Id);
 
@@ -57,8 +57,12 @@ public sealed class ReportService : IReportService
             .Select(g =>
             {
                 var p = prodMap.GetValueOrDefault(g.Key);
+                var prixAchat = p?.PrixAchatHT ?? 0;
                 var ht = g.Sum(l => DocumentTotalsHelper.LigneHT(l.Quantite, l.PrixUnitaireHT, l.Remise));
+                var cost = g.Sum(l => l.Quantite * prixAchat);
+                var profit = ht - cost;
                 var tva = g.Sum(l => DocumentTotalsHelper.LigneHT(l.Quantite, l.PrixUnitaireHT, l.Remise) * (l.TauxTVA / 100m));
+                var marginPct = ht > 0 ? profit / ht * 100m : 0;
                 return new ReportSaleByProductRow(
                     p?.Reference ?? string.Empty,
                     p?.Designation ?? g.First().Designation,
@@ -66,7 +70,9 @@ public sealed class ReportService : IReportService
                     g.Sum(l => l.Quantite),
                     ht,
                     ht + tva,
-                    dev);
+                    dev,
+                    profit,
+                    marginPct);
             })
             .OrderByDescending(r => r.TotalTtc)
             .ToList();
@@ -90,7 +96,12 @@ public sealed class ReportService : IReportService
                 f.RemiseGlobale,
                 Lignes = f.Lignes!.Select(l => new
                 {
-                    l.Quantite, l.PrixUnitaireHT, l.Remise, l.TauxTVA
+                    l.ProduitId,
+                    l.Quantite,
+                    l.PrixUnitaireHT,
+                    l.Remise,
+                    l.TauxTVA,
+                    l.Designation
                 }).ToList()
             })
             .ToListAsync(ct);
@@ -102,30 +113,74 @@ public sealed class ReportService : IReportService
             .ToListAsync(ct);
         var clientMap = clients.ToDictionary(c => c.Id);
 
+        var allProdIds = factures.SelectMany(f => f.Lignes).Select(l => l.ProduitId).Distinct().ToList();
+        var produits = await db.Produits.AsNoTracking()
+            .Where(p => allProdIds.Contains(p.Id))
+            .Select(p => new { p.Id, p.Reference, p.Designation, p.PrixAchatHT })
+            .ToListAsync(ct);
+        var prodMap = produits.ToDictionary(p => p.Id);
+
         var grouped = factures
             .GroupBy(f => f.ClientId)
             .Select(g =>
             {
                 var c = clientMap.GetValueOrDefault(g.Key);
-                var totaux = g.Select(f =>
-                {
-                    var lignes = f.Lignes.Select(l => new FactureLigne
+
+                var allLignes = g.SelectMany(f => f.Lignes).ToList();
+
+                // Per-product sub-rows (profit before global discount)
+                var products = allLignes
+                    .GroupBy(l => l.ProduitId)
+                    .Select(pg =>
                     {
-                        Quantite = l.Quantite,
-                        PrixUnitaireHT = l.PrixUnitaireHT,
-                        Remise = l.Remise,
-                        TauxTVA = l.TauxTVA
-                    }).ToList();
-                    return DocumentTotalsHelper.FactureTotals(lignes, f.RemiseGlobale);
-                });
+                        var p = prodMap.GetValueOrDefault(pg.Key);
+                        var prixAchat = p?.PrixAchatHT ?? 0;
+                        var ht = pg.Sum(l => DocumentTotalsHelper.LigneHT(l.Quantite, l.PrixUnitaireHT, l.Remise));
+                        var cost = pg.Sum(l => l.Quantite * prixAchat);
+                        var profit = ht - cost;
+                        var tva = pg.Sum(l => DocumentTotalsHelper.LigneHT(l.Quantite, l.PrixUnitaireHT, l.Remise) * (l.TauxTVA / 100m));
+                        var marginPct = ht > 0 ? profit / ht * 100m : 0;
+                        return new ReportSaleByCustomerProductRow(
+                            p?.Reference ?? string.Empty,
+                            p?.Designation ?? pg.First().Designation,
+                            pg.Sum(l => l.Quantite),
+                            ht,
+                            ht + tva,
+                            dev,
+                            profit,
+                            marginPct);
+                    })
+                    .OrderByDescending(pr => pr.TotalTtc)
+                    .ToList();
+
+                // Client-level totals with profit (global discount applied)
+                decimal totalHt = 0, totalTva = 0, totalCost = 0;
+                foreach (var f in g)
+                {
+                    var factor = 1 - f.RemiseGlobale / 100m;
+                    foreach (var l in f.Lignes)
+                    {
+                        var lht = DocumentTotalsHelper.LigneHT(l.Quantite, l.PrixUnitaireHT, l.Remise);
+                        var prixAchat = prodMap.GetValueOrDefault(l.ProduitId)?.PrixAchatHT ?? 0;
+                        totalHt += lht * factor;
+                        totalTva += lht * (l.TauxTVA / 100m) * factor;
+                        totalCost += l.Quantite * prixAchat;
+                    }
+                }
+                var totalProfit = totalHt - totalCost;
+                var marginPct = totalHt > 0 ? totalProfit / totalHt * 100m : 0;
+
                 return new ReportSaleByCustomerRow(
                     c?.Nom ?? string.Empty,
                     c?.ICE ?? string.Empty,
                     c?.Ville ?? string.Empty,
                     g.Count(),
-                    totaux.Sum(t => t.ht),
-                    totaux.Sum(t => t.ttc),
-                    dev);
+                    totalHt,
+                    totalHt + totalTva,
+                    dev,
+                    totalProfit,
+                    marginPct,
+                    products);
             })
             .OrderByDescending(r => r.TotalTtc)
             .ToList();
@@ -196,37 +251,84 @@ public sealed class ReportService : IReportService
             .OrderBy(f => f.Date)
             .Select(f => new
             {
+                f.Id,
+                f.ClientId,
+                f.Numero,
                 f.Date,
                 f.RemiseGlobale,
                 Lignes = f.Lignes!.Select(l => new
                 {
-                    l.Quantite, l.PrixUnitaireHT, l.Remise, l.TauxTVA
+                    l.ProduitId,
+                    l.Quantite,
+                    l.PrixUnitaireHT,
+                    l.Remise,
+                    l.TauxTVA
                 }).ToList()
             })
             .ToListAsync(ct);
+
+        var clientIds = factures.Select(f => f.ClientId).Distinct().ToList();
+        var clients = await db.Tiers.AsNoTracking()
+            .Where(t => clientIds.Contains(t.Id))
+            .Select(t => new { t.Id, t.Nom })
+            .ToListAsync(ct);
+        var clientMap = clients.ToDictionary(c => c.Id);
+
+        var allProdIds = factures.SelectMany(f => f.Lignes).Select(l => l.ProduitId).Distinct().ToList();
+        var produits = await db.Produits.AsNoTracking()
+            .Where(p => allProdIds.Contains(p.Id))
+            .Select(p => new { p.Id, p.PrixAchatHT })
+            .ToListAsync(ct);
+        var prodMap = produits.ToDictionary(p => p.Id);
 
         var grouped = factures
             .GroupBy(f => f.Date.Date)
             .Select(g =>
             {
-                var totaux = g.Select(f =>
+                decimal dayHt = 0, dayTva = 0, dayCost = 0;
+
+                var details = g.Select(f =>
                 {
-                    var lignes = f.Lignes.Select(l => new FactureLigne
+                    var factor = 1 - f.RemiseGlobale / 100m;
+                    decimal ht = 0, tva = 0, cost = 0;
+                    foreach (var l in f.Lignes)
                     {
-                        Quantite = l.Quantite,
-                        PrixUnitaireHT = l.PrixUnitaireHT,
-                        Remise = l.Remise,
-                        TauxTVA = l.TauxTVA
-                    }).ToList();
-                    return DocumentTotalsHelper.FactureTotals(lignes, f.RemiseGlobale);
-                });
+                        var lht = DocumentTotalsHelper.LigneHT(l.Quantite, l.PrixUnitaireHT, l.Remise);
+                        var prixAchat = prodMap.GetValueOrDefault(l.ProduitId)?.PrixAchatHT ?? 0;
+                        ht += lht;
+                        tva += lht * (l.TauxTVA / 100m);
+                        cost += l.Quantite * prixAchat;
+                    }
+                    ht *= factor;
+                    tva *= factor;
+                    dayHt += ht;
+                    dayTva += tva;
+                    dayCost += cost;
+                    var profit = ht - cost;
+                    var marginPct = ht > 0 ? profit / ht * 100m : 0;
+                    return new ReportDailySaleDetailRow(
+                        f.Numero ?? string.Empty,
+                        clientMap.GetValueOrDefault(f.ClientId)?.Nom ?? string.Empty,
+                        ht,
+                        ht + tva,
+                        dev,
+                        profit,
+                        marginPct);
+                }).ToList();
+
+                var dayProfit = dayHt - dayCost;
+                var dayMargin = dayHt > 0 ? dayProfit / dayHt * 100m : 0;
+
                 return new ReportDailySaleRow(
                     g.Key,
                     g.Count(),
-                    totaux.Sum(t => t.ht),
-                    totaux.Sum(t => t.tva),
-                    totaux.Sum(t => t.ttc),
-                    dev);
+                    dayHt,
+                    dayTva,
+                    dayHt + dayTva,
+                    dev,
+                    dayProfit,
+                    dayMargin,
+                    details);
             })
             .OrderByDescending(r => r.Date)
             .ToList();

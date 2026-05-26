@@ -9,6 +9,7 @@
     <Color x:Key="CourseraSubtleTextColor">#5E7296</Color>
     <Color x:Key="CourseraPrimaryColor">#2563EB</Color>
     <Color x:Key="CourseraPrimaryHoverColor">#1D4ED8</Color>
+    <Color x:Key="CourseraSuccessColor">#16A34A</Color>
     <Color x:Key="CourseraDangerColor">#DC2626</Color>
     <Color x:Key="CourseraWarningColor">#D97706</Color>
     <Color x:Key="CourseraStockAlertBgColor">#FEF2F2</Color>
@@ -23,6 +24,7 @@
     <SolidColorBrush x:Key="CourseraSubtleTextBrush" Color="{StaticResource CourseraSubtleTextColor}"/>
     <SolidColorBrush x:Key="CourseraPrimaryBrush" Color="{StaticResource CourseraPrimaryColor}"/>
     <SolidColorBrush x:Key="CourseraPrimaryHoverBrush" Color="{StaticResource CourseraPrimaryHoverColor}"/>
+    <SolidColorBrush x:Key="CourseraSuccessBrush" Color="{StaticResource CourseraSuccessColor}"/>
     <SolidColorBrush x:Key="CourseraDangerBrush" Color="{StaticResource CourseraDangerColor}"/>
     <SolidColorBrush x:Key="CourseraWarningBrush" Color="{StaticResource CourseraWarningColor}"/>
     <SolidColorBrush x:Key="CourseraStockAlertBgBrush" Color="{StaticResource CourseraStockAlertBgColor}"/>

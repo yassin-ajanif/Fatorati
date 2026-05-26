@@ -3,6 +3,7 @@
              xmlns:vm="using:GestionCommerciale.Modules.Reporting.ViewModels"
              xmlns:conv="using:GestionCommerciale.Shared.Converters"
              x:Class="GestionCommerciale.Modules.Reporting.Views.ReportsListView"
+             x:Name="ThisControl"
              x:DataType="vm:ReportsListViewModel"
              x:CompileBindings="False">
   <Grid>
@@ -77,11 +78,16 @@
                                    FontSize="12" VerticalAlignment="Center"/>
                         <TextBlock Grid.Column="2" Text="{Binding LblQty}" FontSize="13"
                                    VerticalAlignment="Center" HorizontalAlignment="Right"/>
-                        <TextBlock Grid.Column="3" Text="{Binding LblHt}" FontSize="13"
-                                   VerticalAlignment="Center" HorizontalAlignment="Right"/>
-                        <TextBlock Grid.Column="4" Text="{Binding LblTtc}" FontWeight="SemiBold"
+                        <TextBlock Grid.Column="3" Text="{Binding LblTtc}" FontWeight="SemiBold"
                                    FontSize="13" VerticalAlignment="Center" HorizontalAlignment="Right"
                                    Foreground="{DynamicResource CourseraPrimaryBrush}"/>
+                        <TextBlock Grid.Column="4" Text="{Binding LblProfit}" FontSize="13"
+                                   FontWeight="SemiBold"
+                                   VerticalAlignment="Center" HorizontalAlignment="Right"
+                                   Foreground="{DynamicResource CourseraSuccessBrush}"/>
+                        <TextBlock Grid.Column="5" Text="{Binding LblMargin}" FontSize="12"
+                                   Classes="subtle"
+                                   VerticalAlignment="Center" HorizontalAlignment="Right"/>
                       </Grid>
                     </Border>
                   </DataTemplate>
@@ -108,25 +114,106 @@
                     <Border Padding="10,8" Margin="0,0,0,4"
                             Background="{DynamicResource CourseraSurfaceMutedBrush}"
                             CornerRadius="8">
-                      <Grid ColumnDefinitions="2*,1*,1*,1*,1*">
-                        <StackPanel Grid.Column="0">
-                          <TextBlock Text="{Binding Client}" FontWeight="SemiBold" FontSize="13"/>
-                          <TextBlock Text="{Binding Ice}" Classes="subtle" FontSize="12"/>
+                      <StackPanel>
+                        <!-- Main client row -->
+                        <Grid ColumnDefinitions="Auto,2*,1*,1*,1*,1*,1*,1*">
+                          <Button Grid.Column="0" Width="24" Height="24" Padding="0"
+                                  Background="Transparent" BorderThickness="0"
+                                  Content="{Binding IsExpanded, Converter={x:Static conv:BoolToExpandArrowConverter.Instance}}"
+                                  Command="{Binding DataContext.ToggleCustomerExpandCommand, ElementName=ThisControl}"
+                                  CommandParameter="{Binding}"
+                                  FontSize="12" VerticalAlignment="Center"
+                                  Foreground="{DynamicResource CourseraPrimaryBrush}"/>
+                          <StackPanel Grid.Column="1">
+                            <TextBlock Text="{Binding Client}" FontWeight="SemiBold" FontSize="13"/>
+                            <TextBlock Text="{Binding Ice}" Classes="subtle" FontSize="12"/>
+                          </StackPanel>
+                          <TextBlock Grid.Column="2" Text="{Binding Ville}" Classes="subtle"
+                                     FontSize="12" VerticalAlignment="Center"/>
+                          <TextBlock Grid.Column="3" Text="{Binding LblCount}" FontSize="13"
+                                     VerticalAlignment="Center" HorizontalAlignment="Right"/>
+                          <TextBlock Grid.Column="4" Text="{Binding LblHt}" FontSize="13"
+                                     VerticalAlignment="Center" HorizontalAlignment="Right"/>
+                          <TextBlock Grid.Column="5" Text="{Binding LblTtc}" FontWeight="SemiBold"
+                                     FontSize="13" VerticalAlignment="Center" HorizontalAlignment="Right"
+                                     Foreground="{DynamicResource CourseraPrimaryBrush}"/>
+                          <TextBlock Grid.Column="6" Text="{Binding LblProfit}" FontSize="13"
+                                     FontWeight="SemiBold"
+                                     VerticalAlignment="Center" HorizontalAlignment="Right"
+                                     Foreground="{DynamicResource CourseraSuccessBrush}"/>
+                          <TextBlock Grid.Column="7" Text="{Binding LblMargin}" FontSize="12"
+                                     Classes="subtle"
+                                     VerticalAlignment="Center" HorizontalAlignment="Right"/>
+                        </Grid>
+
+                        <!-- Expanded sub-products -->
+                        <StackPanel IsVisible="{Binding IsExpanded}" Margin="28,8,0,0" Spacing="3">
+                          <ItemsControl ItemsSource="{Binding Products}">
+                            <ItemsControl.ItemTemplate>
+                              <DataTemplate x:DataType="vm:ReportSaleByCustomerProductRow">
+                                <Border Padding="8,6" CornerRadius="6"
+                                        Background="{DynamicResource CourseraSurfaceBrush}">
+                                  <Grid ColumnDefinitions="2*,1*,1*,1*,1*,1*">
+                                    <StackPanel Grid.Column="0">
+                                      <TextBlock Text="{Binding Reference}" FontSize="12" FontWeight="SemiBold"/>
+                                      <TextBlock Text="{Binding Designation}" Classes="subtle" FontSize="11"/>
+                                    </StackPanel>
+                                    <TextBlock Grid.Column="1" Text="{Binding LblQty}" FontSize="12"
+                                               VerticalAlignment="Center" HorizontalAlignment="Right"/>
+                                    <TextBlock Grid.Column="2" Text="{Binding LblHt}" FontSize="12"
+                                               VerticalAlignment="Center" HorizontalAlignment="Right"
+                                               Classes="subtle"/>
+                                    <TextBlock Grid.Column="3" Text="{Binding LblTtc}" FontSize="12"
+                                               FontWeight="SemiBold"
+                                               VerticalAlignment="Center" HorizontalAlignment="Right"
+                                               Foreground="{DynamicResource CourseraPrimaryBrush}"/>
+                                    <TextBlock Grid.Column="4" Text="{Binding LblProfit}" FontSize="12"
+                                               FontWeight="SemiBold"
+                                               VerticalAlignment="Center" HorizontalAlignment="Right"
+                                               Foreground="{DynamicResource CourseraSuccessBrush}"/>
+                                    <TextBlock Grid.Column="5" Text="{Binding LblMargin}" FontSize="11"
+                                               Classes="subtle"
+                                               VerticalAlignment="Center" HorizontalAlignment="Right"/>
+                                  </Grid>
+                                </Border>
+                              </DataTemplate>
+                            </ItemsControl.ItemTemplate>
+                          </ItemsControl>
                         </StackPanel>
-                        <TextBlock Grid.Column="1" Text="{Binding Ville}" Classes="subtle"
-                                   FontSize="12" VerticalAlignment="Center"/>
-                        <TextBlock Grid.Column="2" Text="{Binding LblCount}" FontSize="13"
-                                   VerticalAlignment="Center" HorizontalAlignment="Right"/>
-                        <TextBlock Grid.Column="3" Text="{Binding LblHt}" FontSize="13"
-                                   VerticalAlignment="Center" HorizontalAlignment="Right"/>
-                        <TextBlock Grid.Column="4" Text="{Binding LblTtc}" FontWeight="SemiBold"
-                                   FontSize="13" VerticalAlignment="Center" HorizontalAlignment="Right"
-                                   Foreground="{DynamicResource CourseraPrimaryBrush}"/>
-                      </Grid>
+                      </StackPanel>
                     </Border>
                   </DataTemplate>
                 </ItemsControl.ItemTemplate>
               </ItemsControl>
+
+              <!-- Totals bar -->
+              <Border Padding="14,10" CornerRadius="8"
+                      Background="{DynamicResource CourseraSurfaceMutedBrush}"
+                      BorderBrush="{DynamicResource CourseraBorderBrush}" BorderThickness="1">
+                <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Spacing="24">
+                  <StackPanel Orientation="Horizontal" Spacing="6">
+                    <TextBlock Text="{Binding LblSaleByCustomerLabelHt}" FontWeight="SemiBold"
+                               FontSize="13" VerticalAlignment="Center"/>
+                    <TextBlock Text="{Binding LblSaleByCustomerTotalHt}" FontSize="13"
+                               VerticalAlignment="Center"/>
+                  </StackPanel>
+                  <StackPanel Orientation="Horizontal" Spacing="6">
+                    <TextBlock Text="{Binding LblSaleByCustomerLabelTtc}" FontWeight="SemiBold"
+                               FontSize="13" VerticalAlignment="Center"/>
+                    <TextBlock Text="{Binding LblSaleByCustomerTotalTtc}" FontSize="14" FontWeight="Bold"
+                               VerticalAlignment="Center"
+                               Foreground="{DynamicResource CourseraPrimaryBrush}"/>
+                  </StackPanel>
+                  <StackPanel Orientation="Horizontal" Spacing="6">
+                    <TextBlock Text="{Binding LblSaleByCustomerLabelProfit}" FontWeight="SemiBold"
+                               FontSize="13" VerticalAlignment="Center"/>
+                    <TextBlock Text="{Binding LblSaleByCustomerTotalProfit}" FontSize="14" FontWeight="Bold"
+                               VerticalAlignment="Center"
+                               Foreground="{DynamicResource CourseraSuccessBrush}"/>
+                  </StackPanel>
+                </StackPanel>
+              </Border>
+
               <Border Padding="20,18" CornerRadius="10"
                       Background="{DynamicResource CourseraSurfaceMutedBrush}"
                       IsVisible="{Binding ShowEmpty}">
@@ -188,23 +275,82 @@
                     <Border Padding="10,8" Margin="0,0,0,4"
                             Background="{DynamicResource CourseraSurfaceMutedBrush}"
                             CornerRadius="8">
-                      <Grid ColumnDefinitions="1*,1*,1*,1*,1*">
-                        <TextBlock Grid.Column="0" Text="{Binding LblDate}" FontWeight="SemiBold"
-                                   FontSize="13" VerticalAlignment="Center"/>
-                        <TextBlock Grid.Column="1" Text="{Binding LblCount}" FontSize="13"
-                                   VerticalAlignment="Center" HorizontalAlignment="Right"/>
-                        <TextBlock Grid.Column="2" Text="{Binding LblHt}" FontSize="13"
-                                   VerticalAlignment="Center" HorizontalAlignment="Right"/>
-                        <TextBlock Grid.Column="3" Text="{Binding LblTva}" FontSize="13"
-                                   VerticalAlignment="Center" HorizontalAlignment="Right"/>
-                        <TextBlock Grid.Column="4" Text="{Binding LblTtc}" FontWeight="SemiBold"
-                                   FontSize="13" VerticalAlignment="Center" HorizontalAlignment="Right"
-                                   Foreground="{DynamicResource CourseraPrimaryBrush}"/>
-                      </Grid>
+                      <StackPanel>
+                        <!-- Main day row -->
+                        <Grid ColumnDefinitions="Auto,1*,1*,1*,1*,1*">
+                          <Button Grid.Column="0" Width="24" Height="24" Padding="0"
+                                  Background="Transparent" BorderThickness="0"
+                                  Content="{Binding IsExpanded, Converter={x:Static conv:BoolToExpandArrowConverter.Instance}}"
+                                  Command="{Binding DataContext.ToggleDailyExpandCommand, ElementName=ThisControl}"
+                                  CommandParameter="{Binding}"
+                                  FontSize="12" VerticalAlignment="Center"
+                                  Foreground="{DynamicResource CourseraPrimaryBrush}"/>
+                          <TextBlock Grid.Column="1" Text="{Binding LblDate}" FontWeight="SemiBold"
+                                     FontSize="13" VerticalAlignment="Center"/>
+                          <TextBlock Grid.Column="2" Text="{Binding LblCount}" FontSize="13"
+                                     VerticalAlignment="Center" HorizontalAlignment="Right"/>
+                          <TextBlock Grid.Column="3" Text="{Binding LblTtc}" FontWeight="SemiBold"
+                                     FontSize="13" VerticalAlignment="Center" HorizontalAlignment="Right"
+                                     Foreground="{DynamicResource CourseraPrimaryBrush}"/>
+                          <TextBlock Grid.Column="4" Text="{Binding LblProfit}" FontSize="13"
+                                     FontWeight="SemiBold"
+                                     VerticalAlignment="Center" HorizontalAlignment="Right"
+                                     Foreground="{DynamicResource CourseraSuccessBrush}"/>
+                          <TextBlock Grid.Column="5" Text="{Binding LblMargin}" FontSize="12"
+                                     Classes="subtle"
+                                     VerticalAlignment="Center" HorizontalAlignment="Right"/>
+                        </Grid>
+
+                        <!-- Expanded invoice details -->
+                        <StackPanel IsVisible="{Binding IsExpanded}" Margin="28,8,0,0" Spacing="3">
+                          <ItemsControl ItemsSource="{Binding Details}">
+                            <ItemsControl.ItemTemplate>
+                              <DataTemplate x:DataType="vm:ReportDailySaleDetailRow">
+                                <Border Padding="8,6" CornerRadius="6"
+                                        Background="{DynamicResource CourseraSurfaceBrush}">
+                                  <Grid ColumnDefinitions="1.5*,1.5*,1*,1*,1*">
+                                    <TextBlock Grid.Column="0" Text="{Binding Numero}" FontSize="12"
+                                               FontWeight="SemiBold" VerticalAlignment="Center"/>
+                                    <TextBlock Grid.Column="1" Text="{Binding Client}" FontSize="12"
+                                               VerticalAlignment="Center" Classes="subtle"/>
+                                    <TextBlock Grid.Column="2" Text="{Binding LblTtc}" FontSize="12"
+                                               FontWeight="SemiBold"
+                                               VerticalAlignment="Center" HorizontalAlignment="Right"
+                                               Foreground="{DynamicResource CourseraPrimaryBrush}"/>
+                                    <TextBlock Grid.Column="3" Text="{Binding LblProfit}" FontSize="12"
+                                               FontWeight="SemiBold"
+                                               VerticalAlignment="Center" HorizontalAlignment="Right"
+                                               Foreground="{DynamicResource CourseraSuccessBrush}"/>
+                                    <TextBlock Grid.Column="4" Text="{Binding LblMargin}" FontSize="11"
+                                               Classes="subtle"
+                                               VerticalAlignment="Center" HorizontalAlignment="Right"/>
+                                  </Grid>
+                                </Border>
+                              </DataTemplate>
+                            </ItemsControl.ItemTemplate>
+                          </ItemsControl>
+                        </StackPanel>
+                      </StackPanel>
                     </Border>
                   </DataTemplate>
                 </ItemsControl.ItemTemplate>
               </ItemsControl>
+
+              <!-- Totals bar -->
+              <Border Padding="14,10" CornerRadius="8"
+                      Background="{DynamicResource CourseraSurfaceMutedBrush}"
+                      BorderBrush="{DynamicResource CourseraBorderBrush}" BorderThickness="1">
+                <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Spacing="24">
+                  <StackPanel Orientation="Horizontal" Spacing="6">
+                    <TextBlock Text="{Binding LblSaleByCustomerLabelProfit}" FontWeight="SemiBold"
+                               FontSize="13" VerticalAlignment="Center"/>
+                    <TextBlock Text="{Binding LblDailySalesTotalProfit}" FontSize="14" FontWeight="Bold"
+                               VerticalAlignment="Center"
+                               Foreground="{DynamicResource CourseraSuccessBrush}"/>
+                  </StackPanel>
+                </StackPanel>
+              </Border>
+
               <Border Padding="20,18" CornerRadius="10"
                       Background="{DynamicResource CourseraSurfaceMutedBrush}"
                       IsVisible="{Binding ShowEmpty}">

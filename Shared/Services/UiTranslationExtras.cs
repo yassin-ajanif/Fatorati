@@ -252,6 +252,10 @@ internal static class UiTranslationExtras
         ["Reports_BtnUnpaid"] = ("Impayés", "غير المدفوعة"),
         ["Reports_BtnStockMovements"] = ("Mouvements de stock", "حركات المخزون"),
         ["Reports_Empty"] = ("Aucune donnée pour cette période.", "لا توجد بيانات لهذه الفترة."),
+        ["Reports_LblTotalHt"] = ("Total HT", "الإجمالي بدون ضريبة"),
+        ["Reports_LblTotalTtc"] = ("Total TTC", "الإجمالي شامل الضريبة"),
+        ["Reports_LblProfit"] = ("Marge", "الهامش"),
+        ["Reports_LblTotalProfit"] = ("Marge totale", "إجمالي الهامش"),
         ["Stock_DefaultMotif"] = ("Inventaire", "جرد"),
         ["ModePaiement_TPE"] = ("TPE", "محطة دفع"),
     };

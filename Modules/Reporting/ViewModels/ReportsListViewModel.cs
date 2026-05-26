@@ -58,6 +58,13 @@ public partial class ReportsListViewModel : BaseViewModel
     [ObservableProperty] private bool _showEmpty;
     [ObservableProperty] private bool _showDateFilter = true;
     [ObservableProperty] private string _emptyMessage = string.Empty;
+    [ObservableProperty] private string _lblSaleByCustomerTotalHt = string.Empty;
+    [ObservableProperty] private string _lblSaleByCustomerTotalTtc = string.Empty;
+    [ObservableProperty] private string _lblSaleByCustomerLabelHt = string.Empty;
+    [ObservableProperty] private string _lblSaleByCustomerLabelTtc = string.Empty;
+    [ObservableProperty] private string _lblSaleByCustomerLabelProfit = string.Empty;
+    [ObservableProperty] private string _lblSaleByCustomerTotalProfit = string.Empty;
+    [ObservableProperty] private string _lblDailySalesTotalProfit = string.Empty;
 
     public ObservableCollection<ReportSaleByProductRow> SalesByProduct { get; } = [];
     public ObservableCollection<ReportSaleByCustomerRow> SalesByCustomer { get; } = [];
@@ -81,6 +88,9 @@ public partial class ReportsListViewModel : BaseViewModel
         BtnUnpaid = _locale.T("Reports_BtnUnpaid");
         BtnStockMovements = _locale.T("Reports_BtnStockMovements");
         EmptyMessage = _locale.T("Reports_Empty");
+        LblSaleByCustomerLabelHt = _locale.T("Reports_LblTotalHt");
+        LblSaleByCustomerLabelTtc = _locale.T("Reports_LblTotalTtc");
+        LblSaleByCustomerLabelProfit = _locale.T("Reports_LblTotalProfit");
     }
 
     partial void OnSelectedReportIndexChanged(int value)
@@ -101,6 +111,20 @@ public partial class ReportsListViewModel : BaseViewModel
     [RelayCommand] private void GoDailySales() => SelectedReportIndex = 3;
     [RelayCommand] private void GoUnpaid() => SelectedReportIndex = 4;
     [RelayCommand] private void GoStockMovements() => SelectedReportIndex = 5;
+
+    [RelayCommand]
+    private void ToggleCustomerExpand(ReportSaleByCustomerRow? row)
+    {
+        if (row != null)
+            row.IsExpanded = !row.IsExpanded;
+    }
+
+    [RelayCommand]
+    private void ToggleDailyExpand(ReportDailySaleRow? row)
+    {
+        if (row != null)
+            row.IsExpanded = !row.IsExpanded;
+    }
 
     [RelayCommand]
     private async Task LoadReportAsync(CancellationToken cancellationToken)
@@ -164,6 +188,10 @@ public partial class ReportsListViewModel : BaseViewModel
         SalesByCustomer.Clear();
         foreach (var r in data) SalesByCustomer.Add(r);
         ShowEmpty = SalesByCustomer.Count == 0;
+        var dev = data.Count > 0 ? data[0].Devise : "MAD";
+        LblSaleByCustomerTotalHt = $"{data.Sum(r => r.TotalHt):N2} {dev}";
+        LblSaleByCustomerTotalTtc = $"{data.Sum(r => r.TotalTtc):N2} {dev}";
+        LblSaleByCustomerTotalProfit = $"{data.Sum(r => r.Profit):N2} {dev}";
     }
 
     private async Task LoadRefundsAsync(DateTime from, DateTime to, CancellationToken ct)
@@ -180,6 +208,8 @@ public partial class ReportsListViewModel : BaseViewModel
         DailySales.Clear();
         foreach (var r in data) DailySales.Add(r);
         ShowEmpty = DailySales.Count == 0;
+        var dev = data.Count > 0 ? data[0].Devise : "MAD";
+        LblDailySalesTotalProfit = $"{data.Sum(r => r.Profit):N2} {dev}";
     }
 
     private async Task LoadUnpaidAsync(CancellationToken ct)
