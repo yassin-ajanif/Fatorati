@@ -213,7 +213,7 @@ public partial class PosViewModel : BaseViewModel
             return;
         }
 
-        Cart.Add(new CartLineRow
+        var line = new CartLineRow
         {
             ProduitId = produit.Id,
             Reference = produit.Reference,
@@ -221,14 +221,23 @@ public partial class PosViewModel : BaseViewModel
             PrixUnitaireHt = produit.PrixVenteHT,
             TauxTva = produit.TauxTVA,
             Quantite = 1
-        });
+        };
+        line.PropertyChanged += OnCartLinePropertyChanged;
+        Cart.Add(line);
         NotifyTotals();
+    }
+
+    private void OnCartLinePropertyChanged(object? sender, System.ComponentModel.PropertyChangedEventArgs e)
+    {
+        if (e.PropertyName == nameof(CartLineRow.MontantTtc))
+            NotifyTotals();
     }
 
     [RelayCommand]
     private void RemoveProduct(CartLineRow? line)
     {
         if (line is null) return;
+        line.PropertyChanged -= OnCartLinePropertyChanged;
         Cart.Remove(line);
         NotifyTotals();
     }
@@ -238,7 +247,6 @@ public partial class PosViewModel : BaseViewModel
     {
         if (line is null) return;
         line.Quantite++;
-        NotifyTotals();
     }
 
     [RelayCommand]
@@ -247,6 +255,7 @@ public partial class PosViewModel : BaseViewModel
         if (line is null) return;
         if (line.Quantite <= 1)
         {
+            line.PropertyChanged -= OnCartLinePropertyChanged;
             Cart.Remove(line);
         }
         else
@@ -259,6 +268,8 @@ public partial class PosViewModel : BaseViewModel
     [RelayCommand]
     private void ClearCart()
     {
+        foreach (var line in Cart)
+            line.PropertyChanged -= OnCartLinePropertyChanged;
         Cart.Clear();
         MontantRecu = 0;
         ShowDiscounts = false;

@@ -1,8 +1,10 @@
 using System.ComponentModel;
 using Avalonia.Controls;
+using Avalonia.Data;
 using Avalonia.Input;
 using Avalonia.Interactivity;
 using Avalonia.Markup.Xaml;
+using Avalonia.VisualTree;
 using GestionCommerciale.Modules.Pos.ViewModels;
 
 namespace GestionCommerciale.Modules.Pos.Views;
@@ -10,6 +12,7 @@ namespace GestionCommerciale.Modules.Pos.Views;
 public partial class PosView : UserControl
 {
     private InputElement? _focusedInput;
+    private NumericUpDown? _numericTarget;
     private bool _keyboardEnabled;
     private bool _isNumericTarget;
     private string _numBuffer = string.Empty;
@@ -35,6 +38,7 @@ public partial class PosView : UserControl
         _focusedInput = sender as InputElement;
         _clientBox = this.FindControl<AutoCompleteBox>("ClientBox");
         _clientBox?.Focus();
+        _numericTarget = null;
         ShowKeyboard();
     }
 
@@ -44,15 +48,19 @@ public partial class PosView : UserControl
         _numBuffer = string.Empty;
         _focusedInput = null;
         _clientBox = null;
+        _numericTarget = null;
         ShowKeyboard();
     }
 
     private void OnNumericDoubleTapped(object? sender, Avalonia.Input.TappedEventArgs e)
     {
         _isNumericTarget = true;
-        _focusedInput = sender as InputElement;
         _numBuffer = string.Empty;
         _clientBox = null;
+        _numericTarget = sender as NumericUpDown;
+        if (_numericTarget == null && sender is Control c)
+            _numericTarget = c.FindAncestorOfType<NumericUpDown>();
+        _focusedInput = _numericTarget;
         ShowKeyboard();
     }
 
@@ -72,6 +80,7 @@ public partial class PosView : UserControl
         if (overlay != null) overlay.IsVisible = false;
         _focusedInput = null;
         _clientBox = null;
+        _numericTarget = null;
     }
 
     private void OnSearchTextChanged(object? sender, TextChangedEventArgs e)
@@ -85,11 +94,19 @@ public partial class PosView : UserControl
         if (e.Key != Key.Enter) return;
         if (DataContext is not PosViewModel vm) return;
         e.Handled = true;
+        var text = vm.SearchText?.Trim();
+        if (string.IsNullOrEmpty(text))
+        {
+            vm.SearchText = string.Empty;
+            return;
+        }
 
-        if (vm.SelectedProduct is not null)
-            vm.AddProductCommand.Execute(vm.SelectedProduct);
-        else if (vm.SearchResults.Count > 0)
-            vm.AddProductCommand.Execute(vm.SearchResults[0]);
+        var match = vm.SearchResults.FirstOrDefault(r =>
+            !string.IsNullOrEmpty(r.CodeBarre) &&
+            r.CodeBarre.Equals(text, StringComparison.OrdinalIgnoreCase));
+
+        if (match is not null)
+            vm.AddProductCommand.Execute(match);
 
         vm.SearchText = string.Empty;
     }
@@ -110,6 +127,12 @@ public partial class PosView : UserControl
             _keyboardEnabled = vm.ShowKeyboard;
     }
 
+    private void SetNumericValue(decimal val)
+    {
+        if (_numericTarget == null) return;
+        _numericTarget.SetCurrentValue(NumericUpDown.ValueProperty, val);
+    }
+
     private void OnKeyboardKeyPressed(string ch)
     {
         if (_clientBox != null)
@@ -117,7 +140,7 @@ public partial class PosView : UserControl
             _clientBox.Text += ch;
             _clientBox.IsDropDownOpen = true;
         }
-        else if (_isNumericTarget && _focusedInput is NumericUpDown nud)
+        else if (_isNumericTarget && _numericTarget != null)
         {
             if (ch == "." && _numBuffer.Contains("."))
                 return;
@@ -125,7 +148,7 @@ public partial class PosView : UserControl
                 _numBuffer += ch;
             if (decimal.TryParse(_numBuffer, System.Globalization.NumberStyles.Any,
                     System.Globalization.CultureInfo.InvariantCulture, out var val))
-                nud.Value = val;
+                SetNumericValue(val);
         }
         else if (!_isNumericTarget && DataContext is PosViewModel vm)
         {
@@ -141,18 +164,18 @@ public partial class PosView : UserControl
             if (t.Length > 0)
                 _clientBox.Text = t[..^1];
         }
-        else if (_isNumericTarget && _focusedInput is NumericUpDown nud)
+        else if (_isNumericTarget && _numericTarget != null)
         {
             if (_numBuffer.Length > 0)
                 _numBuffer = _numBuffer[..^1];
             if (_numBuffer.Length == 0)
             {
-                nud.Value = 0;
+                SetNumericValue(0);
                 return;
             }
             if (decimal.TryParse(_numBuffer, System.Globalization.NumberStyles.Any,
                     System.Globalization.CultureInfo.InvariantCulture, out var val))
-                nud.Value = val;
+                SetNumericValue(val);
         }
         else if (!_isNumericTarget && DataContext is PosViewModel vm && vm.SearchText.Length > 0)
         {
@@ -166,10 +189,10 @@ public partial class PosView : UserControl
         {
             _clientBox.Text = string.Empty;
         }
-        else if (_isNumericTarget && _focusedInput is NumericUpDown nud)
+        else if (_isNumericTarget && _numericTarget != null)
         {
             _numBuffer = string.Empty;
-            nud.Value = 0;
+            SetNumericValue(0);
         }
         else if (!_isNumericTarget && DataContext is PosViewModel vm)
         {

@@ -4,6 +4,7 @@
              xmlns:models="using:GestionCommerciale.Modules.Stock.Models"
              xmlns:tiers="using:GestionCommerciale.Modules.Tiers.Models"
              xmlns:controls="using:GestionCommerciale.Shared.Controls"
+             xmlns:converters="using:GestionCommerciale.Shared.Converters"
              x:Class="GestionCommerciale.Modules.Pos.Views.PosView"
              x:DataType="vm:PosViewModel"
              x:Name="ThisControl">
@@ -215,7 +216,8 @@
             <StackPanel Grid.Column="4" VerticalAlignment="Center" Margin="0,0,24,0">
               <TextBlock Text="{Binding LabelResteARendre}" FontSize="11" Classes="subtle"/>
               <TextBlock Text="{Binding ResteARendre, StringFormat='{}{0:N2} DH'}"
-                         FontWeight="Bold" FontSize="20"/>
+                         FontWeight="Bold" FontSize="20"
+                         Foreground="{Binding ResteARendre, Converter={x:Static converters:PositiveNegativeForegroundConverter.Instance}}"/>
             </StackPanel>
 
             <Button Grid.Column="6" Content="{Binding BtnClearCart}" Command="{Binding ClearCartCommand}"
