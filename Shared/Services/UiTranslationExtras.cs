@@ -256,6 +256,8 @@ internal static class UiTranslationExtras
         ["Reports_LblTotalTtc"] = ("Total TTC", "الإجمالي شامل الضريبة"),
         ["Reports_LblProfit"] = ("Marge", "الهامش"),
         ["Reports_LblTotalProfit"] = ("Marge totale", "إجمالي الهامش"),
+        ["Reports_LblStockValHt"] = ("Val. stock HT", "قيمة المخزون بدون ضريبة"),
+        ["Reports_LblStockValTtc"] = ("Val. stock TTC", "قيمة المخزون شامل الضريبة"),
         ["Stock_DefaultMotif"] = ("Inventaire", "جرد"),
         ["ModePaiement_TPE"] = ("TPE", "محطة دفع"),
     };

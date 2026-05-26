@@ -65,6 +65,10 @@ public partial class ReportsListViewModel : BaseViewModel
     [ObservableProperty] private string _lblSaleByCustomerLabelProfit = string.Empty;
     [ObservableProperty] private string _lblSaleByCustomerTotalProfit = string.Empty;
     [ObservableProperty] private string _lblDailySalesTotalProfit = string.Empty;
+    [ObservableProperty] private string _lblStockValHtLabel = string.Empty;
+    [ObservableProperty] private string _lblStockValTtcLabel = string.Empty;
+    [ObservableProperty] private string _lblStockValHt = string.Empty;
+    [ObservableProperty] private string _lblStockValTtc = string.Empty;
 
     public ObservableCollection<ReportSaleByProductRow> SalesByProduct { get; } = [];
     public ObservableCollection<ReportSaleByCustomerRow> SalesByCustomer { get; } = [];
@@ -91,6 +95,8 @@ public partial class ReportsListViewModel : BaseViewModel
         LblSaleByCustomerLabelHt = _locale.T("Reports_LblTotalHt");
         LblSaleByCustomerLabelTtc = _locale.T("Reports_LblTotalTtc");
         LblSaleByCustomerLabelProfit = _locale.T("Reports_LblTotalProfit");
+        LblStockValHtLabel = _locale.T("Reports_LblStockValHt");
+        LblStockValTtcLabel = _locale.T("Reports_LblStockValTtc");
     }
 
     partial void OnSelectedReportIndexChanged(int value)
@@ -226,5 +232,8 @@ public partial class ReportsListViewModel : BaseViewModel
         StockMovements.Clear();
         foreach (var r in data) StockMovements.Add(r);
         ShowEmpty = StockMovements.Count == 0;
+        var valuation = await _reportService.GetStockValuationAsync(ct);
+        LblStockValHt = $"{valuation.ht:N2} {valuation.devise}";
+        LblStockValTtc = $"{valuation.ttc:N2} {valuation.devise}";
     }
 }

@@ -441,6 +441,28 @@
                   </DataTemplate>
                 </ItemsControl.ItemTemplate>
               </ItemsControl>
+
+              <!-- Stock valuation totals -->
+              <Border Padding="14,10" CornerRadius="8"
+                      Background="{DynamicResource CourseraSurfaceMutedBrush}"
+                      BorderBrush="{DynamicResource CourseraBorderBrush}" BorderThickness="1">
+                <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Spacing="24">
+                  <StackPanel Orientation="Horizontal" Spacing="6">
+                    <TextBlock Text="{Binding LblStockValHtLabel}" FontWeight="SemiBold"
+                               FontSize="13" VerticalAlignment="Center"/>
+                    <TextBlock Text="{Binding LblStockValHt}" FontSize="13"
+                               VerticalAlignment="Center"/>
+                  </StackPanel>
+                  <StackPanel Orientation="Horizontal" Spacing="6">
+                    <TextBlock Text="{Binding LblStockValTtcLabel}" FontWeight="SemiBold"
+                               FontSize="13" VerticalAlignment="Center"/>
+                    <TextBlock Text="{Binding LblStockValTtc}" FontSize="14" FontWeight="Bold"
+                               VerticalAlignment="Center"
+                               Foreground="{DynamicResource CourseraPrimaryBrush}"/>
+                  </StackPanel>
+                </StackPanel>
+              </Border>
+
               <Border Padding="20,18" CornerRadius="10"
                       Background="{DynamicResource CourseraSurfaceMutedBrush}"
                       IsVisible="{Binding ShowEmpty}">

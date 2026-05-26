@@ -437,6 +437,24 @@ public sealed class ReportService : IReportService
         }).ToList();
     }
 
+    public async Task<(decimal ht, decimal ttc, string devise)> GetStockValuationAsync(CancellationToken ct = default)
+    {
+        var dev = await GetDeviseAsync(ct);
+        await using var db = await _dbFactory.CreateDbContextAsync(ct);
+        var produits = await db.Produits.AsNoTracking()
+            .Where(p => p.StockActuel > 0)
+            .Select(p => new { p.StockActuel, p.PrixAchatHT, p.PrixVenteHT, p.TauxTVA })
+            .ToListAsync(ct);
+
+        decimal totalHt = 0, totalTtc = 0;
+        foreach (var p in produits)
+        {
+            totalHt += p.StockActuel * p.PrixAchatHT;
+            totalTtc += p.StockActuel * p.PrixVenteHT * (1 + p.TauxTVA / 100m);
+        }
+        return (totalHt, totalTtc, dev);
+    }
+
     private async Task<string> GetDeviseAsync(CancellationToken ct = default)
     {
         var cfg = await _settings.GetAsync(ct);
