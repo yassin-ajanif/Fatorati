@@ -140,6 +140,7 @@ public static class UiTranslations
         ["DevisList_ColTtc"] = ("TTC", "الإجمالي"),
         ["DevisList_ColNote"] = ("Note", "ملاحظة"),
         ["DocList_ColStatut"] = ("Statut", "الحالة"),
+        ["DocList_ColFacture"] = ("Facture", "فاتورة"),
         ["DocList_ColEcheance"] = ("Échéance", "الاستحقاق"),
         ["DocList_SearchPlaceholderClient"] = ("Rechercher par n° ou client…", "بحث برقم العميل أو اسمه…"),
         ["DocList_SearchPlaceholderSupplier"] = ("Rechercher par n° ou fournisseur…", "بحث برقم المورد أو اسمه…"),

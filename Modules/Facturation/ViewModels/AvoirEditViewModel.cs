@@ -408,7 +408,7 @@ public partial class AvoirEditViewModel : BaseViewModel
             Lignes.Add(row);
         }
 
-        CanEditDraft = false;
+        CanEditDraft = true;
         await LoadProduitsAsync(cancellationToken);
         RefreshTotals();
         Title = _locale.Tf("Avoir_TitleNum", Numero);

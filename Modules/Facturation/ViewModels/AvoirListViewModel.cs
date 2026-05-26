@@ -72,11 +72,12 @@ public partial class AvoirListViewModel : BaseViewModel
         BtnPdf = _locale.T("Btn_Pdf");
         UpdateBtnFilterDateText();
         WmSearch = _locale.T("Wm_SearchAvoirList");
-        ColNumero = _locale.T("DevisList_ColNumero");
-        ColClient = _locale.T("DevisList_ColClient");
+        // Reuse existing document/list header keys so the UI shows real labels (not missing key strings).
+        ColNumero = _locale.T("DevisList_ColRef");
+        ColClient = _locale.T("Lbl_Client");
         ColDate = _locale.T("DevisList_ColDate");
         ColFacture = _locale.T("DocList_ColFacture");
-        ColMotif = _locale.T("DocList_ColMotif");
+        ColMotif = _locale.T("Lbl_Motif");
         ColHt = _locale.T("DevisList_ColHt");
         ColTtc = _locale.T("DevisList_ColTtc");
     }
