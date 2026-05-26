@@ -103,7 +103,8 @@
                              Watermark="{Binding WmClientSearch}"
                              ItemsSource="{Binding Clients}"
                              ItemFilter="{Binding PartyAutocompleteFilter}"
-                             SelectedItem="{Binding SelectedClient, Mode=TwoWay}">
+                             SelectedItem="{Binding SelectedClient, Mode=TwoWay}"
+                             DoubleTapped="OnClientDoubleTapped">
               <AutoCompleteBox.ValueMemberBinding>
                 <Binding Path="Nom"/>
               </AutoCompleteBox.ValueMemberBinding>
@@ -194,7 +195,7 @@
     <!-- Keyboard overlay -->
     <Grid x:Name="KeyboardOverlay" IsVisible="False" Background="#80000000" ZIndex="100"
           PointerPressed="OnOverlayPointerPressed">
-      <Border VerticalAlignment="Bottom" CornerRadius="12,12,0,0" BorderThickness="1" Padding="8"
+      <Border VerticalAlignment="Center" HorizontalAlignment="Center" MaxWidth="480" CornerRadius="12" BorderThickness="1" Padding="8"
               Background="{DynamicResource CourseraSurfaceBrush}" BorderBrush="{DynamicResource CourseraBorderBrush}">
         <controls:VirtualKeyboard x:Name="PosKeyboard"
                                   KeyPressed="OnKeyboardKeyPressed"

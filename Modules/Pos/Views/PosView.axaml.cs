@@ -26,10 +26,24 @@ public partial class PosView : UserControl
         HideKeyboard();
     }
 
+    private AutoCompleteBox? _clientBox;
+
+    private void OnClientDoubleTapped(object? sender, Avalonia.Input.TappedEventArgs e)
+    {
+        _isNumericTarget = false;
+        _numBuffer = string.Empty;
+        _focusedInput = sender as InputElement;
+        _clientBox = this.FindControl<AutoCompleteBox>("ClientBox");
+        _clientBox?.Focus();
+        ShowKeyboard();
+    }
+
     private void OnSearchDoubleTapped(object? sender, Avalonia.Input.TappedEventArgs e)
     {
         _isNumericTarget = false;
         _numBuffer = string.Empty;
+        _focusedInput = null;
+        _clientBox = null;
         ShowKeyboard();
     }
 
@@ -38,6 +52,7 @@ public partial class PosView : UserControl
         _isNumericTarget = true;
         _focusedInput = sender as InputElement;
         _numBuffer = string.Empty;
+        _clientBox = null;
         ShowKeyboard();
     }
 
@@ -56,6 +71,7 @@ public partial class PosView : UserControl
         var overlay = this.FindControl<Grid>("KeyboardOverlay");
         if (overlay != null) overlay.IsVisible = false;
         _focusedInput = null;
+        _clientBox = null;
     }
 
     private void OnSearchTextChanged(object? sender, TextChangedEventArgs e)
@@ -96,7 +112,12 @@ public partial class PosView : UserControl
 
     private void OnKeyboardKeyPressed(string ch)
     {
-        if (_isNumericTarget && _focusedInput is NumericUpDown nud)
+        if (_clientBox != null)
+        {
+            _clientBox.Text += ch;
+            _clientBox.IsDropDownOpen = true;
+        }
+        else if (_isNumericTarget && _focusedInput is NumericUpDown nud)
         {
             if (ch == "." && _numBuffer.Contains("."))
                 return;
@@ -114,7 +135,13 @@ public partial class PosView : UserControl
 
     private void OnKeyboardBackspace()
     {
-        if (_isNumericTarget && _focusedInput is NumericUpDown nud)
+        if (_clientBox != null)
+        {
+            var t = _clientBox.Text ?? string.Empty;
+            if (t.Length > 0)
+                _clientBox.Text = t[..^1];
+        }
+        else if (_isNumericTarget && _focusedInput is NumericUpDown nud)
         {
             if (_numBuffer.Length > 0)
                 _numBuffer = _numBuffer[..^1];
@@ -135,7 +162,11 @@ public partial class PosView : UserControl
 
     private void OnKeyboardClear()
     {
-        if (_isNumericTarget && _focusedInput is NumericUpDown nud)
+        if (_clientBox != null)
+        {
+            _clientBox.Text = string.Empty;
+        }
+        else if (_isNumericTarget && _focusedInput is NumericUpDown nud)
         {
             _numBuffer = string.Empty;
             nud.Value = 0;

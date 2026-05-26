@@ -68,6 +68,7 @@
         <Button Classes="key" Content="0" Tag="0" Click="OnKeyClick"/>
       </WrapPanel>
       <WrapPanel HorizontalAlignment="Center">
+        <Button Classes="key-wide" Content="⌫" Click="OnBackspace"/>
         <Button x:Name="SpaceBtn" Classes="key-wide" Content="Espace" Click="OnSpace"/>
         <Button Classes="key-wide" Content="." Tag="." Click="OnKeyClick"/>
         <Button Classes="key-wide" Content="✕" Click="OnClear"/>
