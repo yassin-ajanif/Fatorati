@@ -26,14 +26,14 @@ public partial class PosView : UserControl
         HideKeyboard();
     }
 
-    private void OnSearchGotFocus(object? sender, GotFocusEventArgs e)
+    private void OnSearchDoubleTapped(object? sender, Avalonia.Input.TappedEventArgs e)
     {
         _isNumericTarget = false;
         _numBuffer = string.Empty;
         ShowKeyboard();
     }
 
-    private void OnNumericGotFocus(object? sender, GotFocusEventArgs e)
+    private void OnNumericDoubleTapped(object? sender, Avalonia.Input.TappedEventArgs e)
     {
         _isNumericTarget = true;
         _focusedInput = sender as InputElement;

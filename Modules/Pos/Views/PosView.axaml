@@ -13,7 +13,7 @@
       <!-- Search -->
       <TextBox x:Name="SearchBox" Grid.Row="0" Watermark="{Binding SearchWatermark}" Text="{Binding SearchText}"
                TextChanged="OnSearchTextChanged" KeyDown="OnSearchKeyDown" Margin="0,0,0,12"
-               GotFocus="OnSearchGotFocus"/>
+               DoubleTapped="OnSearchDoubleTapped"/>
 
       <!-- Product quick list -->
       <ListBox Grid.Row="1" ItemsSource="{Binding SearchResults}" MaxHeight="180"
@@ -63,17 +63,17 @@
                                 CommandParameter="{Binding .}"/>
                         <NumericUpDown x:Name="QtyInput" Value="{Binding Quantite}" FormatString="N2" Minimum="0" ShowButtonSpinner="False"
                                        MinWidth="60" MinHeight="28" FontSize="14" FontWeight="SemiBold"
-                                       HorizontalAlignment="Center" GotFocus="OnNumericGotFocus"/>
+                                       HorizontalAlignment="Center" DoubleTapped="OnNumericDoubleTapped"/>
                         <Button Content="+" FontSize="20" FontWeight="Bold" Classes="primary" Padding="8,0"
                                 Command="{Binding $parent[UserControl].((vm:PosViewModel)DataContext).IncreaseQtyCommand}"
                                 CommandParameter="{Binding .}"/>
                       </StackPanel>
                       <StackPanel Grid.Column="3" Orientation="Horizontal" Spacing="2" VerticalAlignment="Center" Margin="0,0,4,0">
                         <NumericUpDown Value="{Binding RemisePct}" FormatString="N0" Minimum="0" Maximum="100"
-                                       MinWidth="40" MinHeight="28" FontSize="11" GotFocus="OnNumericGotFocus"/>
+                                       MinWidth="40" MinHeight="28" FontSize="11" DoubleTapped="OnNumericDoubleTapped"/>
                         <TextBlock Text="%" VerticalAlignment="Center" FontSize="11" Classes="subtle"/>
                         <NumericUpDown Value="{Binding RemiseMontant}" FormatString="N2" Minimum="0"
-                                       MinWidth="60" MinHeight="28" FontSize="11" GotFocus="OnNumericGotFocus"/>
+                                       MinWidth="60" MinHeight="28" FontSize="11" DoubleTapped="OnNumericDoubleTapped"/>
                       </StackPanel>
                       <TextBlock Grid.Column="4" Text="{Binding MontantTtc, StringFormat='{}{0:N2} DH'}"
                                  VerticalAlignment="Center" FontWeight="Bold" FontSize="14"
@@ -134,7 +134,7 @@
                           </ComboBox.ItemTemplate>
                         </ComboBox>
                         <NumericUpDown x:Name="SplitMontantInput" Value="{Binding Montant}" FormatString="N2" Minimum="0"
-                                       MinWidth="90" MinHeight="28" FontSize="12" GotFocus="OnNumericGotFocus"/>
+                                       MinWidth="90" MinHeight="28" FontSize="12" DoubleTapped="OnNumericDoubleTapped"/>
                         <Button Content="×" MinWidth="24" MinHeight="28" Padding="0" FontSize="14"
                                 Command="{Binding $parent[UserControl].((vm:PosViewModel)DataContext).RemovePaymentSplitCommand}"
                                 CommandParameter="{Binding .}"/>
@@ -154,13 +154,13 @@
             <StackPanel Grid.Column="0" VerticalAlignment="Center" Margin="0,0,12,0">
               <TextBlock Text="{Binding LabelRemiseGlobale}" FontSize="11" Classes="subtle"/>
               <NumericUpDown x:Name="RemiseGlobaleInput" Value="{Binding RemiseGlobale}" FormatString="N2" Minimum="0" Maximum="100"
-                             MinWidth="70" MinHeight="32" FontSize="14" FontWeight="SemiBold" GotFocus="OnNumericGotFocus"/>
+                             MinWidth="70" MinHeight="32" FontSize="14" FontWeight="SemiBold" DoubleTapped="OnNumericDoubleTapped"/>
             </StackPanel>
 
             <StackPanel Grid.Column="1" VerticalAlignment="Center" Margin="0,0,16,0">
               <TextBlock Text="{Binding LabelRemiseGlobaleMontant}" FontSize="11" Classes="subtle"/>
               <NumericUpDown x:Name="RemiseGlobaleMontantInput" Value="{Binding RemiseGlobaleMontant}" FormatString="N2" Minimum="0"
-                             MinWidth="90" MinHeight="32" FontSize="14" FontWeight="SemiBold" GotFocus="OnNumericGotFocus"/>
+                             MinWidth="90" MinHeight="32" FontSize="14" FontWeight="SemiBold" DoubleTapped="OnNumericDoubleTapped"/>
             </StackPanel>
 
             <StackPanel Grid.Column="2" VerticalAlignment="Center" Margin="0,0,16,0">
@@ -171,7 +171,7 @@
             <StackPanel Grid.Column="3" VerticalAlignment="Center" Margin="0,0,16,0">
               <TextBlock Text="{Binding LabelMontantRecu}" FontSize="11" Classes="subtle"/>
               <NumericUpDown x:Name="MontantRecuInput" Value="{Binding MontantRecu}" FormatString="N2" Minimum="0"
-                             MinWidth="110" MinHeight="32" FontSize="14" FontWeight="SemiBold" GotFocus="OnNumericGotFocus"/>
+                             MinWidth="110" MinHeight="32" FontSize="14" FontWeight="SemiBold" DoubleTapped="OnNumericDoubleTapped"/>
             </StackPanel>
 
             <StackPanel Grid.Column="4" VerticalAlignment="Center" Margin="0,0,24,0">
