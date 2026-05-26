@@ -24,17 +24,20 @@ public partial class AppShellViewModel : BaseViewModel
     private readonly IServiceProvider _sp;
     private readonly ICurrentUserSession _session;
     private readonly ILocaleService _locale;
+    private readonly PerformanceTestService _testService;
 
     public AppShellViewModel(
         WorkspaceNavigator workspaceNavigator,
         IServiceProvider sp,
         ICurrentUserSession session,
-        ILocaleService locale)
+        ILocaleService locale,
+        PerformanceTestService testService)
     {
         _workspace = workspaceNavigator;
         _sp = sp;
         _session = session;
         _locale = locale;
+        _testService = testService;
         UserLabel = session.Nom ?? string.Empty;
         _workspace.CurrentPageChanged += (_, _) =>
         {
@@ -69,6 +72,9 @@ public partial class AppShellViewModel : BaseViewModel
     [ObservableProperty] private string _navProduits = string.Empty;
     [ObservableProperty] private string _navReports = string.Empty;
     [ObservableProperty] private string _navSettings = string.Empty;
+
+    [ObservableProperty] private bool _isTestRunning;
+    [ObservableProperty] private string _testProgress = string.Empty;
 
     [ObservableProperty] private bool _isNavHomeActive;
     [ObservableProperty] private bool _isNavPosActive;
@@ -208,6 +214,24 @@ public partial class AppShellViewModel : BaseViewModel
 
     [RelayCommand]
     private void GoSettings() => _workspace.Open(_sp.GetRequiredService<SettingsViewModel>());
+
+    [RelayCommand]
+    private async Task RunPerfTestAsync(CancellationToken ct)
+    {
+        if (IsTestRunning) return;
+        IsTestRunning = true;
+        TestProgress = string.Empty;
+        try
+        {
+            var progress = new Progress<string>(msg => TestProgress = msg);
+            var result = await _testService.RunAsync(progress, ct);
+            TestProgress = result;
+        }
+        finally
+        {
+            IsTestRunning = false;
+        }
+    }
 
     private void UpdateActiveNav()
     {

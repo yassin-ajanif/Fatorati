@@ -52,6 +52,7 @@ public static class DependencyInjection
         services.AddSingleton<ILicenseService, LicenseService>();
         services.AddSingleton<IPdfService, PdfService>();
         services.AddSingleton<VirtualKeyboardService>();
+        services.AddSingleton<PerformanceTestService>();
         services.AddTransient<MainWindowViewModel>();
         services.AddTransient<LoginViewModel>();
         services.AddTransient<AppShellViewModel>();
