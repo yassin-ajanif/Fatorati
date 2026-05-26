@@ -1,6 +1,7 @@
 using GestionCommerciale.Modules.Devis.Models;
 using GestionCommerciale.Modules.Facturation.Models;
 using GestionCommerciale.Modules.Livraison.Models;
+using GestionCommerciale.Modules.AvoirFournisseur.Models;
 using GestionCommerciale.Modules.Commande.Models;
 using GestionCommerciale.Modules.Reception.Models;
 using GestionCommerciale.Modules.Stock.Models;
@@ -30,6 +31,8 @@ public class AppDbContext : DbContext
     public DbSet<Paiement> Paiements => Set<Paiement>();
     public DbSet<Avoir> Avoirs => Set<Avoir>();
     public DbSet<AvoirLigne> AvoirLignes => Set<AvoirLigne>();
+    public DbSet<AvoirFournisseur> AvoirsFournisseurs => Set<AvoirFournisseur>();
+    public DbSet<AvoirFournisseurLigne> AvoirFournisseurLignes => Set<AvoirFournisseurLigne>();
     public DbSet<AppSettingsRow> AppSettings => Set<AppSettingsRow>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
@@ -88,6 +91,11 @@ public class AppDbContext : DbContext
         {
             e.HasOne(a => a.Facture).WithMany().HasForeignKey(a => a.FactureId).IsRequired(false).OnDelete(DeleteBehavior.SetNull);
             e.HasMany(a => a.Lignes).WithOne(l => l.Avoir).HasForeignKey(l => l.AvoirId).OnDelete(DeleteBehavior.Cascade);
+        });
+
+        modelBuilder.Entity<AvoirFournisseur>(e =>
+        {
+            e.HasMany(a => a.Lignes).WithOne(l => l.AvoirFournisseur).HasForeignKey(l => l.AvoirFournisseurId).OnDelete(DeleteBehavior.Cascade);
         });
 
         modelBuilder.Entity<AppSettingsRow>(e =>

@@ -1,3 +1,4 @@
+using GestionCommerciale.Modules.AvoirFournisseur.Models;
 using GestionCommerciale.Modules.Commande.Models;
 using GestionCommerciale.Modules.Devis.Models;
 using GestionCommerciale.Modules.Facturation.Models;
@@ -52,6 +53,19 @@ public static class DocumentTotalsHelper
     }
 
     public static (decimal ht, decimal tva, decimal ttc) AvoirTotals(IEnumerable<AvoirLigne> lignes)
+    {
+        decimal ht = 0, tva = 0;
+        foreach (var l in lignes)
+        {
+            var lht = LigneHT(l.Quantite, l.PrixUnitaireHT, l.Remise);
+            ht += lht;
+            tva += lht * (l.TauxTVA / 100m);
+        }
+
+        return (ht, tva, ht + tva);
+    }
+
+    public static (decimal ht, decimal tva, decimal ttc) AvoirFournisseurTotals(IEnumerable<AvoirFournisseurLigne> lignes)
     {
         decimal ht = 0, tva = 0;
         foreach (var l in lignes)

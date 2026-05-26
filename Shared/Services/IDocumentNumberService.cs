@@ -8,4 +8,5 @@ public interface IDocumentNumberService
     Task<string> NextBCAsync(CancellationToken cancellationToken = default);
     Task<string> NextFactureAsync(CancellationToken cancellationToken = default);
     Task<string> NextAvoirAsync(CancellationToken cancellationToken = default);
+    Task<string> NextAvoirFournisseurAsync(CancellationToken cancellationToken = default);
 }

@@ -52,6 +52,13 @@ public sealed class DocumentNumberService : IDocumentNumberService
             return list;
         }, "AVO", cancellationToken);
 
+    public Task<string> NextAvoirFournisseurAsync(CancellationToken cancellationToken = default) =>
+        NextFromDbAsync(async db =>
+        {
+            var list = await db.AvoirsFournisseurs.AsNoTracking().Select(d => d.Numero).ToListAsync(cancellationToken);
+            return list;
+        }, "AVF", cancellationToken);
+
     private async Task<string> NextFromDbAsync(Func<AppDbContext, Task<List<string>>> loadNumeros, string prefix, CancellationToken cancellationToken)
     {
         var year = DateTime.Now.Year;
