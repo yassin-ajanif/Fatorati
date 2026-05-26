@@ -47,7 +47,10 @@ public partial class DevisListViewModel : BaseViewModel
     [ObservableProperty] private string _btnRefresh = string.Empty;
     [ObservableProperty] private string _btnNew = string.Empty;
     [ObservableProperty] private string _btnPdf = string.Empty;
+    [ObservableProperty] private string _btnFilterDate = string.Empty;
     [ObservableProperty] private string _menuDeleteDevis = string.Empty;
+    private DateTime? _dateFrom;
+    private DateTime? _dateTo;
     [ObservableProperty] private string _colHeaderRef = string.Empty;
     [ObservableProperty] private string _colHeaderClient = string.Empty;
     [ObservableProperty] private string _colHeaderDate = string.Empty;
@@ -64,6 +67,7 @@ public partial class DevisListViewModel : BaseViewModel
         BtnRefresh = _locale.T("Btn_Refresh");
         BtnNew = _locale.T("Btn_New");
         BtnPdf = _locale.T("Btn_Pdf");
+        UpdateBtnFilterDateText();
         MenuDeleteDevis = _locale.T("Devis_MenuDelete");
         ColHeaderRef = _locale.T("DevisList_ColRef");
         ColHeaderClient = _locale.T("Lbl_Client");
@@ -103,7 +107,12 @@ public partial class DevisListViewModel : BaseViewModel
             var cfg = await _settings.GetAsync(cancellationToken);
             var devise = string.IsNullOrWhiteSpace(cfg.Devise) ? "MAD" : cfg.Devise.Trim();
             await using var db = await _dbFactory.CreateDbContextAsync(cancellationToken);
-            var list = await db.Devis.AsNoTracking().Include(d => d.Lignes).OrderByDescending(d => d.Date).Take(200).ToListAsync(cancellationToken);
+            var q = db.Devis.AsNoTracking().Include(d => d.Lignes).AsQueryable();
+            if (_dateFrom.HasValue)
+                q = q.Where(d => d.Date >= _dateFrom.Value);
+            if (_dateTo.HasValue)
+                q = q.Where(d => d.Date <= _dateTo.Value);
+            var list = await q.OrderByDescending(d => d.Date).Take(200).ToListAsync(cancellationToken);
             var clientIds = list.Select(d => d.ClientId).Distinct().ToList();
             var noms = await db.Tiers.AsNoTracking()
                 .Where(t => clientIds.Contains(t.Id))
@@ -120,6 +129,33 @@ public partial class DevisListViewModel : BaseViewModel
         {
             IsBusy = false;
         }
+    }
+
+    private void UpdateBtnFilterDateText()
+    {
+        if (_dateFrom.HasValue && _dateTo.HasValue)
+            BtnFilterDate = $"{_dateFrom:dd/MM/yy} — {_dateTo:dd/MM/yy}";
+        else
+            BtnFilterDate = _locale.T("Btn_FilterDate");
+    }
+
+    [RelayCommand]
+    private async Task FilterDateAsync(CancellationToken cancellationToken)
+    {
+        var range = await _dialog.PickDateRangeAsync(_locale.T("Btn_FilterDate"), cancellationToken);
+        if (range == null) return;
+        if (range.Value.from == DateTime.MinValue && range.Value.to == DateTime.MinValue)
+        {
+            _dateFrom = null;
+            _dateTo = null;
+        }
+        else
+        {
+            _dateFrom = range.Value.from;
+            _dateTo = range.Value.to;
+        }
+        UpdateBtnFilterDateText();
+        await LoadAsync(cancellationToken);
     }
 
     [RelayCommand]

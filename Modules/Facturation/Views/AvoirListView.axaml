@@ -9,6 +9,7 @@
       <Button Content="{Binding BtnNew}" Command="{Binding NewAvoirCommand}"/>
       <Button Content="{Binding BtnRefresh}" Command="{Binding LoadCommand}"/>
       <Button Content="{Binding BtnPdf}" Command="{Binding ExportPdfCommand}"/>
+      <Button Content="{Binding BtnFilterDate}" Command="{Binding FilterDateCommand}"/>
       <TextBox Width="260" MinWidth="200" VerticalAlignment="Center"
                Watermark="{Binding WmSearch}"
                Text="{Binding SearchText, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"/>

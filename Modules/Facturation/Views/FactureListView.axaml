@@ -10,6 +10,7 @@
       <Button Content="{Binding BtnRefresh}" Command="{Binding LoadCommand}"/>
       <Button Content="{Binding BtnNew}" Command="{Binding NewFactureCommand}"/>
       <Button Content="{Binding BtnPdf}" Command="{Binding ExportPdfCommand}"/>
+      <Button Content="{Binding BtnFilterDate}" Command="{Binding FilterDateCommand}"/>
       <ComboBox Width="220" PlaceholderText="{Binding WmFilterPayee}" SelectedIndex="{Binding PayeeFilterIndex}">
         <ComboBoxItem>
           <TextBlock Text="{Binding #FactureListRoot.((vm:FactureListViewModel)DataContext).LblPayeeFilterAll}"/>

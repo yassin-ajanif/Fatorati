@@ -52,7 +52,10 @@ public partial class AvoirListViewModel : BaseViewModel
     [ObservableProperty] private string _btnRefresh = string.Empty;
     [ObservableProperty] private string _btnNew = string.Empty;
     [ObservableProperty] private string _btnPdf = string.Empty;
+    [ObservableProperty] private string _btnFilterDate = string.Empty;
     [ObservableProperty] private string _searchText = string.Empty;
+    private DateTime? _dateFrom;
+    private DateTime? _dateTo;
     [ObservableProperty] private string _wmSearch = string.Empty;
     [ObservableProperty] private string _colNumero = string.Empty;
     [ObservableProperty] private string _colClient = string.Empty;
@@ -67,6 +70,7 @@ public partial class AvoirListViewModel : BaseViewModel
         BtnRefresh = _locale.T("Btn_Refresh");
         BtnNew = _locale.T("Btn_NewAvoir");
         BtnPdf = _locale.T("Btn_Pdf");
+        UpdateBtnFilterDateText();
         WmSearch = _locale.T("Wm_SearchAvoirList");
         ColNumero = _locale.T("DevisList_ColNumero");
         ColClient = _locale.T("DevisList_ColClient");
@@ -105,10 +109,16 @@ public partial class AvoirListViewModel : BaseViewModel
                           from f in fj.DefaultIfEmpty()
                           select new { a, nom = t != null ? t.Nom : string.Empty, factNum = f != null ? f.Numero : string.Empty };
 
+            var joinedQ = joined.AsQueryable();
+            if (_dateFrom.HasValue)
+                joinedQ = joinedQ.Where(x => x.a.Date >= _dateFrom.Value);
+            if (_dateTo.HasValue)
+                joinedQ = joinedQ.Where(x => x.a.Date <= _dateTo.Value);
+
             List<(Avoir a, string nom, string factNum)> raw;
             if (string.IsNullOrWhiteSpace(SearchText))
             {
-                var rows = await joined
+                var rows = await joinedQ
                     .OrderByDescending(x => x.a.Date)
                     .Take(DocumentNumberSearchHelper.ResultCap)
                     .Select(x => new { x.a, nom = x.nom, factNum = x.factNum })
@@ -120,7 +130,7 @@ public partial class AvoirListViewModel : BaseViewModel
                 var term = SearchText.Trim();
                 if (DocumentNumberSearchHelper.IsNumericSearchTerm(term))
                 {
-                    var rows = await joined
+                    var rows = await joinedQ
                         .OrderByDescending(x => x.a.Date)
                         .Take(DocumentNumberSearchHelper.NumericScanCap)
                         .Select(x => new { x.a, nom = x.nom, factNum = x.factNum })
@@ -134,7 +144,7 @@ public partial class AvoirListViewModel : BaseViewModel
                 }
                 else
                 {
-                    var filtered = joined.Where(x =>
+                    var filtered = joinedQ.Where(x =>
                         x.a.Numero.Contains(term)
                         || x.nom.Contains(term)
                         || x.factNum.Contains(term)
@@ -159,6 +169,33 @@ public partial class AvoirListViewModel : BaseViewModel
         {
             IsBusy = false;
         }
+    }
+
+    private void UpdateBtnFilterDateText()
+    {
+        if (_dateFrom.HasValue && _dateTo.HasValue)
+            BtnFilterDate = $"{_dateFrom:dd/MM/yy} — {_dateTo:dd/MM/yy}";
+        else
+            BtnFilterDate = _locale.T("Btn_FilterDate");
+    }
+
+    [RelayCommand]
+    private async Task FilterDateAsync(CancellationToken cancellationToken)
+    {
+        var range = await _dialog.PickDateRangeAsync(_locale.T("Btn_FilterDate"), cancellationToken);
+        if (range == null) return;
+        if (range.Value.from == DateTime.MinValue && range.Value.to == DateTime.MinValue)
+        {
+            _dateFrom = null;
+            _dateTo = null;
+        }
+        else
+        {
+            _dateFrom = range.Value.from;
+            _dateTo = range.Value.to;
+        }
+        UpdateBtnFilterDateText();
+        await LoadAsync(cancellationToken);
     }
 
     [RelayCommand]

@@ -50,6 +50,7 @@ internal static class UiTranslationExtras
         ["Btn_NewFacture"] = ("Nouvelle", "فاتورة جديدة"),
         ["Btn_NewAvoir"] = ("Nouvel avoir", "إشعار دائن جديد"),
         ["Btn_BackList"] = ("Retour liste", "العودة للقائمة"),
+        ["Btn_FilterDate"] = ("Filtrer par date", "تصفية حسب التاريخ"),
 
         ["Lbl_Client"] = ("Client", "العميل"),
         ["Lbl_Supplier"] = ("Fournisseur", "المورد"),

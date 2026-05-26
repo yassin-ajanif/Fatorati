@@ -47,7 +47,10 @@ public partial class BCListViewModel : BaseViewModel
     [ObservableProperty] private string _btnRefresh = string.Empty;
     [ObservableProperty] private string _btnNew = string.Empty;
     [ObservableProperty] private string _btnPdf = string.Empty;
+    [ObservableProperty] private string _btnFilterDate = string.Empty;
     [ObservableProperty] private string _menuDeleteBc = string.Empty;
+    private DateTime? _dateFrom;
+    private DateTime? _dateTo;
     [ObservableProperty] private string _colHeaderRef = string.Empty;
     [ObservableProperty] private string _colHeaderParty = string.Empty;
     [ObservableProperty] private string _colHeaderDate = string.Empty;
@@ -63,6 +66,7 @@ public partial class BCListViewModel : BaseViewModel
         BtnRefresh = _locale.T("Btn_Refresh");
         BtnNew = _locale.T("Btn_New");
         BtnPdf = _locale.T("Btn_Pdf");
+        UpdateBtnFilterDateText();
         MenuDeleteBc = _locale.T("BC_MenuDelete");
         ColHeaderRef = _locale.T("DevisList_ColRef");
         ColHeaderParty = _locale.T("Lbl_Supplier");
@@ -101,7 +105,12 @@ public partial class BCListViewModel : BaseViewModel
             var cfg = await _settings.GetAsync(cancellationToken);
             var devise = string.IsNullOrWhiteSpace(cfg.Devise) ? "MAD" : cfg.Devise.Trim();
             await using var db = await _dbFactory.CreateDbContextAsync(cancellationToken);
-            var list = await db.BonsCommande.AsNoTracking().Include(b => b.Lignes).OrderByDescending(b => b.Date).Take(200).ToListAsync(cancellationToken);
+            var q = db.BonsCommande.AsNoTracking().Include(b => b.Lignes).AsQueryable();
+            if (_dateFrom.HasValue)
+                q = q.Where(b => b.Date >= _dateFrom.Value);
+            if (_dateTo.HasValue)
+                q = q.Where(b => b.Date <= _dateTo.Value);
+            var list = await q.OrderByDescending(b => b.Date).Take(200).ToListAsync(cancellationToken);
             var ids = list.Select(b => b.FournisseurId).Distinct().ToList();
             var noms = await db.Tiers.AsNoTracking()
                 .Where(t => ids.Contains(t.Id))
@@ -115,6 +124,33 @@ public partial class BCListViewModel : BaseViewModel
         {
             IsBusy = false;
         }
+    }
+
+    private void UpdateBtnFilterDateText()
+    {
+        if (_dateFrom.HasValue && _dateTo.HasValue)
+            BtnFilterDate = $"{_dateFrom:dd/MM/yy} — {_dateTo:dd/MM/yy}";
+        else
+            BtnFilterDate = _locale.T("Btn_FilterDate");
+    }
+
+    [RelayCommand]
+    private async Task FilterDateAsync(CancellationToken cancellationToken)
+    {
+        var range = await _dialog.PickDateRangeAsync(_locale.T("Btn_FilterDate"), cancellationToken);
+        if (range == null) return;
+        if (range.Value.from == DateTime.MinValue && range.Value.to == DateTime.MinValue)
+        {
+            _dateFrom = null;
+            _dateTo = null;
+        }
+        else
+        {
+            _dateFrom = range.Value.from;
+            _dateTo = range.Value.to;
+        }
+        UpdateBtnFilterDateText();
+        await LoadAsync(cancellationToken);
     }
 
     [RelayCommand]
