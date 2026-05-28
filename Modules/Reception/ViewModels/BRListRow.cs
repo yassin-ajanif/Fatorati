@@ -23,7 +23,7 @@ public sealed class BRListRow
             FournisseurNom = fournisseurNom,
             DateShort = br.Date.ToString("d", CultureInfo.CurrentCulture),
             HtLabel = locale.Tf("Doc_FmtHt", ht, devise),
-            TtcLabel = locale.Tf("Doc_FmtTtc", ttc, devise),
+            TtcLabel = $"{ttc:N2} {devise}",
             NotePreview = DocumentListFormat.NotePreview(br.Note),
         };
     }

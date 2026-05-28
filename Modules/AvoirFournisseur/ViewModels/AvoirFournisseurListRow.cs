@@ -22,7 +22,7 @@ public sealed class AvoirFournisseurListRow
             FournisseurNom = fournisseurNom,
             DateShort = doc.Date.ToString("d", CultureInfo.CurrentCulture),
             HtLabel = locale.Tf("Doc_FmtHt", ht, devise),
-            TtcLabel = locale.Tf("Doc_FmtTtc", ttc, devise),
+            TtcLabel = $"{ttc:N2} {devise}",
             NotePreview = DocumentListFormat.NotePreview(doc.Motif),
         };
     }

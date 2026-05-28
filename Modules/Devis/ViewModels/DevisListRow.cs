@@ -28,7 +28,7 @@ public sealed class DevisListRow
             DateShort = devis.Date.ToString("d", CultureInfo.CurrentCulture),
             ValidUntilShort = devis.DateValidite.ToString("d", CultureInfo.CurrentCulture),
             HtLabel = locale.Tf("Doc_FmtHt", ht, devise),
-            TtcLabel = locale.Tf("Doc_FmtTtc", ttc, devise),
+            TtcLabel = $"{ttc:N2} {devise}",
             IsExpired = devis.DateValidite.Date < today,
             NotePreview = DocumentListFormat.NotePreview(devis.Note),
         };

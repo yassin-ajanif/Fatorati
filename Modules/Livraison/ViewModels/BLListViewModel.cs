@@ -106,7 +106,8 @@ public partial class BLListViewModel : BaseViewModel
 
             var search = SearchText?.Trim();
             if (!string.IsNullOrEmpty(search))
-                q = q.Where(bl => bl.Numero.Contains(search));
+                q = q.Where(bl => EF.Functions.Like(bl.Numero, $"%{search}%")
+                    || db.Tiers.AsNoTracking().Any(t => t.Id == bl.ClientId && EF.Functions.Like(t.Nom, $"%{search}%")));
 
             var total = await q.CountAsync(ct);
             var list = await q.OrderByDescending(b => b.Date)

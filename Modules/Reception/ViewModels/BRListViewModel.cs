@@ -106,7 +106,8 @@ public partial class BRListViewModel : BaseViewModel
 
             var search = SearchText?.Trim();
             if (!string.IsNullOrEmpty(search))
-                q = q.Where(b => b.Numero.Contains(search));
+                q = q.Where(b => EF.Functions.Like(b.Numero, $"%{search}%")
+                    || db.Tiers.AsNoTracking().Any(t => t.Id == b.FournisseurId && EF.Functions.Like(t.Nom, $"%{search}%")));
 
             var total = await q.CountAsync(ct);
             var list = await q.OrderByDescending(b => b.Date)

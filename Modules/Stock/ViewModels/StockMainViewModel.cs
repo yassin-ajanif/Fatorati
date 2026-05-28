@@ -6,6 +6,7 @@ using GestionCommerciale.Modules.Stock;
 using GestionCommerciale.Modules.Stock.Models;
 using GestionCommerciale.Modules.Stock.Services;
 using GestionCommerciale.Shared.Database;
+using GestionCommerciale.Shared.Helpers;
 using GestionCommerciale.Shared.Services;
 using GestionCommerciale.Shared.ViewModels;
 using Microsoft.EntityFrameworkCore;
@@ -19,6 +20,8 @@ public partial class StockMainViewModel : BaseViewModel
     private readonly IDialogService _dialog;
     private readonly ICurrentUserSession _session;
     private readonly ILocaleService _locale;
+
+    private int _currentProduitId;
 
     public StockMainViewModel(
         IDbContextFactory<AppDbContext> dbFactory,
@@ -34,7 +37,12 @@ public partial class StockMainViewModel : BaseViewModel
         _locale = locale;
         _locale.CultureApplied += (_, _) => RefreshStockUi();
         RefreshStockUi();
+        Pagination = new PaginationHelper(() => _ = LoadProduitsAsync(CancellationToken.None));
+        MouvementPagination = new PaginationHelper(() => _ = LoadMouvementsAsync(_currentProduitId, CancellationToken.None));
     }
+
+    public PaginationHelper Pagination { get; }
+    public PaginationHelper MouvementPagination { get; }
 
     [ObservableProperty] private string _btnRefreshList = string.Empty;
     [ObservableProperty] private string _lblCatalog = string.Empty;
@@ -84,7 +92,11 @@ public partial class StockMainViewModel : BaseViewModel
             _ = LoadMouvementsAsync(SelectedProduit.Id, CancellationToken.None);
     }
 
-    partial void OnProductSearchChanged(string value) => _ = LoadProduitsAsync(CancellationToken.None);
+    partial void OnProductSearchChanged(string value)
+    {
+        Pagination.CurrentPage = 1;
+        _ = LoadProduitsAsync(CancellationToken.None);
+    }
 
     public ObservableCollection<Produit> Produits { get; } = [];
     public ObservableCollection<MouvementStock> Mouvements { get; } = [];
@@ -104,12 +116,17 @@ public partial class StockMainViewModel : BaseViewModel
         try
         {
             await using var db = await _dbFactory.CreateDbContextAsync(cancellationToken);
-            var list = await db.Produits.AsNoTracking()
+            var q = db.Produits.AsNoTracking()
                 .WhereSearchMatches(ProductSearch)
-                .SelectForListWithoutImageData()
+                .SelectForListWithoutImageData();
+            var total = await q.CountAsync(cancellationToken);
+            var list = await q
+                .OrderBy(p => p.Reference)
+                .Skip(Pagination.Skip).Take(Pagination.PageSize)
                 .ToListAsync(cancellationToken);
             Produits.Clear();
             foreach (var p in list) Produits.Add(p);
+            Pagination.TotalCount = total;
             if (prevId.HasValue)
                 SelectedProduit = Produits.FirstOrDefault(p => p.Id == prevId.Value);
         }
@@ -123,19 +140,25 @@ public partial class StockMainViewModel : BaseViewModel
     {
         Mouvements.Clear();
         if (value == null) return;
+        _currentProduitId = value.Id;
+        MouvementPagination.CurrentPage = 1;
         _ = LoadMouvementsAsync(value.Id, CancellationToken.None);
     }
 
     private async Task LoadMouvementsAsync(int produitId, CancellationToken cancellationToken)
     {
+        if (produitId == 0) return;
         await using var db = await _dbFactory.CreateDbContextAsync(cancellationToken);
-        var list = await db.MouvementsStock.AsNoTracking()
-            .Where(m => m.ProduitId == produitId)
+        var q = db.MouvementsStock.AsNoTracking()
+            .Where(m => m.ProduitId == produitId);
+        var total = await q.CountAsync(cancellationToken);
+        var list = await q
             .OrderByDescending(m => m.CreatedAt)
-            .Take(200)
+            .Skip(MouvementPagination.Skip).Take(MouvementPagination.PageSize)
             .ToListAsync(cancellationToken);
         Mouvements.Clear();
         foreach (var m in list) Mouvements.Add(m);
+        MouvementPagination.TotalCount = total;
     }
 
     [RelayCommand]

@@ -54,7 +54,6 @@ public partial class FactureListViewModel : BaseViewModel
     [ObservableProperty] private string _colHeaderDate = string.Empty;
     [ObservableProperty] private string _colHeaderEcheance = string.Empty;
     [ObservableProperty] private string _colHeaderPayee = string.Empty;
-    [ObservableProperty] private string _colHeaderHt = string.Empty;
     [ObservableProperty] private string _colHeaderTtc = string.Empty;
     [ObservableProperty] private string _colHeaderNote = string.Empty;
     [ObservableProperty] private string _searchWatermark = string.Empty;
@@ -80,7 +79,6 @@ public partial class FactureListViewModel : BaseViewModel
         ColHeaderDate = _locale.T("DevisList_ColDate");
         ColHeaderEcheance = _locale.T("DocList_ColEcheance");
         ColHeaderPayee = _locale.T("FactList_ColPayee");
-        ColHeaderHt = _locale.T("DevisList_ColHt");
         ColHeaderTtc = _locale.T("DevisList_ColTtc");
         ColHeaderNote = _locale.T("DevisList_ColNote");
         SearchWatermark = _locale.T("DocList_SearchPlaceholderClient");
@@ -123,7 +121,8 @@ public partial class FactureListViewModel : BaseViewModel
 
             var search = SearchText?.Trim();
             if (!string.IsNullOrEmpty(search))
-                q = q.Where(f => f.Numero.Contains(search) || f.ClientId.ToString() == search);
+                q = q.Where(f => EF.Functions.Like(f.Numero, $"%{search}%")
+                    || db.Tiers.AsNoTracking().Any(t => t.Id == f.ClientId && EF.Functions.Like(t.Nom, $"%{search}%")));
 
             var total = await q.CountAsync(ct);
             var list = await q.OrderByDescending(f => f.Date)

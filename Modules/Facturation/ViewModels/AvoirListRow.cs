@@ -30,7 +30,7 @@ public sealed class AvoirListRow
             DateShort = avoir.Date.ToString("d", CultureInfo.CurrentCulture),
             MotifDisplay = string.IsNullOrEmpty(motifDisplay) ? factureNumero : motifDisplay,
             HtLabel = locale.Tf("Doc_FmtHt", ht, devise),
-            TtcLabel = locale.Tf("Doc_FmtTtc", ttc, devise),
+            TtcLabel = $"{ttc:N2} {devise}",
         };
     }
 }

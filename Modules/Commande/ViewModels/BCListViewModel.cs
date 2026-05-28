@@ -103,7 +103,8 @@ public partial class BCListViewModel : BaseViewModel
 
             var search = SearchText?.Trim();
             if (!string.IsNullOrEmpty(search))
-                q = q.Where(b => b.Numero.Contains(search));
+                q = q.Where(bc => EF.Functions.Like(bc.Numero, $"%{search}%")
+                    || db.Tiers.AsNoTracking().Any(t => t.Id == bc.FournisseurId && EF.Functions.Like(t.Nom, $"%{search}%")));
 
             var total = await q.CountAsync(ct);
             var list = await q.OrderByDescending(b => b.Date)

@@ -105,7 +105,8 @@ public partial class DevisListViewModel : BaseViewModel
 
             var search = SearchText?.Trim();
             if (!string.IsNullOrEmpty(search))
-                q = q.Where(d => d.Numero.Contains(search) || d.ClientId.ToString() == search);
+                q = q.Where(d => EF.Functions.Like(d.Numero, $"%{search}%")
+                    || db.Tiers.AsNoTracking().Any(t => t.Id == d.ClientId && EF.Functions.Like(t.Nom, $"%{search}%")));
 
             var total = await q.CountAsync(ct);
             var list = await q.OrderByDescending(d => d.Date)

@@ -27,7 +27,7 @@ public sealed class FactureListRow
             EcheanceShort = f.DateEcheance.ToString("d", CultureInfo.CurrentCulture),
             StatutLabel = f.EstPayee ? locale.T("Fact_Paid") : locale.T("Fact_Unpaid"),
             HtLabel = locale.Tf("Doc_FmtHt", ht, devise),
-            TtcLabel = locale.Tf("Doc_FmtTtc", ttc, devise),
+            TtcLabel = $"{ttc:N2} {devise}",
             NotePreview = DocumentListFormat.NotePreview(f.Note),
         };
     }

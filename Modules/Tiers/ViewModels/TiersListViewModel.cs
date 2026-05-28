@@ -171,7 +171,9 @@ public partial class TiersListViewModel : BaseViewModel
             if (!string.IsNullOrEmpty(f))
             {
                 q = q.Where(t =>
-                    t.Nom.Contains(f) || t.ICE.Contains(f) || t.Ville.Contains(f));
+                    EF.Functions.Like(t.Nom, $"%{f}%") ||
+                    EF.Functions.Like(t.ICE, $"%{f}%") ||
+                    EF.Functions.Like(t.Ville, $"%{f}%"));
             }
 
             var total = await q.CountAsync(cancellationToken);

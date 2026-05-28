@@ -182,17 +182,8 @@ public partial class ReportingViewModel : BaseViewModel
         var since30 = now.AddDays(-30);
         var expireUntil = now.AddDays(14);
 
-        var facCur = await db.Factures.AsNoTracking()
-            .Where(f => f.Date >= startCur && f.Date < endCur)
-            .Include(f => f.Lignes)
-            .ToListAsync(ct);
-        var caCur = facCur.Sum(f => DocumentTotalsHelper.FactureTotals(f.Lignes ?? [], f.RemiseGlobale).ttc);
-
-        var facPrev = await db.Factures.AsNoTracking()
-            .Where(f => f.Date >= startPrev && f.Date < endPrev)
-            .Include(f => f.Lignes)
-            .ToListAsync(ct);
-        var caPrev = facPrev.Sum(f => DocumentTotalsHelper.FactureTotals(f.Lignes ?? [], f.RemiseGlobale).ttc);
+        var caCur = await InvoiceTtcSumAsync(db, startCur, endCur, ct);
+        var caPrev = await InvoiceTtcSumAsync(db, startPrev, endPrev, ct);
 
         var devis30 = await db.Devis.AsNoTracking().CountAsync(d => d.Date >= since30, ct);
         var devisExpire = await db.Devis.AsNoTracking().CountAsync(
@@ -205,21 +196,24 @@ public partial class ReportingViewModel : BaseViewModel
         var brMonth = await db.BonsReception.AsNoTracking().CountAsync(
             b => b.Date >= startCur && b.Date < endCur, ct);
 
-        var factsYear = await db.Factures.AsNoTracking()
-            .Where(f => f.Date >= startCur.AddMonths(-11))
-            .Include(f => f.Lignes)
-            .ToListAsync(ct);
-        var topClients = factsYear
-            .GroupBy(f => f.ClientId)
-            .Select(g => new { ClientId = g.Key, Total = g.Sum(f => DocumentTotalsHelper.FactureTotals(f.Lignes ?? [], f.RemiseGlobale).ttc) })
+        var yearStart = startCur.AddMonths(-11);
+        var topClientAgg = (await db.Factures.AsNoTracking()
+            .Where(f => f.Date >= yearStart)
+            .Select(f => new {
+                f.ClientId,
+                TTC = f.Lignes.Sum(l => l.Quantite * l.PrixUnitaireHT * (1m - l.Remise / 100m) * (1m + l.TauxTVA / 100m)) * (1m - f.RemiseGlobale / 100m)
+            })
+            .GroupBy(x => x.ClientId)
+            .Select(g => new { ClientId = g.Key, Total = g.Sum(x => x.TTC) })
+            .ToListAsync(ct))
             .OrderByDescending(x => x.Total)
             .Take(5)
             .ToList();
 
-        var maxClient = topClients.Count > 0 ? topClients.Max(x => x.Total) : 0m;
+        var maxClient = topClientAgg.Count > 0 ? topClientAgg.Max(x => x.Total) : 0m;
 
         var topClientRows = new List<ReportRankRow>();
-        foreach (var x in topClients)
+        foreach (var x in topClientAgg)
         {
             var nom = await db.Tiers.AsNoTracking().Where(t => t.Id == x.ClientId).Select(t => t.Nom).FirstOrDefaultAsync(ct);
             var share = maxClient > 0 ? (double)(x.Total / maxClient) : 0;
@@ -234,7 +228,7 @@ public partial class ReportingViewModel : BaseViewModel
             from l in db.BonLivraisonLignes.AsNoTracking()
             join b in db.BonsLivraison.AsNoTracking() on l.BLId equals b.Id
             where b.Date >= blSince
-            select l
+            select new { l.ProduitId, l.QuantiteLivree }
         ).ToListAsync(ct);
         var topProd = blLignes
             .GroupBy(l => l.ProduitId)
@@ -276,22 +270,24 @@ public partial class ReportingViewModel : BaseViewModel
             p => p.Actif && p.StockMinimum > 0 && p.StockActuel < p.StockMinimum, ct);
         var pctSous = actifs > 0 ? (double)sousMin / actifs * 100.0 : 0;
 
-        var unpaidRows = new List<ReportUnpaidRow>();
-        var unpaid = await db.Factures.AsNoTracking()
+        var unpaidProj = await db.Factures.AsNoTracking()
             .Where(f => !f.EstPayee)
-            .Include(f => f.Lignes)
-            .Include(f => f.Paiements)
+            .Select(f => new {
+                f.Numero,
+                f.DateEcheance,
+                TTC = f.Lignes.Sum(l => l.Quantite * l.PrixUnitaireHT * (1m - l.Remise / 100m) * (1m + l.TauxTVA / 100m)) * (1m - f.RemiseGlobale / 100m),
+                Paye = f.Paiements.Sum(p => (decimal?)p.Montant) ?? 0m
+            })
             .OrderBy(f => f.DateEcheance)
             .Take(200)
             .ToListAsync(ct);
 
         decimal encoursTotal = 0;
         var encoursCount = 0;
-        foreach (var f in unpaid)
+        var unpaidRows = new List<ReportUnpaidRow>();
+        foreach (var f in unpaidProj)
         {
-            var (_, _, ttc) = DocumentTotalsHelper.FactureTotals(f.Lignes ?? [], f.RemiseGlobale);
-            var paye = (f.Paiements ?? []).Sum(p => p.Montant);
-            var reste = ttc - paye;
+            var reste = f.TTC - f.Paye;
             if (reste <= 0.01m) continue;
 
             encoursTotal += reste;
@@ -343,6 +339,14 @@ public partial class ReportingViewModel : BaseViewModel
             StockAlertes = stockAlertRows,
             FacturesImpayees = unpaidRows,
         };
+    }
+
+    private static async Task<decimal> InvoiceTtcSumAsync(AppDbContext db, DateTime from, DateTime to, CancellationToken ct)
+    {
+        return await db.Factures.AsNoTracking()
+            .Where(f => f.Date >= from && f.Date < to)
+            .Select(f => (decimal?)f.Lignes.Sum(l => l.Quantite * l.PrixUnitaireHT * (1m - l.Remise / 100m) * (1m + l.TauxTVA / 100m)) * (1m - f.RemiseGlobale / 100m))
+            .SumAsync(ct) ?? 0m;
     }
 
     private static string FormatCaLine(ILocaleService locale, string key, decimal amount, string dev)

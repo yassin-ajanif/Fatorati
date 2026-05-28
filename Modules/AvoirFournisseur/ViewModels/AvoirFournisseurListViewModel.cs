@@ -94,13 +94,8 @@ public partial class AvoirFournisseurListViewModel : BaseViewModel
 
             var search = SearchText?.Trim();
             if (!string.IsNullOrEmpty(search))
-            {
-                var matchingIds = await db.Tiers.AsNoTracking()
-                    .Where(t => t.Nom.Contains(search))
-                    .Select(t => t.Id)
-                    .ToListAsync(ct);
-                q = q.Where(a => a.Numero.Contains(search) || matchingIds.Contains(a.FournisseurId));
-            }
+                q = q.Where(a => EF.Functions.Like(a.Numero, $"%{search}%")
+                    || db.Tiers.AsNoTracking().Any(t => t.Id == a.FournisseurId && EF.Functions.Like(t.Nom, $"%{search}%")));
 
             var total = await q.CountAsync(ct);
             var docs = await q.OrderByDescending(d => d.Date)
