@@ -26,4 +26,22 @@ public class AppSettingsRow
 
     /// <summary>Stored license key once activated (null = not yet licensed).</summary>
     public string? LicenseKey { get; set; }
+
+    /// <summary>Enables automatic periodic database backups.</summary>
+    public bool BackupEnabled { get; set; }
+
+    /// <summary>Interval between automatic backups.</summary>
+    public int BackupIntervalHours { get; set; } = 24;
+
+    /// <summary>Unit for BackupIntervalHours: "Minutes" or "Hours".</summary>
+    public string BackupIntervalUnit { get; set; } = "Hours";
+
+    /// <summary>Number of days to keep backup files before deleting them.</summary>
+    public int BackupRetentionDays { get; set; } = 30;
+
+    /// <summary>Directory where backup files are stored.</summary>
+    public string BackupDirectory { get; set; } = string.Empty;
+
+    /// <summary>UTC date of the last successful automatic backup.</summary>
+    public DateTime? LastBackupDate { get; set; }
 }

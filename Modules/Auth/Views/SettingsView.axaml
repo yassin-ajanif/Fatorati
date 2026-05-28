@@ -80,6 +80,39 @@
         <TextBox Text="{Binding Devise}" Watermark="{Binding WmDevise}"/>
       </StackPanel>
 
+      <Border BorderBrush="#2E7D32" BorderThickness="1" CornerRadius="6" Padding="10" Margin="0,8,0,0">
+        <StackPanel Spacing="10">
+          <TextBlock Text="{Binding LblBackup}" FontWeight="Bold" Foreground="#2E7D32"/>
+          <CheckBox Content="{Binding LblBackupEnabled}" IsChecked="{Binding BackupEnabled}"/>
+          <Grid ColumnDefinitions="Auto,*,Auto">
+            <TextBlock Grid.Column="0" Text="{Binding LblBackupInterval}" VerticalAlignment="Center" Margin="0,0,8,0"/>
+            <NumericUpDown Grid.Column="1" Minimum="1" Maximum="10080" Value="{Binding BackupIntervalHours}" MinWidth="80"/>
+            <ComboBox Grid.Column="2" Margin="8,0,0,0" MinWidth="100"
+                      ItemsSource="{Binding BackupIntervalUnitOptions}"
+                      SelectedItem="{Binding BackupIntervalUnit}"/>
+          </Grid>
+          <Grid ColumnDefinitions="Auto,*">
+            <TextBlock Grid.Column="0" Text="{Binding LblBackupRetention}" VerticalAlignment="Center" Margin="0,0,8,0"/>
+            <NumericUpDown Grid.Column="1" Minimum="1" Maximum="365" Value="{Binding BackupRetentionDays}" MinWidth="100"/>
+          </Grid>
+          <StackPanel Spacing="4">
+            <TextBlock Text="{Binding LblBackupDirectory}" FontWeight="SemiBold"/>
+            <Grid ColumnDefinitions="*,Auto">
+              <TextBox Grid.Column="0" Text="{Binding BackupDirectory}" IsReadOnly="True" VerticalContentAlignment="Center"/>
+              <Button Grid.Column="1" Margin="8,0,0,0" Content="{Binding LblPickBackupDir}" Command="{Binding PickBackupDirectoryCommand}" VerticalAlignment="Center"/>
+            </Grid>
+          </StackPanel>
+          <StackPanel Orientation="Horizontal" Spacing="8">
+            <Button Content="{Binding LblBackupNow}" Command="{Binding CreateBackupNowCommand}"/>
+            <TextBlock VerticalAlignment="Center" Text="{Binding LblLastBackup}"/>
+            <TextBlock VerticalAlignment="Center" Text="{Binding LastBackupDateStr}"/>
+          </StackPanel>
+          <TextBlock Classes="subtle" FontSize="12">
+            <Run Text="{Binding LblBackupDirectory}"/><Run Text=": "/><Run Text="{Binding BackupDirectory}"/>
+          </TextBlock>
+        </StackPanel>
+      </Border>
+
       <Border BorderBrush="#993300" BorderThickness="1" CornerRadius="6" Padding="10" Margin="0,8,0,0">
         <StackPanel Spacing="8">
           <TextBlock Text="{Binding LblDangerZone}" FontWeight="Bold" Foreground="#993300"/>

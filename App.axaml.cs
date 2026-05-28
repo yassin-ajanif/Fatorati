@@ -72,6 +72,7 @@ public partial class App : Application
         var settings = await appSettingsService.GetAsync(default);
 
         App.Services.GetRequiredService<VirtualKeyboardService>().IsEnabled = settings.EnableVirtualKeyboard;
+        App.Services.GetRequiredService<IPeriodicBackupService>().Start();
 
         if (!licenseService.IsLicensed(settings))
         {

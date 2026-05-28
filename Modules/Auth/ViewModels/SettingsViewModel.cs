@@ -17,6 +17,7 @@ public partial class SettingsViewModel : BaseViewModel
     private readonly ICurrentUserSession _session;
     private readonly ILocaleService _locale;
     private readonly IDbContextFactory<AppDbContext> _dbFactory;
+    private readonly IBackupService _backup;
 
     public UiLanguageOption[] LanguageOptions { get; } =
     [
@@ -29,13 +30,15 @@ public partial class SettingsViewModel : BaseViewModel
         IDialogService dialog,
         ICurrentUserSession session,
         ILocaleService locale,
-        IDbContextFactory<AppDbContext> dbFactory)
+        IDbContextFactory<AppDbContext> dbFactory,
+        IBackupService backup)
     {
         _settings = settings;
         _dialog = dialog;
         _session = session;
         _locale = locale;
         _dbFactory = dbFactory;
+        _backup = backup;
         _locale.CultureApplied += (_, _) => RefreshSettingsLabels();
         RefreshSettingsLabels();
     }
@@ -69,6 +72,25 @@ public partial class SettingsViewModel : BaseViewModel
     [ObservableProperty] private string _lblUiLanguage = string.Empty;
     [ObservableProperty] private string _lblDangerZone = string.Empty;
     [ObservableProperty] private string _btnFormatSystem = string.Empty;
+    [ObservableProperty] private bool _backupEnabled;
+    [ObservableProperty] private int _backupIntervalHours = 24;
+    [ObservableProperty] private int _backupRetentionDays = 30;
+    [ObservableProperty] private string _backupDirectory = string.Empty;
+    [ObservableProperty] private int _backupCount;
+    [ObservableProperty] private string _lastBackupDateStr = string.Empty;
+    [ObservableProperty] private string _backupIntervalUnit = "Hours";
+    [ObservableProperty] private string _lblBackupIntervalUnit = string.Empty;
+    public List<string> BackupIntervalUnitOptions { get; } = ["Minutes", "Hours"];
+
+    [ObservableProperty] private string _lblBackup = string.Empty;
+    [ObservableProperty] private string _lblBackupEnabled = string.Empty;
+    [ObservableProperty] private string _lblBackupInterval = string.Empty;
+    [ObservableProperty] private string _lblBackupRetention = string.Empty;
+    [ObservableProperty] private string _lblBackupDirectory = string.Empty;
+    [ObservableProperty] private string _lblPickBackupDir = string.Empty;
+    [ObservableProperty] private string _lblBackupNow = string.Empty;
+    [ObservableProperty] private string _lblLastBackup = string.Empty;
+
     [ObservableProperty] private string _wmSociete = string.Empty;
     [ObservableProperty] private string _wmAdresse = string.Empty;
     [ObservableProperty] private string _wmIce = string.Empty;
@@ -97,6 +119,15 @@ public partial class SettingsViewModel : BaseViewModel
         LblUiLanguage = _locale.T("Settings_UiLanguage");
         LblDangerZone = _locale.T("Settings_DangerZone");
         BtnFormatSystem = _locale.T("Settings_BtnFormatSystem");
+        LblBackup = _locale.T("Settings_Backup");
+        LblBackupEnabled = _locale.T("Settings_BackupEnabled");
+        LblBackupInterval = _locale.T("Settings_BackupInterval");
+        LblBackupIntervalUnit = _locale.T("Settings_BackupIntervalUnit");
+        LblBackupRetention = _locale.T("Settings_BackupRetention");
+        LblBackupDirectory = _locale.T("Settings_BackupDirectory");
+        LblPickBackupDir = _locale.T("Settings_PickBackupDir");
+        LblBackupNow = _locale.T("Settings_BackupNow");
+        LblLastBackup = _locale.T("Settings_LastBackup");
         WmSociete = _locale.T("Settings_WmSociete");
         WmAdresse = _locale.T("Settings_WmAdresse");
         WmIce = _locale.T("Settings_WmIce");
@@ -138,6 +169,16 @@ public partial class SettingsViewModel : BaseViewModel
             TauxTvaText = "20";
         }
 
+        BackupEnabled = row.BackupEnabled;
+        BackupIntervalHours = row.BackupIntervalHours;
+        BackupIntervalUnit = string.IsNullOrWhiteSpace(row.BackupIntervalUnit) ? "Hours" : row.BackupIntervalUnit;
+        BackupRetentionDays = row.BackupRetentionDays;
+        BackupDirectory = row.BackupDirectory;
+        BackupCount = await _backup.GetBackupCountAsync(row.BackupDirectory, cancellationToken);
+        LastBackupDateStr = row.LastBackupDate.HasValue
+            ? row.LastBackupDate.Value.ToLocalTime().ToString("g")
+            : string.Empty;
+
         RefreshSettingsLabels();
     }
 
@@ -172,12 +213,63 @@ public partial class SettingsViewModel : BaseViewModel
             EnableVirtualKeyboard = EnableVirtualKeyboard,
             DevisValiditeJoursDefaut = DevisValiditeJours,
             Devise = Devise,
-            UiLanguage = lang
+            UiLanguage = lang,
+            BackupEnabled = BackupEnabled,
+            BackupIntervalHours = BackupIntervalHours,
+            BackupIntervalUnit = BackupIntervalUnit,
+            BackupRetentionDays = BackupRetentionDays,
+            BackupDirectory = BackupDirectory
         };
         await _settings.SaveAsync(row, cancellationToken);
         _locale.ApplyLanguage(lang);
         RefreshSettingsLabels();
         await _dialog.ShowInfoAsync(_locale.T("Settings_Title"), _locale.T("Settings_Saved"), cancellationToken);
+    }
+
+    [RelayCommand]
+    private async Task PickBackupDirectoryAsync(CancellationToken cancellationToken)
+    {
+        var path = await _dialog.PickFolderAsync(cancellationToken);
+        if (!string.IsNullOrWhiteSpace(path))
+        {
+            BackupDirectory = path;
+            BackupCount = await _backup.GetBackupCountAsync(path, cancellationToken);
+            await SaveAsync(cancellationToken);
+        }
+    }
+
+    [RelayCommand]
+    private async Task CreateBackupNowAsync(CancellationToken cancellationToken)
+    {
+        if (string.IsNullOrWhiteSpace(BackupDirectory))
+        {
+            await _dialog.ShowErrorAsync(_locale.T("Settings_Backup"), _locale.T("Settings_BackupNoDir"), cancellationToken);
+            return;
+        }
+
+        IsBusy = true;
+        try
+        {
+            var result = await _backup.CreateBackupAsync(BackupDirectory, cancellationToken);
+            if (result is null)
+            {
+                await _dialog.ShowErrorAsync(_locale.T("Settings_Backup"), _locale.T("Settings_BackupFailed"), cancellationToken);
+                return;
+            }
+
+            LastBackupDateStr = DateTime.Now.ToString("g");
+            BackupCount = await _backup.GetBackupCountAsync(BackupDirectory, cancellationToken);
+            await _backup.CleanupOldBackupsAsync(BackupDirectory, BackupRetentionDays, cancellationToken);
+            await _dialog.ShowInfoAsync(_locale.T("Settings_Backup"), _locale.T("Settings_BackupDone"), cancellationToken);
+        }
+        catch (Exception ex)
+        {
+            await _dialog.ShowErrorAsync(_locale.T("Settings_Backup"), ex.Message, cancellationToken);
+        }
+        finally
+        {
+            IsBusy = false;
+        }
     }
 
     [RelayCommand]

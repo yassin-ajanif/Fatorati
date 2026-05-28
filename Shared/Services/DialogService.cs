@@ -402,6 +402,19 @@ public sealed class DialogService : IDialogService
         return result.Count > 0 ? result[0].TryGetLocalPath() : null;
     }
 
+    public async Task<string?> PickFolderAsync(CancellationToken cancellationToken = default)
+    {
+        var owner = GetMainWindow();
+        if (owner?.StorageProvider is not { } sp) return null;
+
+        var result = await sp.OpenFolderPickerAsync(new FolderPickerOpenOptions
+        {
+            AllowMultiple = false
+        });
+
+        return result.Count > 0 ? result[0].TryGetLocalPath() : null;
+    }
+
     public async Task<string?> PickSaveFileAsync(string title, string suggestedFileName, IReadOnlyList<string> patterns, CancellationToken cancellationToken = default)
     {
         var owner = GetMainWindow();
