@@ -145,6 +145,8 @@ public partial class ReportsListViewModel : BaseViewModel
         ShowEmpty = false;
         try
         {
+            await Task.Yield();
+
             var from = DateFrom.Date;
             var to = DateTo.Date;
 

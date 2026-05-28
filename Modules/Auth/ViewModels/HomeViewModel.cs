@@ -31,7 +31,7 @@ public class HomeViewModel : BaseViewModel
         if (session.CanAccessReporting)
             Dashboard = sp.GetRequiredService<ReportingViewModel>();
 
-        RefreshTrialMessage();
+        _ = RefreshTrialMessageAsync();
     }
 
     /// <summary>Reporting dashboard; null when the user role cannot access reporting.</summary>
@@ -47,9 +47,9 @@ public class HomeViewModel : BaseViewModel
 
     public bool ShowTrialMessage => TrialMessage is not null;
 
-    private void RefreshTrialMessage()
+    private async Task RefreshTrialMessageAsync()
     {
-        var settings = _appSettings.GetAsync(default).GetAwaiter().GetResult();
+        var settings = await _appSettings.GetAsync(default);
 
         if (_license.IsLicensed(settings))
         {

@@ -1,5 +1,6 @@
 using Avalonia.Controls;
 using Avalonia.Markup.Xaml;
+using Avalonia.Threading;
 using GestionCommerciale.Modules.Auth.ViewModels;
 
 namespace GestionCommerciale.Modules.Auth.Views;
@@ -14,7 +15,7 @@ public partial class HomeView : UserControl
     protected override void OnAttachedToVisualTree(Avalonia.VisualTreeAttachmentEventArgs e)
     {
         base.OnAttachedToVisualTree(e);
-        RefreshDashboardIfAttached();
+        Dispatcher.UIThread.Post(RefreshDashboardIfAttached);
     }
 
     private void RefreshDashboardIfAttached()

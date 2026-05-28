@@ -21,5 +21,22 @@
                 MaxWidth="480">
       <TextBlock Text="{Binding Welcome}" TextWrapping="Wrap" FontSize="16"/>
     </StackPanel>
+
+    <!-- Loading overlay -->
+    <Border IsVisible="{Binding Dashboard.IsBusy}" Background="#990F172A"
+            IsHitTestVisible="False"
+            HorizontalAlignment="Stretch" VerticalAlignment="Stretch">
+      <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center" Spacing="14">
+        <Border Padding="24,20" CornerRadius="14" Background="{DynamicResource CourseraSurfaceBrush}"
+                BorderBrush="{DynamicResource CourseraBorderBrush}" BorderThickness="1"
+                Classes="report-shadow-soft">
+          <StackPanel Spacing="12" MinWidth="220">
+            <TextBlock Text="{Binding Dashboard.LblLoading}" FontWeight="SemiBold" FontSize="14"
+                       HorizontalAlignment="Center"/>
+            <ProgressBar IsIndeterminate="True" Height="4" CornerRadius="2"/>
+          </StackPanel>
+        </Border>
+      </StackPanel>
+    </Border>
   </Grid>
 </UserControl>

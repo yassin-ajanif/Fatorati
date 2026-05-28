@@ -478,6 +478,7 @@
 
     <!-- Loading overlay -->
     <Border IsVisible="{Binding IsBusy}" Background="#990F172A"
+            IsHitTestVisible="False"
             HorizontalAlignment="Stretch" VerticalAlignment="Stretch">
       <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center" Spacing="14">
         <Border Padding="24,20" CornerRadius="14" Background="{DynamicResource CourseraSurfaceBrush}"
