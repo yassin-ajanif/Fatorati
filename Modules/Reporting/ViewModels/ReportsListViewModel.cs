@@ -184,7 +184,7 @@ public partial class ReportsListViewModel : BaseViewModel
 
     private async Task LoadSalesByProductAsync(DateTime from, DateTime to, CancellationToken ct)
     {
-        var data = await _reportService.GetSalesByProductAsync(from, to, ct);
+        var data = await Task.Run(() => _reportService.GetSalesByProductAsync(from, to, ct), ct);
         SalesByProduct.Clear();
         foreach (var r in data) SalesByProduct.Add(r);
         ShowEmpty = SalesByProduct.Count == 0;
@@ -192,7 +192,7 @@ public partial class ReportsListViewModel : BaseViewModel
 
     private async Task LoadSalesByCustomerAsync(DateTime from, DateTime to, CancellationToken ct)
     {
-        var data = await _reportService.GetSalesByCustomerAsync(from, to, ct);
+        var data = await Task.Run(() => _reportService.GetSalesByCustomerAsync(from, to, ct), ct);
         SalesByCustomer.Clear();
         foreach (var r in data) SalesByCustomer.Add(r);
         ShowEmpty = SalesByCustomer.Count == 0;
@@ -204,7 +204,7 @@ public partial class ReportsListViewModel : BaseViewModel
 
     private async Task LoadRefundsAsync(DateTime from, DateTime to, CancellationToken ct)
     {
-        var data = await _reportService.GetRefundsAsync(from, to, ct);
+        var data = await Task.Run(() => _reportService.GetRefundsAsync(from, to, ct), ct);
         Refunds.Clear();
         foreach (var r in data) Refunds.Add(r);
         ShowEmpty = Refunds.Count == 0;
@@ -212,7 +212,7 @@ public partial class ReportsListViewModel : BaseViewModel
 
     private async Task LoadDailySalesAsync(DateTime from, DateTime to, CancellationToken ct)
     {
-        var data = await _reportService.GetDailySalesAsync(from, to, ct);
+        var data = await Task.Run(() => _reportService.GetDailySalesAsync(from, to, ct), ct);
         DailySales.Clear();
         foreach (var r in data) DailySales.Add(r);
         ShowEmpty = DailySales.Count == 0;
@@ -222,7 +222,7 @@ public partial class ReportsListViewModel : BaseViewModel
 
     private async Task LoadUnpaidAsync(CancellationToken ct)
     {
-        var data = await _reportService.GetUnpaidSalesAsync(ct);
+        var data = await Task.Run(() => _reportService.GetUnpaidSalesAsync(ct), ct);
         UnpaidSales.Clear();
         foreach (var r in data) UnpaidSales.Add(r);
         ShowEmpty = UnpaidSales.Count == 0;
@@ -230,11 +230,11 @@ public partial class ReportsListViewModel : BaseViewModel
 
     private async Task LoadStockMovementsAsync(DateTime from, DateTime to, CancellationToken ct)
     {
-        var data = await _reportService.GetStockMovementsAsync(from, to, ct);
+        var data = await Task.Run(() => _reportService.GetStockMovementsAsync(from, to, ct), ct);
         StockMovements.Clear();
         foreach (var r in data) StockMovements.Add(r);
         ShowEmpty = StockMovements.Count == 0;
-        var valuation = await _reportService.GetStockValuationAsync(ct);
+        var valuation = await Task.Run(() => _reportService.GetStockValuationAsync(ct), ct);
         LblStockValHt = $"{valuation.ht:N2} {valuation.devise}";
         LblStockValTtc = $"{valuation.ttc:N2} {valuation.devise}";
     }
