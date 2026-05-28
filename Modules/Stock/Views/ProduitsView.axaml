@@ -18,7 +18,7 @@
                      TextWrapping="Wrap" Opacity="0.75" FontSize="12" Margin="0,0,0,8"/>
           <TextBox Grid.Row="2" Text="{Binding ProductSearch, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
                    Watermark="{Binding WmSearch}" Margin="0,0,0,8"/>
-          <Grid Grid.Row="3" RowDefinitions="Auto,*">
+          <Grid Grid.Row="3" RowDefinitions="Auto,*,Auto">
             <Border Grid.Row="0" Background="#12000000" CornerRadius="4,4,0,0" Padding="10,8" BorderBrush="#20000000" BorderThickness="0,0,0,1">
               <Grid ColumnDefinitions="72,*,56,56">
                 <TextBlock Text="{Binding ColRef}" FontWeight="SemiBold" FontSize="12"/>
@@ -49,6 +49,18 @@
                 </DataTemplate>
               </ListBox.ItemTemplate>
             </ListBox>
+            <Grid Grid.Row="2" Margin="0,4" HorizontalAlignment="Center" VerticalAlignment="Center" ColumnDefinitions="Auto,Auto,Auto,Auto,Auto,Auto">
+              <Button Grid.Column="0" Content="⏮ Premier" Command="{Binding Pagination.FirstPageCommand}" IsEnabled="{Binding Pagination.HasPrevious}" Margin="0,0,4,0" FontSize="12" />
+              <Button Grid.Column="1" Content="◀ Précédent" Command="{Binding Pagination.PreviousPageCommand}" IsEnabled="{Binding Pagination.HasPrevious}" Margin="0,0,4,0" FontSize="12" />
+              <TextBlock Grid.Column="2" VerticalAlignment="Center" Margin="4,0">
+                <Run Text="{Binding Pagination.CurrentPage}" />
+                <Run Text="/" />
+                <Run Text="{Binding Pagination.TotalPages}" />
+              </TextBlock>
+              <Button Grid.Column="3" Content="Suivant ▶" Command="{Binding Pagination.NextPageCommand}" IsEnabled="{Binding Pagination.HasNext}" Margin="4,0,0,0" FontSize="12" />
+              <Button Grid.Column="4" Content="Dernier ⏭" Command="{Binding Pagination.LastPageCommand}" IsEnabled="{Binding Pagination.HasNext}" Margin="4,0,0,0" FontSize="12" />
+              <TextBlock Grid.Column="5" Text="{Binding Pagination.TotalCount, StringFormat='Total: {0}'}" VerticalAlignment="Center" Margin="8,0,0,0" FontSize="12" Foreground="{StaticResource CourseraSurfaceMutedBrush}" />
+            </Grid>
           </Grid>
         </Grid>
       </Border>

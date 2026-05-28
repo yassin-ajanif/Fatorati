@@ -8,6 +8,7 @@ using CommunityToolkit.Mvvm.Input;
 using GestionCommerciale.Modules.Tiers.Models;
 
 using GestionCommerciale.Shared.Database;
+using GestionCommerciale.Shared.Helpers;
 
 using GestionCommerciale.Shared.Services;
 
@@ -38,7 +39,7 @@ public partial class TiersListViewModel : BaseViewModel
 
     private int _loadGeneration;
 
-
+    public PaginationHelper Pagination { get; }
 
     private TiersListScope _scope = TiersListScope.Clients;
 
@@ -69,6 +70,7 @@ public partial class TiersListViewModel : BaseViewModel
             Configure(_scope);
             RefreshListUi();
         };
+        Pagination = new PaginationHelper(() => _ = LoadItemsAsync(CancellationToken.None));
         Configure(TiersListScope.Clients);
         RefreshListUi();
     }
@@ -130,7 +132,7 @@ public partial class TiersListViewModel : BaseViewModel
 
         _filterLoadCts = new CancellationTokenSource();
 
-        _ = LoadItemsAsync(_filterLoadCts.Token);
+        _ = LoadItemsAsync(_filterLoadCts.Token, resetPagination: true);
 
     }
 
@@ -142,7 +144,7 @@ public partial class TiersListViewModel : BaseViewModel
 
 
 
-    private async Task LoadItemsAsync(CancellationToken cancellationToken)
+    private async Task LoadItemsAsync(CancellationToken cancellationToken, bool resetPagination = false)
 
     {
 
@@ -158,44 +160,44 @@ public partial class TiersListViewModel : BaseViewModel
 
             var q = db.Tiers.AsNoTracking().AsQueryable();
 
-            // Inline filter — EF Core cannot translate a call to a local/static method into SQL.
-
             q = _scope switch
-
             {
-
                 TiersListScope.Clients => q.Where(t => t.Type == TypeTiers.Client || t.Type == TypeTiers.LesDeux),
-
                 TiersListScope.Fournisseurs => q.Where(t => t.Type == TypeTiers.Fournisseur || t.Type == TypeTiers.LesDeux),
-
                 _ => q
-
             };
 
             var f = Filter.Trim();
-
             if (!string.IsNullOrEmpty(f))
-
             {
-
                 q = q.Where(t =>
-
                     t.Nom.Contains(f) || t.ICE.Contains(f) || t.Ville.Contains(f));
-
             }
 
-
-
-            var list = await q.OrderBy(t => t.Nom).ToListAsync(cancellationToken);
-
+            var total = await q.CountAsync(cancellationToken);
             if (generation != _loadGeneration)
-
                 return;
 
+            if (resetPagination)
+                Pagination.CurrentPage = 1;
+
+            var list = await q
+                .OrderBy(t => t.Nom)
+                .Skip(Pagination.Skip)
+                .Take(Pagination.PageSize)
+                .ToListAsync(cancellationToken);
+
+            if (generation != _loadGeneration)
+                return;
+
+            var selId = Selected?.Id;
             Items.Clear();
+            foreach (var item in list)
+                Items.Add(item);
+            if (selId is { } id)
+                Selected = Items.FirstOrDefault(x => x.Id == id);
 
-            foreach (var t in list) Items.Add(t);
-
+            Pagination.TotalCount = total;
         }
 
         finally
@@ -283,5 +285,3 @@ public partial class TiersListViewModel : BaseViewModel
     }
 
 }
-
-

@@ -1,6 +1,4 @@
-using System.Collections.Generic;
 using System.Collections.ObjectModel;
-using System.Linq;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using GestionCommerciale.Shared.Helpers;
@@ -42,6 +40,7 @@ public partial class FactureListViewModel : BaseViewModel
         _locale.CultureApplied += (_, _) => RefreshListToolbar();
         RefreshListToolbar();
         Title = _locale.T("FactList_Title");
+        Pagination = new PaginationHelper(() => _ = LoadPageAsync(CancellationToken.None));
     }
 
     [ObservableProperty] private string _btnRefresh = string.Empty;
@@ -63,7 +62,7 @@ public partial class FactureListViewModel : BaseViewModel
     [ObservableProperty] private string _lblPayeeFilterUnpaid = string.Empty;
     [ObservableProperty] private string _lblPayeeFilterPaid = string.Empty;
 
-    private readonly List<FactureListRow> _allRows = [];
+    public PaginationHelper Pagination { get; }
 
     private void RefreshListToolbar()
     {
@@ -95,32 +94,21 @@ public partial class FactureListViewModel : BaseViewModel
     private DateTime? _dateFrom;
     private DateTime? _dateTo;
 
-    partial void OnPayeeFilterIndexChanged(int value) => _ = LoadAsync(CancellationToken.None);
+    partial void OnPayeeFilterIndexChanged(int value) => _ = LoadPageAsync(CancellationToken.None, true);
 
-    partial void OnSearchTextChanged(string value) => ApplySearchFilter();
+    partial void OnSearchTextChanged(string value) => _ = LoadPageAsync(CancellationToken.None, true);
 
-    private void ApplySearchFilter()
-    {
-        var selId = Selected?.Facture.Id;
-        Items.Clear();
-        foreach (var r in _allRows)
-        {
-            if (DocumentListFilter.Matches(SearchText, r.Facture.Numero, r.ClientNom))
-                Items.Add(r);
-        }
-        if (selId is { } id)
-            Selected = Items.FirstOrDefault(x => x.Facture.Id == id);
-    }
-
-    [RelayCommand]
-    private async Task LoadAsync(CancellationToken cancellationToken)
+    private async Task LoadPageAsync(CancellationToken ct, bool resetPage = false)
     {
         IsBusy = true;
         try
         {
-            var cfg = await _settings.GetAsync(cancellationToken);
+            if (resetPage)
+                Pagination.CurrentPage = 1;
+
+            var cfg = await _settings.GetAsync(ct);
             var devise = string.IsNullOrWhiteSpace(cfg.Devise) ? "MAD" : cfg.Devise.Trim();
-            await using var db = await _dbFactory.CreateDbContextAsync(cancellationToken);
+            await using var db = await _dbFactory.CreateDbContextAsync(ct);
             var q = db.Factures.AsNoTracking().Include(f => f.Lignes).AsQueryable();
             q = PayeeFilterIndex switch
             {
@@ -132,21 +120,35 @@ public partial class FactureListViewModel : BaseViewModel
                 q = q.Where(f => f.Date >= _dateFrom.Value);
             if (_dateTo.HasValue)
                 q = q.Where(f => f.Date <= _dateTo.Value);
-            var list = await q.OrderByDescending(f => f.Date).Take(300).ToListAsync(cancellationToken);
+
+            var search = SearchText?.Trim();
+            if (!string.IsNullOrEmpty(search))
+                q = q.Where(f => f.Numero.Contains(search) || f.ClientId.ToString() == search);
+
+            var total = await q.CountAsync(ct);
+            var list = await q.OrderByDescending(f => f.Date)
+                .Skip(Pagination.Skip).Take(Pagination.PageSize)
+                .ToListAsync(ct);
             var ids = list.Select(f => f.ClientId).Distinct().ToList();
             var noms = await db.Tiers.AsNoTracking()
                 .Where(t => ids.Contains(t.Id))
-                .ToDictionaryAsync(t => t.Id, t => t.Nom, cancellationToken);
-            _allRows.Clear();
+                .ToDictionaryAsync(t => t.Id, t => t.Nom, ct);
+            var selId = Selected?.Facture.Id;
+            Items.Clear();
             foreach (var f in list)
-                _allRows.Add(FactureListRow.Create(f, noms.GetValueOrDefault(f.ClientId) ?? string.Empty, devise, _locale));
-            ApplySearchFilter();
+                Items.Add(FactureListRow.Create(f, noms.GetValueOrDefault(f.ClientId) ?? string.Empty, devise, _locale));
+            Pagination.TotalCount = total;
+            if (selId is { } id)
+                Selected = Items.FirstOrDefault(x => x.Facture.Id == id);
         }
         finally
         {
             IsBusy = false;
         }
     }
+
+    [RelayCommand]
+    private Task LoadAsync(CancellationToken ct) => LoadPageAsync(ct, true);
 
     private void UpdateBtnFilterDateText()
     {
@@ -218,7 +220,6 @@ public partial class FactureListViewModel : BaseViewModel
             if (Selected?.Facture.Id == item.Id)
                 Selected = null;
             Items.Remove(row);
-            _allRows.Remove(row);
             await _dialog.ShowInfoAsync(_locale.T("Fact_Title"), _locale.T("Fact_Deleted"), cancellationToken);
         }
         catch (Exception ex)

@@ -4,6 +4,7 @@ using CommunityToolkit.Mvvm.Input;
 using GestionCommerciale.Modules.AvoirFournisseur.Models;
 using GestionCommerciale.Modules.Auth.Services;
 using GestionCommerciale.Shared.Database;
+using GestionCommerciale.Shared.Helpers;
 using GestionCommerciale.Shared.Services;
 using GestionCommerciale.Shared.ViewModels;
 using Microsoft.EntityFrameworkCore;
@@ -37,6 +38,7 @@ public partial class AvoirFournisseurListViewModel : BaseViewModel
         Title = _locale.T("Avf_Title");
         RefreshUi();
         _locale.CultureApplied += (_, _) => RefreshUi();
+        Pagination = new PaginationHelper(() => _ = LoadPageAsync(CancellationToken.None));
     }
 
     [ObservableProperty] private string _btnNew = string.Empty;
@@ -56,7 +58,7 @@ public partial class AvoirFournisseurListViewModel : BaseViewModel
     private DateTime? _dateFrom, _dateTo;
 
     public ObservableCollection<AvoirFournisseurListRow> Rows { get; } = [];
-    private List<AvoirFournisseurListRow> _allRows = [];
+    public PaginationHelper Pagination { get; }
 
     private void RefreshUi()
     {
@@ -72,52 +74,59 @@ public partial class AvoirFournisseurListViewModel : BaseViewModel
         ColMotif = _locale.T("Lbl_Motif");
     }
 
-    partial void OnSearchTextChanged(string value) => ApplyFilter();
+    partial void OnSearchTextChanged(string value) => _ = LoadPageAsync(CancellationToken.None, true);
 
-    private void ApplyFilter()
-    {
-        var q = _allRows.AsEnumerable();
-        if (!string.IsNullOrWhiteSpace(SearchText))
-        {
-            var s = SearchText.Trim().ToUpperInvariant();
-            q = q.Where(r => r.Doc.Numero.ToUpperInvariant().Contains(s)
-                          || r.FournisseurNom.ToUpperInvariant().Contains(s));
-        }
-
-        Rows.Clear();
-        foreach (var r in q) Rows.Add(r);
-    }
-
-    [RelayCommand]
-    private async Task LoadAsync(CancellationToken cancellationToken)
+    private async Task LoadPageAsync(CancellationToken ct, bool resetPage = false)
     {
         IsBusy = true;
         try
         {
-            var cfg = await _settings.GetAsync(cancellationToken);
+            if (resetPage)
+                Pagination.CurrentPage = 1;
+
+            var cfg = await _settings.GetAsync(ct);
             var devise = string.IsNullOrWhiteSpace(cfg.Devise) ? "MAD" : cfg.Devise.Trim();
 
-            await using var db = await _dbFactory.CreateDbContextAsync(cancellationToken);
+            await using var db = await _dbFactory.CreateDbContextAsync(ct);
+            var q = db.Set<Models.AvoirFournisseur>().AsNoTracking().Include(d => d.Lignes).AsQueryable();
+            if (_dateFrom.HasValue) q = q.Where(d => d.Date >= _dateFrom.Value);
+            if (_dateTo.HasValue) q = q.Where(d => d.Date <= _dateTo.Value);
 
-            var query = db.Set<Models.AvoirFournisseur>().Include(d => d.Lignes).AsQueryable();
-            if (_dateFrom.HasValue) query = query.Where(d => d.Date >= _dateFrom.Value);
-            if (_dateTo.HasValue) query = query.Where(d => d.Date <= _dateTo.Value);
+            var search = SearchText?.Trim();
+            if (!string.IsNullOrEmpty(search))
+            {
+                var matchingIds = await db.Tiers.AsNoTracking()
+                    .Where(t => t.Nom.Contains(search))
+                    .Select(t => t.Id)
+                    .ToListAsync(ct);
+                q = q.Where(a => a.Numero.Contains(search) || matchingIds.Contains(a.FournisseurId));
+            }
 
-            var docs = await query.OrderByDescending(d => d.Date).Take(200).ToListAsync(cancellationToken);
+            var total = await q.CountAsync(ct);
+            var docs = await q.OrderByDescending(d => d.Date)
+                .Skip(Pagination.Skip).Take(Pagination.PageSize)
+                .ToListAsync(ct);
             var fourIds = docs.Select(d => d.FournisseurId).Distinct().ToList();
             var fours = await db.Tiers.AsNoTracking()
                 .Where(t => fourIds.Contains(t.Id))
-                .ToDictionaryAsync(t => t.Id, t => t.Nom, cancellationToken);
+                .ToDictionaryAsync(t => t.Id, t => t.Nom, ct);
 
-            _allRows = docs.Select(d => AvoirFournisseurListRow.Create(d,
-                fours.GetValueOrDefault(d.FournisseurId, "?"), devise, _locale)).ToList();
-            ApplyFilter();
+            var selId = Selected?.Doc.Id;
+            Rows.Clear();
+            foreach (var d in docs)
+                Rows.Add(AvoirFournisseurListRow.Create(d, fours.GetValueOrDefault(d.FournisseurId, "?"), devise, _locale));
+            Pagination.TotalCount = total;
+            if (selId is { } id)
+                Selected = Rows.FirstOrDefault(x => x.Doc.Id == id);
         }
         finally
         {
             IsBusy = false;
         }
     }
+
+    [RelayCommand]
+    private Task LoadAsync(CancellationToken ct) => LoadPageAsync(ct, true);
 
     [RelayCommand]
     private void New()

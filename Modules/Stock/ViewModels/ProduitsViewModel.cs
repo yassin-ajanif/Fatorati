@@ -1,4 +1,5 @@
 using System.Collections.ObjectModel;
+using System.Linq;
 using Avalonia.Media.Imaging;
 using Avalonia.Threading;
 using CommunityToolkit.Mvvm.ComponentModel;
@@ -8,6 +9,7 @@ using GestionCommerciale.Modules.Stock;
 using GestionCommerciale.Modules.Stock.Models;
 using GestionCommerciale.Modules.Stock.Services;
 using GestionCommerciale.Shared.Database;
+using GestionCommerciale.Shared.Helpers;
 using GestionCommerciale.Shared.Services;
 using GestionCommerciale.Shared.ViewModels;
 using Microsoft.EntityFrameworkCore;
@@ -27,6 +29,8 @@ public partial class ProduitsViewModel : BaseViewModel
     private byte[]? _pendingImageReplacement;
     private bool _clearImageOnSave;
 
+    public PaginationHelper Pagination { get; }
+
     private Bitmap? _ficheImagePreview;
 
     public ProduitsViewModel(IDbContextFactory<AppDbContext> dbFactory, IDialogService dialog, ICurrentUserSession session, ILocaleService locale)
@@ -36,6 +40,7 @@ public partial class ProduitsViewModel : BaseViewModel
         _session = session;
         _locale = locale;
         _locale.CultureApplied += (_, _) => RefreshProduitsUi();
+        Pagination = new PaginationHelper(() => _ = LoadProduitsAsync(CancellationToken.None));
         RefreshProduitsUi();
     }
 
@@ -105,7 +110,11 @@ public partial class ProduitsViewModel : BaseViewModel
         WmBarcodeExample = _locale.T("Wm_BarcodeExample");
     }
 
-    partial void OnProductSearchChanged(string value) => _ = LoadProduitsAsync(CancellationToken.None);
+    partial void OnProductSearchChanged(string value)
+    {
+        Pagination.CurrentPage = 1;
+        _ = LoadProduitsAsync(CancellationToken.None);
+    }
 
     partial void OnIsNewDraftChanged(bool value)
     {
@@ -255,12 +264,18 @@ public partial class ProduitsViewModel : BaseViewModel
         try
         {
             await using var db = await _dbFactory.CreateDbContextAsync(cancellationToken);
-            var list = await db.Produits.AsNoTracking()
+            var q = db.Produits.AsNoTracking()
                 .WhereSearchMatches(ProductSearch)
-                .SelectForListWithoutImageData()
+                .SelectForListWithoutImageData();
+            var total = await q.CountAsync(cancellationToken);
+            var list = await q
+                .OrderBy(p => p.Reference)
+                .Skip(Pagination.Skip)
+                .Take(Pagination.PageSize)
                 .ToListAsync(cancellationToken);
             Produits.Clear();
             foreach (var p in list) Produits.Add(p);
+            Pagination.TotalCount = total;
             if (prevId.HasValue)
                 SelectedProduit = Produits.FirstOrDefault(p => p.Id == prevId.Value);
         }

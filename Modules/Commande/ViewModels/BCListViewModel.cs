@@ -42,6 +42,7 @@ public partial class BCListViewModel : BaseViewModel
         _locale.CultureApplied += (_, _) => RefreshListToolbar();
         RefreshListToolbar();
         Title = _locale.T("BCList_Title");
+        Pagination = new PaginationHelper(() => _ = LoadPageAsync(CancellationToken.None));
     }
 
     [ObservableProperty] private string _btnRefresh = string.Empty;
@@ -59,7 +60,7 @@ public partial class BCListViewModel : BaseViewModel
     [ObservableProperty] private string _colHeaderNote = string.Empty;
     [ObservableProperty] private string _searchWatermark = string.Empty;
 
-    private readonly List<BCListRow> _allRows = [];
+    public PaginationHelper Pagination { get; }
 
     private void RefreshListToolbar()
     {
@@ -81,50 +82,53 @@ public partial class BCListViewModel : BaseViewModel
     [ObservableProperty] private BCListRow? _selected;
     [ObservableProperty] private string _searchText = string.Empty;
 
-    partial void OnSearchTextChanged(string value) => ApplySearchFilter();
+    partial void OnSearchTextChanged(string value) => _ = LoadPageAsync(CancellationToken.None, true);
 
-    private void ApplySearchFilter()
-    {
-        var selId = Selected?.Bc.Id;
-        Items.Clear();
-        foreach (var r in _allRows)
-        {
-            if (DocumentListFilter.Matches(SearchText, r.Bc.Numero, r.FournisseurNom))
-                Items.Add(r);
-        }
-        if (selId is { } id)
-            Selected = Items.FirstOrDefault(x => x.Bc.Id == id);
-    }
-
-    [RelayCommand]
-    private async Task LoadAsync(CancellationToken cancellationToken)
+    private async Task LoadPageAsync(CancellationToken ct, bool resetPage = false)
     {
         IsBusy = true;
         try
         {
-            var cfg = await _settings.GetAsync(cancellationToken);
+            if (resetPage)
+                Pagination.CurrentPage = 1;
+
+            var cfg = await _settings.GetAsync(ct);
             var devise = string.IsNullOrWhiteSpace(cfg.Devise) ? "MAD" : cfg.Devise.Trim();
-            await using var db = await _dbFactory.CreateDbContextAsync(cancellationToken);
+            await using var db = await _dbFactory.CreateDbContextAsync(ct);
             var q = db.BonsCommande.AsNoTracking().Include(b => b.Lignes).AsQueryable();
             if (_dateFrom.HasValue)
                 q = q.Where(b => b.Date >= _dateFrom.Value);
             if (_dateTo.HasValue)
                 q = q.Where(b => b.Date <= _dateTo.Value);
-            var list = await q.OrderByDescending(b => b.Date).Take(200).ToListAsync(cancellationToken);
+
+            var search = SearchText?.Trim();
+            if (!string.IsNullOrEmpty(search))
+                q = q.Where(b => b.Numero.Contains(search));
+
+            var total = await q.CountAsync(ct);
+            var list = await q.OrderByDescending(b => b.Date)
+                .Skip(Pagination.Skip).Take(Pagination.PageSize)
+                .ToListAsync(ct);
             var ids = list.Select(b => b.FournisseurId).Distinct().ToList();
             var noms = await db.Tiers.AsNoTracking()
                 .Where(t => ids.Contains(t.Id))
-                .ToDictionaryAsync(t => t.Id, t => t.Nom, cancellationToken);
-            _allRows.Clear();
+                .ToDictionaryAsync(t => t.Id, t => t.Nom, ct);
+            var selId = Selected?.Bc.Id;
+            Items.Clear();
             foreach (var b in list)
-                _allRows.Add(BCListRow.Create(b, noms.GetValueOrDefault(b.FournisseurId) ?? string.Empty, devise, _locale));
-            ApplySearchFilter();
+                Items.Add(BCListRow.Create(b, noms.GetValueOrDefault(b.FournisseurId) ?? string.Empty, devise, _locale));
+            Pagination.TotalCount = total;
+            if (selId is { } id)
+                Selected = Items.FirstOrDefault(x => x.Bc.Id == id);
         }
         finally
         {
             IsBusy = false;
         }
     }
+
+    [RelayCommand]
+    private Task LoadAsync(CancellationToken ct) => LoadPageAsync(ct, true);
 
     private void UpdateBtnFilterDateText()
     {
@@ -196,7 +200,6 @@ public partial class BCListViewModel : BaseViewModel
             if (Selected?.Bc.Id == item.Id)
                 Selected = null;
             Items.Remove(row);
-            _allRows.Remove(row);
             await _dialog.ShowInfoAsync(_locale.T("BC_Title"), _locale.T("BC_Deleted"), cancellationToken);
         }
         catch (Exception ex)

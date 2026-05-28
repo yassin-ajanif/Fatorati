@@ -1,6 +1,4 @@
-using System.Collections.Generic;
 using System.Collections.ObjectModel;
-using System.Linq;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using GestionCommerciale.Modules.Reception.Models;
@@ -47,6 +45,7 @@ public partial class BRListViewModel : BaseViewModel
         _locale.CultureApplied += (_, _) => RefreshListToolbar();
         RefreshListToolbar();
         Title = _locale.T("BRList_Title");
+        Pagination = new PaginationHelper(() => _ = LoadPageAsync(CancellationToken.None));
     }
 
     [ObservableProperty] private string _btnRefresh = string.Empty;
@@ -64,7 +63,7 @@ public partial class BRListViewModel : BaseViewModel
     [ObservableProperty] private string _colHeaderNote = string.Empty;
     [ObservableProperty] private string _searchWatermark = string.Empty;
 
-    private readonly List<BRListRow> _allRows = [];
+    public PaginationHelper Pagination { get; }
 
     private void RefreshListToolbar()
     {
@@ -86,50 +85,53 @@ public partial class BRListViewModel : BaseViewModel
     [ObservableProperty] private BRListRow? _selected;
     [ObservableProperty] private string _searchText = string.Empty;
 
-    partial void OnSearchTextChanged(string value) => ApplySearchFilter();
+    partial void OnSearchTextChanged(string value) => _ = LoadPageAsync(CancellationToken.None, true);
 
-    private void ApplySearchFilter()
-    {
-        var selId = Selected?.Br.Id;
-        Items.Clear();
-        foreach (var r in _allRows)
-        {
-            if (DocumentListFilter.Matches(SearchText, r.Br.Numero, r.FournisseurNom))
-                Items.Add(r);
-        }
-        if (selId is { } id)
-            Selected = Items.FirstOrDefault(x => x.Br.Id == id);
-    }
-
-    [RelayCommand]
-    private async Task LoadAsync(CancellationToken cancellationToken)
+    private async Task LoadPageAsync(CancellationToken ct, bool resetPage = false)
     {
         IsBusy = true;
         try
         {
-            var cfg = await _settings.GetAsync(cancellationToken);
+            if (resetPage)
+                Pagination.CurrentPage = 1;
+
+            var cfg = await _settings.GetAsync(ct);
             var devise = string.IsNullOrWhiteSpace(cfg.Devise) ? "MAD" : cfg.Devise.Trim();
-            await using var db = await _dbFactory.CreateDbContextAsync(cancellationToken);
+            await using var db = await _dbFactory.CreateDbContextAsync(ct);
             var q = db.BonsReception.AsNoTracking().Include(b => b.Lignes).AsQueryable();
             if (_dateFrom.HasValue)
                 q = q.Where(b => b.Date >= _dateFrom.Value);
             if (_dateTo.HasValue)
                 q = q.Where(b => b.Date <= _dateTo.Value);
-            var list = await q.OrderByDescending(b => b.Date).Take(200).ToListAsync(cancellationToken);
+
+            var search = SearchText?.Trim();
+            if (!string.IsNullOrEmpty(search))
+                q = q.Where(b => b.Numero.Contains(search));
+
+            var total = await q.CountAsync(ct);
+            var list = await q.OrderByDescending(b => b.Date)
+                .Skip(Pagination.Skip).Take(Pagination.PageSize)
+                .ToListAsync(ct);
             var ids = list.Select(b => b.FournisseurId).Distinct().ToList();
             var noms = await db.Tiers.AsNoTracking()
                 .Where(t => ids.Contains(t.Id))
-                .ToDictionaryAsync(t => t.Id, t => t.Nom, cancellationToken);
-            _allRows.Clear();
+                .ToDictionaryAsync(t => t.Id, t => t.Nom, ct);
+            var selId = Selected?.Br.Id;
+            Items.Clear();
             foreach (var b in list)
-                _allRows.Add(BRListRow.Create(b, noms.GetValueOrDefault(b.FournisseurId) ?? string.Empty, devise, _locale));
-            ApplySearchFilter();
+                Items.Add(BRListRow.Create(b, noms.GetValueOrDefault(b.FournisseurId) ?? string.Empty, devise, _locale));
+            Pagination.TotalCount = total;
+            if (selId is { } id)
+                Selected = Items.FirstOrDefault(x => x.Br.Id == id);
         }
         finally
         {
             IsBusy = false;
         }
     }
+
+    [RelayCommand]
+    private Task LoadAsync(CancellationToken ct) => LoadPageAsync(ct, true);
 
     private void UpdateBtnFilterDateText()
     {
@@ -195,7 +197,6 @@ public partial class BRListViewModel : BaseViewModel
             if (Selected?.Br.Id == item.Id)
                 Selected = null;
             Items.Remove(row);
-            _allRows.Remove(row);
             await _dialog.ShowInfoAsync(_locale.T("BR_DlgShort"), _locale.T("BR_Deleted"), cancellationToken);
         }
         catch (Exception ex)
