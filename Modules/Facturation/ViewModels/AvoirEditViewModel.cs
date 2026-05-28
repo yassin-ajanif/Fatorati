@@ -11,6 +11,7 @@ using GestionCommerciale.Modules.Facturation.Services;
 using GestionCommerciale.Modules.Tiers.Models;
 using GestionCommerciale.Shared.Database;
 using GestionCommerciale.Shared.Helpers;
+using GestionCommerciale.Shared.Models.Pdf;
 using GestionCommerciale.Shared.Services;
 using GestionCommerciale.Shared.ViewModels;
 using Microsoft.EntityFrameworkCore;
@@ -66,6 +67,7 @@ public partial class AvoirEditViewModel : BaseViewModel
     private readonly ICurrentUserSession _session;
     private readonly ILocaleService _locale;
     private readonly IUiPreferencesService _uiPreferences;
+    private readonly IPdfService _pdf;
 
     public AvoirEditViewModel(
         IDbContextFactory<AppDbContext> dbFactory,
@@ -76,7 +78,8 @@ public partial class AvoirEditViewModel : BaseViewModel
         IServiceProvider sp,
         ICurrentUserSession session,
         ILocaleService locale,
-        IUiPreferencesService uiPreferences)
+        IUiPreferencesService uiPreferences,
+        IPdfService pdf)
     {
         _dbFactory = dbFactory;
         _numbers = numbers;
@@ -87,6 +90,7 @@ public partial class AvoirEditViewModel : BaseViewModel
         _session = session;
         _locale = locale;
         _uiPreferences = uiPreferences;
+        _pdf = pdf;
         _locale.CultureApplied += (_, _) =>
         {
             RefreshAvoirUi();
@@ -121,6 +125,7 @@ public partial class AvoirEditViewModel : BaseViewModel
 
     [ObservableProperty] private string _btnBack = string.Empty;
     [ObservableProperty] private string _btnSave = string.Empty;
+    [ObservableProperty] private string _btnPdf = string.Empty;
     [ObservableProperty] private string _btnValidateAvoir = string.Empty;
     [ObservableProperty] private string _lblClient = string.Empty;
     [ObservableProperty] private string _wmClientSearch = string.Empty;
@@ -172,6 +177,7 @@ public partial class AvoirEditViewModel : BaseViewModel
     {
         BtnBack = _locale.T("Btn_Back");
         BtnSave = _locale.T("Btn_Save");
+        BtnPdf = _locale.T("Btn_Pdf");
         BtnValidateAvoir = _locale.T("Btn_ValidateAvoir");
         LblClient = _locale.T("Lbl_Client");
         WmClientSearch = _locale.T("Wm_SearchClient");
@@ -490,6 +496,31 @@ public partial class AvoirEditViewModel : BaseViewModel
         catch (Exception ex)
         {
             await _dialog.ShowErrorAsync(_locale.T("Avoir_Title"), ex.Message, cancellationToken);
+        }
+        finally
+        {
+            IsBusy = false;
+        }
+    }
+
+    [RelayCommand]
+    private async Task ExportPdfAsync(CancellationToken cancellationToken)
+    {
+        if (AvoirId is not { } id) return;
+        try
+        {
+            IsBusy = true;
+            await using var db = await _dbFactory.CreateDbContextAsync(cancellationToken);
+            var a = await db.Avoirs.Include(x => x.Lignes).FirstAsync(x => x.Id == id, cancellationToken);
+            var client = await db.Tiers.AsNoTracking().FirstAsync(t => t.Id == a.ClientId, cancellationToken);
+            var bytes = await _pdf.BuildAvoirPdfAsync(a, DocumentPartyPdfInfo.FromTiers(client), cancellationToken);
+            var ok = await _dialog.SavePickedFileBytesAsync(_locale.T("Export_PdfPicker"), $"{a.Numero}.pdf", new[] { "*.pdf" }, bytes, cancellationToken);
+            if (ok)
+                await _dialog.ShowInfoAsync(_locale.T("Export_Pdf"), _locale.T("Export_Done"), cancellationToken);
+        }
+        catch (Exception ex)
+        {
+            await _dialog.ShowErrorAsync(_locale.T("Export_Pdf"), ex.Message, cancellationToken);
         }
         finally
         {

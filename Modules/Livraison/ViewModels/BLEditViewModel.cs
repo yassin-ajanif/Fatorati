@@ -14,6 +14,7 @@ using GestionCommerciale.Modules.Stock.Services;
 using GestionCommerciale.Modules.Tiers.Models;
 using GestionCommerciale.Shared.Database;
 using GestionCommerciale.Shared.Helpers;
+using GestionCommerciale.Shared.Models.Pdf;
 using GestionCommerciale.Shared.Services;
 using GestionCommerciale.Shared.ViewModels;
 using Microsoft.EntityFrameworkCore;
@@ -33,6 +34,7 @@ public partial class BLEditViewModel : BaseViewModel
     private readonly ILocaleService _locale;
     private readonly IUiPreferencesService _uiPreferences;
     private readonly IStockMovementService _stock;
+    private readonly IPdfService _pdf;
 
     public BLEditViewModel(
         IDbContextFactory<AppDbContext> dbFactory,
@@ -44,7 +46,8 @@ public partial class BLEditViewModel : BaseViewModel
         ICurrentUserSession session,
         ILocaleService locale,
         IUiPreferencesService uiPreferences,
-        IStockMovementService stock)
+        IStockMovementService stock,
+        IPdfService pdf)
     {
         _dbFactory = dbFactory;
         _numbers = numbers;
@@ -56,6 +59,7 @@ public partial class BLEditViewModel : BaseViewModel
         _locale = locale;
         _uiPreferences = uiPreferences;
         _stock = stock;
+        _pdf = pdf;
         _locale.CultureApplied += (_, _) => RefreshBlUi();
         LineGridColumns.PropertyChanged += OnLineGridColumnsPropertyChanged;
         _uiPreferences.LoadDocumentLineColumns("bon_livraison", LineGridColumns);
@@ -64,6 +68,7 @@ public partial class BLEditViewModel : BaseViewModel
         RefreshBlUi();
     }
 
+    [ObservableProperty] private string _btnPdf = string.Empty;
     [ObservableProperty] private string _btnBack = string.Empty;
     [ObservableProperty] private string _btnSave = string.Empty;
     [ObservableProperty] private string _btnToInvoice = string.Empty;
@@ -137,6 +142,7 @@ public partial class BLEditViewModel : BaseViewModel
 
     private void RefreshBlUi()
     {
+        BtnPdf = _locale.T("Btn_Pdf");
         BtnBack = _locale.T("Btn_Back");
         BtnSave = _locale.T("Btn_Save");
         BtnToInvoice = _locale.T("Btn_ToInvoice");
@@ -539,5 +545,30 @@ public partial class BLEditViewModel : BaseViewModel
         var list = _sp.GetRequiredService<BLListViewModel>();
         _workspace.Open(list);
         list.LoadCommand.Execute(null);
+    }
+
+    [RelayCommand]
+    private async Task ExportPdfAsync(CancellationToken cancellationToken)
+    {
+        if (BlId is not { } id) return;
+        try
+        {
+            IsBusy = true;
+            await using var db = await _dbFactory.CreateDbContextAsync(cancellationToken);
+            var b = await db.BonsLivraison.Include(x => x.Lignes).FirstAsync(x => x.Id == id, cancellationToken);
+            var client = await db.Tiers.AsNoTracking().FirstAsync(t => t.Id == b.ClientId, cancellationToken);
+            var bytes = await _pdf.BuildBonLivraisonPdfAsync(b, DocumentPartyPdfInfo.FromTiers(client), cancellationToken);
+            var ok = await _dialog.SavePickedFileBytesAsync(_locale.T("Export_PdfPicker"), $"{b.Numero}.pdf", new[] { "*.pdf" }, bytes, cancellationToken);
+            if (ok)
+                await _dialog.ShowInfoAsync(_locale.T("Export_Pdf"), _locale.T("Export_Done"), cancellationToken);
+        }
+        catch (Exception ex)
+        {
+            await _dialog.ShowErrorAsync(_locale.T("Export_Pdf"), ex.Message, cancellationToken);
+        }
+        finally
+        {
+            IsBusy = false;
+        }
     }
 }

@@ -11,6 +11,7 @@ using GestionCommerciale.Modules.Facturation.Services;
 using GestionCommerciale.Modules.Tiers.Models;
 using GestionCommerciale.Shared.Database;
 using GestionCommerciale.Shared.Helpers;
+using GestionCommerciale.Shared.Models.Pdf;
 using GestionCommerciale.Shared.Services;
 using GestionCommerciale.Shared.ViewModels;
 using Microsoft.EntityFrameworkCore;
@@ -30,6 +31,7 @@ public partial class FactureEditViewModel : BaseViewModel
     private readonly ICurrentUserSession _session;
     private readonly ILocaleService _locale;
     private readonly IUiPreferencesService _uiPreferences;
+    private readonly IPdfService _pdf;
 
     public FactureEditViewModel(
         IDbContextFactory<AppDbContext> dbFactory,
@@ -41,7 +43,8 @@ public partial class FactureEditViewModel : BaseViewModel
         IServiceProvider sp,
         ICurrentUserSession session,
         ILocaleService locale,
-        IUiPreferencesService uiPreferences)
+        IUiPreferencesService uiPreferences,
+        IPdfService pdf)
     {
         _dbFactory = dbFactory;
         _numbers = numbers;
@@ -53,6 +56,7 @@ public partial class FactureEditViewModel : BaseViewModel
         _session = session;
         _locale = locale;
         _uiPreferences = uiPreferences;
+        _pdf = pdf;
         _locale.CultureApplied += (_, _) =>
         {
             RefreshFactureUi();
@@ -94,6 +98,7 @@ public partial class FactureEditViewModel : BaseViewModel
     [ObservableProperty] private string _addLineSearchText = string.Empty;
     [ObservableProperty] private object? _addLineCatalogPick;
 
+    [ObservableProperty] private string _btnPdf = string.Empty;
     [ObservableProperty] private string _btnBack = string.Empty;
     [ObservableProperty] private string _btnSave = string.Empty;
     [ObservableProperty] private string _menuDeleteFacture = string.Empty;
@@ -159,6 +164,7 @@ public partial class FactureEditViewModel : BaseViewModel
 
     private void RefreshFactureUi()
     {
+        BtnPdf = _locale.T("Btn_Pdf");
         BtnBack = _locale.T("Btn_Back");
         BtnSave = _locale.T("Btn_Save");
         MenuDeleteFacture = _locale.T("Fact_MenuDelete");
@@ -741,5 +747,30 @@ public partial class FactureEditViewModel : BaseViewModel
         var list = _sp.GetRequiredService<FactureListViewModel>();
         _workspace.Open(list);
         list.LoadCommand.Execute(null);
+    }
+
+    [RelayCommand]
+    private async Task ExportPdfAsync(CancellationToken cancellationToken)
+    {
+        if (FactureId is not { } id) return;
+        try
+        {
+            IsBusy = true;
+            await using var db = await _dbFactory.CreateDbContextAsync(cancellationToken);
+            var f = await db.Factures.Include(x => x.Lignes).Include(x => x.Paiements).FirstAsync(x => x.Id == id, cancellationToken);
+            var client = await db.Tiers.AsNoTracking().FirstAsync(t => t.Id == f.ClientId, cancellationToken);
+            var bytes = await _pdf.BuildFacturePdfAsync(f, DocumentPartyPdfInfo.FromTiers(client), cancellationToken);
+            var ok = await _dialog.SavePickedFileBytesAsync(_locale.T("Export_PdfPicker"), $"{f.Numero}.pdf", new[] { "*.pdf" }, bytes, cancellationToken);
+            if (ok)
+                await _dialog.ShowInfoAsync(_locale.T("Export_Pdf"), _locale.T("Export_Done"), cancellationToken);
+        }
+        catch (Exception ex)
+        {
+            await _dialog.ShowErrorAsync(_locale.T("Export_Pdf"), ex.Message, cancellationToken);
+        }
+        finally
+        {
+            IsBusy = false;
+        }
     }
 }

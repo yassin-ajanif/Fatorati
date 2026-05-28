@@ -66,7 +66,6 @@ public partial class BCListViewModel : BaseViewModel
     {
         BtnRefresh = _locale.T("Btn_Refresh");
         BtnNew = _locale.T("Btn_New");
-        BtnPdf = _locale.T("Btn_Pdf");
         UpdateBtnFilterDateText();
         MenuDeleteBc = _locale.T("BC_MenuDelete");
         ColHeaderRef = _locale.T("DevisList_ColRef");

@@ -1,3 +1,4 @@
+using GestionCommerciale.Modules.AvoirFournisseur.Models;
 using GestionCommerciale.Modules.Commande.Models;
 using GestionCommerciale.Modules.Devis.Models;
 using GestionCommerciale.Modules.Facturation.Models;
@@ -246,6 +247,39 @@ public sealed class PdfService : IPdfService
         };
 
         var model = BaseModel(cfg, "AVOIR", docLines, PartyLines(party, "Client"), cols, rows, totals, note);
+        return CommercialDocumentPdfRenderer.Render(model, TryLoadLogoBytes(cfg.SocieteLogoPath));
+    }
+
+    public async Task<byte[]> BuildAvoirFournisseurPdfAsync(AvoirFournisseur doc, DocumentPartyPdfInfo party, CancellationToken cancellationToken = default)
+    {
+        var cfg = await _settings.GetAsync(cancellationToken);
+        var refs = await LoadProductRefsAsync(doc.Lignes.Select(l => l.ProduitId), cancellationToken);
+        var totals = DocumentTotalsHelper.AvoirFournisseurTotals(doc.Lignes);
+        var cols = BrColumns();
+        var rows = new List<IReadOnlyList<string>>();
+        foreach (var l in doc.Lignes)
+        {
+            var lht = l.Quantite * l.PrixUnitaireHT;
+            var ttc = lht * (1 + l.TauxTVA / 100m);
+            rows.Add([
+                RefCell(refs, l.ProduitId),
+                l.Designation,
+                l.Quantite.ToString("N2"),
+                l.PrixUnitaireHT.ToString("N2"),
+                l.TauxTVA.ToString("N2"),
+                lht.ToString("N2"),
+                ttc.ToString("N2")
+            ]);
+        }
+
+        var note = $"{doc.Motif}\nRetour marchandise : {(doc.RetourMarchandise ? "Oui" : "Non")}";
+        var docLines = new List<PdfKeyValueLine>
+        {
+            new("N°", doc.Numero),
+            new("Date", doc.Date.ToString("dd/MM/yyyy"))
+        };
+
+        var model = BaseModel(cfg, "AVOIR FOURNISSEUR", docLines, PartyLines(party, "Fournisseur"), cols, rows, totals, note);
         return CommercialDocumentPdfRenderer.Render(model, TryLoadLogoBytes(cfg.SocieteLogoPath));
     }
 

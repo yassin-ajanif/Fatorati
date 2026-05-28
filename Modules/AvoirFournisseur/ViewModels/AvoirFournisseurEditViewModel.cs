@@ -10,6 +10,7 @@ using GestionCommerciale.Modules.Stock.Models;
 using GestionCommerciale.Modules.Tiers.Models;
 using GestionCommerciale.Shared.Database;
 using GestionCommerciale.Shared.Helpers;
+using GestionCommerciale.Shared.Models.Pdf;
 using GestionCommerciale.Shared.Services;
 using GestionCommerciale.Shared.ViewModels;
 using Microsoft.EntityFrameworkCore;
@@ -27,6 +28,7 @@ public partial class AvoirFournisseurEditViewModel : BaseViewModel
     private readonly ICurrentUserSession _session;
     private readonly ILocaleService _locale;
     private readonly IUiPreferencesService _uiPreferences;
+    private readonly IPdfService _pdf;
 
     public AvoirFournisseurEditViewModel(
         IDbContextFactory<AppDbContext> dbFactory,
@@ -36,7 +38,8 @@ public partial class AvoirFournisseurEditViewModel : BaseViewModel
         IServiceProvider sp,
         ICurrentUserSession session,
         ILocaleService locale,
-        IUiPreferencesService uiPreferences)
+        IUiPreferencesService uiPreferences,
+        IPdfService pdf)
     {
         _dbFactory = dbFactory;
         _numbers = numbers;
@@ -46,6 +49,7 @@ public partial class AvoirFournisseurEditViewModel : BaseViewModel
         _session = session;
         _locale = locale;
         _uiPreferences = uiPreferences;
+        _pdf = pdf;
         _locale.CultureApplied += (_, _) =>
         {
             RefreshUi();
@@ -79,6 +83,7 @@ public partial class AvoirFournisseurEditViewModel : BaseViewModel
 
     [ObservableProperty] private string _btnBack = string.Empty;
     [ObservableProperty] private string _btnSave = string.Empty;
+    [ObservableProperty] private string _btnPdf = string.Empty;
     [ObservableProperty] private string _lblFournisseur = string.Empty;
     [ObservableProperty] private string _wmFournisseurSearch = string.Empty;
     [ObservableProperty] private string _lblDate = string.Empty;
@@ -129,6 +134,7 @@ public partial class AvoirFournisseurEditViewModel : BaseViewModel
     {
         BtnBack = _locale.T("Btn_Back");
         BtnSave = _locale.T("Btn_Save");
+        BtnPdf = _locale.T("Btn_Pdf");
         LblFournisseur = _locale.T("Avf_LblFournisseur");
         WmFournisseurSearch = _locale.T("Wm_SearchClient");
         LblDate = _locale.T("Avf_LblDate");
@@ -368,6 +374,31 @@ public partial class AvoirFournisseurEditViewModel : BaseViewModel
             AvoirFournisseurId = doc.Id;
             Numero = doc.Numero;
             await _dialog.ShowInfoAsync(_locale.T("Avf_Title"), _locale.T("Avf_Saved"), cancellationToken);
+        }
+        finally
+        {
+            IsBusy = false;
+        }
+    }
+
+    [RelayCommand]
+    private async Task ExportPdfAsync(CancellationToken cancellationToken)
+    {
+        if (AvoirFournisseurId is not { } id) return;
+        try
+        {
+            IsBusy = true;
+            await using var db = await _dbFactory.CreateDbContextAsync(cancellationToken);
+            var a = await db.AvoirsFournisseurs.Include(x => x.Lignes).FirstAsync(x => x.Id == id, cancellationToken);
+            var fournisseur = await db.Tiers.AsNoTracking().FirstAsync(t => t.Id == a.FournisseurId, cancellationToken);
+            var bytes = await _pdf.BuildAvoirFournisseurPdfAsync(a, DocumentPartyPdfInfo.FromTiers(fournisseur), cancellationToken);
+            var ok = await _dialog.SavePickedFileBytesAsync(_locale.T("Export_PdfPicker"), $"{a.Numero}.pdf", new[] { "*.pdf" }, bytes, cancellationToken);
+            if (ok)
+                await _dialog.ShowInfoAsync(_locale.T("Export_Pdf"), _locale.T("Export_Done"), cancellationToken);
+        }
+        catch (Exception ex)
+        {
+            await _dialog.ShowErrorAsync(_locale.T("Export_Pdf"), ex.Message, cancellationToken);
         }
         finally
         {

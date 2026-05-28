@@ -14,6 +14,7 @@ using GestionCommerciale.Modules.Stock.Services;
 using GestionCommerciale.Modules.Tiers.Models;
 using GestionCommerciale.Shared.Database;
 using GestionCommerciale.Shared.Helpers;
+using GestionCommerciale.Shared.Models.Pdf;
 using GestionCommerciale.Shared.Services;
 using GestionCommerciale.Shared.ViewModels;
 using Microsoft.EntityFrameworkCore;
@@ -33,6 +34,7 @@ public partial class BREditViewModel : BaseViewModel
     private readonly ILocaleService _locale;
     private readonly IUiPreferencesService _uiPreferences;
     private readonly IStockMovementService _stock;
+    private readonly IPdfService _pdf;
     private int? _sourceBonCommandeId;
 
     public BREditViewModel(
@@ -45,7 +47,8 @@ public partial class BREditViewModel : BaseViewModel
         ICurrentUserSession session,
         ILocaleService locale,
         IUiPreferencesService uiPreferences,
-        IStockMovementService stock)
+        IStockMovementService stock,
+        IPdfService pdf)
     {
         _dbFactory = dbFactory;
         _numbers = numbers;
@@ -57,6 +60,7 @@ public partial class BREditViewModel : BaseViewModel
         _locale = locale;
         _uiPreferences = uiPreferences;
         _stock = stock;
+        _pdf = pdf;
         _locale.CultureApplied += (_, _) => RefreshBrUi();
         LineGridColumns.PropertyChanged += OnLineGridColumnsPropertyChanged;
         _uiPreferences.LoadDocumentLineColumns("bon_reception", LineGridColumns);
@@ -65,6 +69,7 @@ public partial class BREditViewModel : BaseViewModel
         RefreshBrUi();
     }
 
+    [ObservableProperty] private string _btnPdf = string.Empty;
     [ObservableProperty] private string _btnBack = string.Empty;
     [ObservableProperty] private string _btnSave = string.Empty;
     [ObservableProperty] private string _menuDeleteBr = string.Empty;
@@ -153,6 +158,7 @@ public partial class BREditViewModel : BaseViewModel
 
     private void RefreshBrUi()
     {
+        BtnPdf = _locale.T("Btn_Pdf");
         BtnBack = _locale.T("Btn_Back");
         BtnSave = _locale.T("Btn_Save");
         MenuDeleteBr = _locale.T("BR_MenuDelete");
@@ -509,5 +515,30 @@ public partial class BREditViewModel : BaseViewModel
         var list = _sp.GetRequiredService<BRListViewModel>();
         _workspace.Open(list);
         list.LoadCommand.Execute(null);
+    }
+
+    [RelayCommand]
+    private async Task ExportPdfAsync(CancellationToken cancellationToken)
+    {
+        if (BrId is not { } id) return;
+        try
+        {
+            IsBusy = true;
+            await using var db = await _dbFactory.CreateDbContextAsync(cancellationToken);
+            var b = await db.BonsReception.Include(x => x.Lignes).FirstAsync(x => x.Id == id, cancellationToken);
+            var fournisseur = await db.Tiers.AsNoTracking().FirstAsync(t => t.Id == b.FournisseurId, cancellationToken);
+            var bytes = await _pdf.BuildBonReceptionPdfAsync(b, DocumentPartyPdfInfo.FromTiers(fournisseur), cancellationToken);
+            var ok = await _dialog.SavePickedFileBytesAsync(_locale.T("Export_PdfPicker"), $"{b.Numero}.pdf", new[] { "*.pdf" }, bytes, cancellationToken);
+            if (ok)
+                await _dialog.ShowInfoAsync(_locale.T("Export_Pdf"), _locale.T("Export_Done"), cancellationToken);
+        }
+        catch (Exception ex)
+        {
+            await _dialog.ShowErrorAsync(_locale.T("Export_Pdf"), ex.Message, cancellationToken);
+        }
+        finally
+        {
+            IsBusy = false;
+        }
     }
 }

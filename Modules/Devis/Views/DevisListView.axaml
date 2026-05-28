@@ -10,7 +10,6 @@
     <StackPanel Orientation="Horizontal" Spacing="8">
       <Button Content="{Binding BtnRefresh}" Command="{Binding LoadCommand}"/>
       <Button Content="{Binding BtnNew}" Command="{Binding NewDevisCommand}"/>
-      <Button Content="{Binding BtnPdf}" Command="{Binding ExportPdfCommand}"/>
       <Button Content="{Binding BtnFilterDate}" Command="{Binding FilterDateCommand}"/>
       <TextBox MinWidth="260" MaxWidth="420" VerticalAlignment="Center"
                Watermark="{Binding SearchWatermark}" Text="{Binding SearchText}"/>

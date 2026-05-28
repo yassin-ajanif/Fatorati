@@ -13,6 +13,7 @@ using GestionCommerciale.Modules.Livraison.ViewModels;
 using GestionCommerciale.Modules.Tiers.Models;
 using GestionCommerciale.Shared.Database;
 using GestionCommerciale.Shared.Helpers;
+using GestionCommerciale.Shared.Models.Pdf;
 using GestionCommerciale.Shared.Services;
 using GestionCommerciale.Shared.ViewModels;
 using Microsoft.EntityFrameworkCore;
@@ -31,6 +32,7 @@ public partial class DevisEditViewModel : BaseViewModel
     private readonly ICurrentUserSession _session;
     private readonly ILocaleService _locale;
     private readonly IUiPreferencesService _uiPreferences;
+    private readonly IPdfService _pdf;
 
     public DevisEditViewModel(
         IDbContextFactory<AppDbContext> dbFactory,
@@ -41,7 +43,8 @@ public partial class DevisEditViewModel : BaseViewModel
         IServiceProvider sp,
         ICurrentUserSession session,
         ILocaleService locale,
-        IUiPreferencesService uiPreferences)
+        IUiPreferencesService uiPreferences,
+        IPdfService pdf)
     {
         _dbFactory = dbFactory;
         _numbers = numbers;
@@ -52,6 +55,7 @@ public partial class DevisEditViewModel : BaseViewModel
         _session = session;
         _locale = locale;
         _uiPreferences = uiPreferences;
+        _pdf = pdf;
         _locale.CultureApplied += (_, _) =>
         {
             RefreshDevisUi();
@@ -64,6 +68,7 @@ public partial class DevisEditViewModel : BaseViewModel
         RefreshDevisUi();
     }
 
+    [ObservableProperty] private string _btnPdf = string.Empty;
     [ObservableProperty] private string _btnBack = string.Empty;
     [ObservableProperty] private string _btnSave = string.Empty;
     [ObservableProperty] private string _btnToBl = string.Empty;
@@ -98,6 +103,7 @@ public partial class DevisEditViewModel : BaseViewModel
 
     private void RefreshDevisUi()
     {
+        BtnPdf = _locale.T("Btn_Pdf");
         BtnBack = _locale.T("Btn_Back");
         BtnSave = _locale.T("Btn_Save");
         BtnToBl = _locale.T("Btn_ToBL");
@@ -535,5 +541,30 @@ public partial class DevisEditViewModel : BaseViewModel
         var list = _sp.GetRequiredService<DevisListViewModel>();
         _workspace.Open(list);
         list.LoadCommand.Execute(null);
+    }
+
+    [RelayCommand]
+    private async Task ExportPdfAsync(CancellationToken cancellationToken)
+    {
+        if (DevisId is not { } id) return;
+        try
+        {
+            IsBusy = true;
+            await using var db = await _dbFactory.CreateDbContextAsync(cancellationToken);
+            var d = await db.Devis.Include(x => x.Lignes).FirstAsync(x => x.Id == id, cancellationToken);
+            var client = await db.Tiers.AsNoTracking().FirstAsync(t => t.Id == d.ClientId, cancellationToken);
+            var bytes = await _pdf.BuildDevisPdfAsync(d, DocumentPartyPdfInfo.FromTiers(client), cancellationToken);
+            var ok = await _dialog.SavePickedFileBytesAsync(_locale.T("Export_PdfPicker"), $"{d.Numero}.pdf", new[] { "*.pdf" }, bytes, cancellationToken);
+            if (ok)
+                await _dialog.ShowInfoAsync(_locale.T("Export_Pdf"), _locale.T("Export_Done"), cancellationToken);
+        }
+        catch (Exception ex)
+        {
+            await _dialog.ShowErrorAsync(_locale.T("Export_Pdf"), ex.Message, cancellationToken);
+        }
+        finally
+        {
+            IsBusy = false;
+        }
     }
 }

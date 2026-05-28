@@ -56,7 +56,7 @@ public static class DependencyInjection
         services.AddTransient<MainWindowViewModel>();
         services.AddTransient<LoginViewModel>();
         services.AddTransient<AppShellViewModel>();
-        services.AddTransient<HomeViewModel>();
+        services.AddSingleton<HomeViewModel>();
         services.AddTransient<PosViewModel>();
         services.AddTransient<TiersListViewModel>();
         services.AddTransient<TiersDetailViewModel>();
@@ -76,7 +76,7 @@ public static class DependencyInjection
         services.AddTransient<AvoirEditViewModel>();
         services.AddTransient<AvoirFournisseurListViewModel>();
         services.AddTransient<AvoirFournisseurEditViewModel>();
-        services.AddTransient<ReportingViewModel>();
+        services.AddSingleton<ReportingViewModel>();
         services.AddTransient<ReportsListViewModel>();
         services.AddTransient<SettingsViewModel>();
 
