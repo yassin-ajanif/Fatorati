@@ -17,4 +17,10 @@ public class AppSettingsRow
 
     /// <summary>Interface language: <c>fr</c> (default) or <c>ar</c> (RTL).</summary>
     public string UiLanguage { get; set; } = "fr";
+
+    /// <summary>UTC date when the 3-day trial was first started (null = not started).</summary>
+    public DateTime? TrialStartedAt { get; set; }
+
+    /// <summary>Stored license key once activated (null = not yet licensed).</summary>
+    public string? LicenseKey { get; set; }
 }

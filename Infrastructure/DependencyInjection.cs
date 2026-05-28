@@ -43,6 +43,7 @@ public static class DependencyInjection
         services.AddSingleton<IBonReceptionWorkflowService, BonReceptionWorkflowService>();
         services.AddSingleton<IFactureWorkflowService, FactureWorkflowService>();
         services.AddSingleton<IAvoirWorkflowService, AvoirWorkflowService>();
+        services.AddSingleton<ILicenseService, LicenseService>();
         services.AddSingleton<IPdfService, PdfService>();
         services.AddTransient<MainWindowViewModel>();
         services.AddTransient<LoginViewModel>();

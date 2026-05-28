@@ -160,6 +160,66 @@ public sealed class DialogService : IDialogService
         return password;
     }
 
+    public async Task<string?> PromptLicenseAsync(string title, string message, CancellationToken cancellationToken = default)
+    {
+        var owner = GetMainWindow();
+        var w = new Window
+        {
+            Title = title,
+            MinWidth = 320,
+            MaxWidth = 480,
+            SizeToContent = SizeToContent.WidthAndHeight,
+            WindowStartupLocation = WindowStartupLocation.CenterOwner,
+            CanResize = false
+        };
+
+        string? licenseKey = null;
+        var panel = new StackPanel { Margin = new Avalonia.Thickness(16), Spacing = 12 };
+        panel.Children.Add(new TextBlock
+        {
+            Text = message,
+            TextWrapping = Avalonia.Media.TextWrapping.Wrap,
+            MaxWidth = 440
+        });
+
+        var input = new TextBox
+        {
+            MinWidth = 280,
+            Watermark = "Clé de licence"
+        };
+        panel.Children.Add(input);
+
+        var buttons = new StackPanel
+        {
+            Orientation = Orientation.Horizontal,
+            HorizontalAlignment = HorizontalAlignment.Right,
+            Spacing = 8
+        };
+        var cancel = new Button { Content = "Quitter" };
+        cancel.Click += (_, _) =>
+        {
+            licenseKey = null;
+            w.Close();
+        };
+        var ok = new Button { Content = "Activer", IsDefault = true };
+        ok.Click += (_, _) =>
+        {
+            licenseKey = input.Text;
+            w.Close();
+        };
+        buttons.Children.Add(cancel);
+        buttons.Children.Add(ok);
+        panel.Children.Add(buttons);
+        w.Content = panel;
+
+        if (owner != null)
+            await w.ShowDialog(owner);
+        else
+            w.Show();
+
+        return licenseKey;
+    }
+
     public async Task<string?> PickOpenFileAsync(string title, IReadOnlyList<string> patterns, CancellationToken cancellationToken = default)
     {
         var owner = GetMainWindow();

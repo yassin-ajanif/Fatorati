@@ -1,4 +1,5 @@
 using Avalonia;
+using Avalonia.Controls;
 using Avalonia.Controls.ApplicationLifetimes;
 using Avalonia.Data.Core;
 using Avalonia.Data.Core.Plugins;
@@ -36,45 +37,116 @@ public partial class App : Application
             sc.AddGestionCommerciale();
             Services = sc.BuildServiceProvider();
 
-            using (var db = Services.GetRequiredService<IDbContextFactory<AppDbContext>>().CreateDbContext())
+            AppDbContext? db = null;
+            try
             {
-                try
-                {
-                    db.Database.Migrate();
-                }
+                db = Services.GetRequiredService<IDbContextFactory<AppDbContext>>().CreateDbContext();
+                try { db.Database.Migrate(); }
                 catch (SqliteException ex) when (
                     ex.SqliteErrorCode == 1 &&
-                    ex.Message.Contains("already exists", StringComparison.OrdinalIgnoreCase))
-                {
-                    // Some local databases were created with schema objects present but missing
-                    // migration history entries. In that case, allow startup to continue.
-                }
+                    ex.Message.Contains("already exists", StringComparison.OrdinalIgnoreCase)) { }
 
                 EnsureSocieteMentionsLegalesColumn(db);
                 EnsureFactureEstPayeeColumn(db);
-
+                EnsureTrialLicenseColumns(db);
                 DbSeeder.Seed(db);
             }
-
-            Services.GetRequiredService<ILocaleService>().InitializeAsync().GetAwaiter().GetResult();
+            finally { db?.Dispose(); }
 
             var mainVm = Services.GetRequiredService<MainWindowViewModel>();
-            var root = Services.GetRequiredService<RootNavigator>();
-            var auth = Services.GetRequiredService<IAuthService>();
-            var loggedIn = auth.LoginAsync(DbSeeder.DefaultAdminEmail, DbSeeder.DefaultAdminPassword, default)
-                .GetAwaiter()
-                .GetResult();
-            root.SetRoot(loggedIn
-                ? Services.GetRequiredService<AppShellViewModel>()
-                : Services.GetRequiredService<LoginViewModel>());
-
-            desktop.MainWindow = new MainWindow
-            {
-                DataContext = mainVm
-            };
+            desktop.MainWindow = new MainWindow { DataContext = mainVm };
+            desktop.MainWindow.Opened += OnMainWindowOpened;
         }
 
         base.OnFrameworkInitializationCompleted();
+    }
+
+    private async void OnMainWindowOpened(object? sender, EventArgs e)
+    {
+        var window = (Window)sender!;
+        window.Opened -= OnMainWindowOpened;
+
+        var licenseService = Services.GetRequiredService<ILicenseService>();
+        var appSettingsService = Services.GetRequiredService<IAppSettingsService>();
+        var dialogService = Services.GetRequiredService<IDialogService>();
+
+        var settings = await appSettingsService.GetAsync(default);
+
+        if (!licenseService.IsLicensed(settings))
+        {
+            if (settings.TrialStartedAt is null)
+            {
+                settings.TrialStartedAt = DateTime.UtcNow;
+                await appSettingsService.SaveAsync(settings, default);
+            }
+            else if (licenseService.IsTrialExpired(settings))
+            {
+                while (true)
+                {
+                    var enteredKey = await dialogService.PromptLicenseAsync(
+                        "Licence expirée",
+                        "Votre période d'essai de 3 jours est expirée. Veuillez entrer votre clé de licence pour continuer.");
+
+                    if (enteredKey is null)
+                        Environment.Exit(0);
+
+                    if (licenseService.ValidateLicenseKey(enteredKey))
+                    {
+                        settings.LicenseKey = enteredKey;
+                        await appSettingsService.SaveAsync(settings, default);
+                        break;
+                    }
+
+                    await dialogService.ShowErrorAsync("Clé invalide",
+                        "La clé de licence saisie est incorrecte. Veuillez réessayer.");
+                }
+            }
+        }
+
+        await Services.GetRequiredService<ILocaleService>().InitializeAsync(default);
+
+        var root = Services.GetRequiredService<RootNavigator>();
+        var auth = Services.GetRequiredService<IAuthService>();
+        var loggedIn = await auth.LoginAsync(DbSeeder.DefaultAdminEmail, DbSeeder.DefaultAdminPassword, default);
+
+        root.SetRoot(loggedIn
+            ? Services.GetRequiredService<AppShellViewModel>()
+            : Services.GetRequiredService<LoginViewModel>());
+    }
+
+    /// <summary>Ensures TrialStartedAt and LicenseKey columns exist on AppSettings for older DBs.</summary>
+    private static void EnsureTrialLicenseColumns(AppDbContext db)
+    {
+        var conn = db.Database.GetDbConnection();
+        var wasClosed = conn.State != ConnectionState.Open;
+        if (wasClosed) conn.Open();
+        try
+        {
+            using var check = conn.CreateCommand();
+            check.CommandText = "SELECT COUNT(*) FROM pragma_table_info('AppSettings') WHERE name = 'TrialStartedAt'";
+            var hasCol = Convert.ToInt64(check.ExecuteScalar() ?? 0L) > 0;
+            if (!hasCol)
+            {
+                using var alter = conn.CreateCommand();
+                alter.CommandText = "ALTER TABLE AppSettings ADD COLUMN TrialStartedAt TEXT NULL;";
+                alter.ExecuteNonQuery();
+            }
+
+            using var check2 = conn.CreateCommand();
+            check2.CommandText = "SELECT COUNT(*) FROM pragma_table_info('AppSettings') WHERE name = 'LicenseKey'";
+            hasCol = Convert.ToInt64(check2.ExecuteScalar() ?? 0L) > 0;
+            if (!hasCol)
+            {
+                using var alter = conn.CreateCommand();
+                alter.CommandText = "ALTER TABLE AppSettings ADD COLUMN LicenseKey TEXT NULL;";
+                alter.ExecuteNonQuery();
+            }
+        }
+        finally
+        {
+            if (wasClosed && conn.State == ConnectionState.Open)
+                conn.Close();
+        }
     }
 
     /// <summary>Repairs SQLite DBs where the model expects SocieteMentionsLegales but Migrate did not add it.</summary>

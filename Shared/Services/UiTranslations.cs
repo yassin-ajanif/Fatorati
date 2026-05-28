@@ -55,6 +55,9 @@ public static class UiTranslations
     {
         ["Win_AppTitle"] = ("faturati", "faturati"),
         ["Home_Welcome"] = ("Bienvenue. Utilisez le menu pour accéder aux modules.", "مرحباً. استخدم القائمة للوصول إلى الوحدات."),
+        ["Home_TrialDaysRemaining"] = ("{0} jour(s) restant(s) avant expiration de la licence.", "{0} يوم (أيام) متبقية قبل انتهاء الترخيص."),
+        ["Home_TrialExpired"] = ("Licence expirée. Veuillez saisir votre clé de licence.", "انتهى الترخيص. يرجى إدخال مفتاح الترخيص."),
+        ["Home_TrialLastDay"] = ("Dernier jour d'essai. Veuillez activer votre licence.", "آخر يوم تجريبي. يرجى تفعيل الترخيص."),
         ["Login_Title"] = ("Connexion", "تسجيل الدخول"),
         ["Login_ErrBadCreds"] = ("Email ou mot de passe incorrect.", "البريد أو كلمة المرور غير صحيحة."),
         ["Users_Title"] = ("Utilisateurs", "المستخدمون"),

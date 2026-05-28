@@ -3,12 +3,18 @@
              xmlns:vm="using:GestionCommerciale.Modules.Auth.ViewModels"
              x:Class="GestionCommerciale.Modules.Auth.Views.HomeView"
              x:DataType="vm:HomeViewModel">
-  <Grid>
-    <ContentControl Content="{Binding Dashboard}"
+  <Grid RowDefinitions="Auto,*">
+    <Border Grid.Row="0" Background="{DynamicResource CourseraWarningBrush}"
+            IsVisible="{Binding ShowTrialMessage}"
+            Padding="12 8" CornerRadius="8" Margin="8 8 8 0">
+      <TextBlock Text="{Binding TrialMessage}" TextWrapping="Wrap"
+                 FontSize="14" Foreground="White" FontWeight="SemiBold"/>
+    </Border>
+    <ContentControl Grid.Row="1" Content="{Binding Dashboard}"
                     IsVisible="{Binding ShowDashboard}"
                     HorizontalAlignment="Stretch"
                     VerticalAlignment="Stretch"/>
-    <StackPanel IsVisible="{Binding ShowWelcomeOnly}"
+    <StackPanel Grid.Row="1" IsVisible="{Binding ShowWelcomeOnly}"
                 VerticalAlignment="Center"
                 HorizontalAlignment="Center"
                 Spacing="12"
