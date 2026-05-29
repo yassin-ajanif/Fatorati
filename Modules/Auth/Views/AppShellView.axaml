@@ -105,13 +105,14 @@
                     BorderBrush="{Binding IsNavSettingsActive, Converter={x:Static conv:NavTabHighlightConverter.Instance}, ConverterParameter=border}"/>
           </StackPanel>
 
-          <Border Height="8"/>
-         <!--
-         <Button Content="Test perf"
-          Command="{Binding RunPerfTestCommand}" 
-          HorizontalAlignment="Stretch"/>--> 
+           <Border Height="8"/>
+          
+         <!-- <Button Content="Test perf"
+           Command="{Binding RunPerfTestCommand}" 
+           HorizontalAlignment="Stretch"/>
           <TextBlock Text="{Binding TestProgress}" TextWrapping="Wrap" FontSize="11" Classes="subtle" IsVisible="{Binding IsTestRunning}"/>
-        </StackPanel>
+         --></StackPanel>
+       
       </ScrollViewer>
     </Border>
     <ContentControl Grid.Column="1" Content="{Binding WorkspaceCurrentPage}" Margin="14,0,0,0"/>
