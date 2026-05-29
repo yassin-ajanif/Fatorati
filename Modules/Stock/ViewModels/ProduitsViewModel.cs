@@ -24,6 +24,7 @@ public partial class ProduitsViewModel : BaseViewModel
     private readonly IDialogService _dialog;
     private readonly ICurrentUserSession _session;
     private readonly ILocaleService _locale;
+    private readonly IProductImportExportService _importExport;
 
     private CancellationTokenSource? _imageLoadCts;
     private byte[]? _pendingImageReplacement;
@@ -33,12 +34,13 @@ public partial class ProduitsViewModel : BaseViewModel
 
     private Bitmap? _ficheImagePreview;
 
-    public ProduitsViewModel(IDbContextFactory<AppDbContext> dbFactory, IDialogService dialog, ICurrentUserSession session, ILocaleService locale)
+    public ProduitsViewModel(IDbContextFactory<AppDbContext> dbFactory, IDialogService dialog, ICurrentUserSession session, ILocaleService locale, IProductImportExportService importExport)
     {
         _dbFactory = dbFactory;
         _dialog = dialog;
         _session = session;
         _locale = locale;
+        _importExport = importExport;
         _locale.CultureApplied += (_, _) => RefreshProduitsUi();
         Pagination = new PaginationHelper(() => _ = LoadProduitsAsync(CancellationToken.None));
         RefreshProduitsUi();
@@ -46,6 +48,8 @@ public partial class ProduitsViewModel : BaseViewModel
 
     [ObservableProperty] private string _btnNewProduct = string.Empty;
     [ObservableProperty] private string _btnRefresh = string.Empty;
+    [ObservableProperty] private string _btnExportCsv = string.Empty;
+    [ObservableProperty] private string _btnImportCsv = string.Empty;
     [ObservableProperty] private string _helpList = string.Empty;
     [ObservableProperty] private string _wmSearch = string.Empty;
     [ObservableProperty] private string _colRef = string.Empty;
@@ -80,6 +84,8 @@ public partial class ProduitsViewModel : BaseViewModel
         Title = _locale.T("Nav_Produits");
         BtnNewProduct = _locale.T("Btn_NewProduct");
         BtnRefresh = _locale.T("Btn_Refresh");
+        BtnExportCsv = _locale.T("Btn_ExportCsv");
+        BtnImportCsv = _locale.T("Btn_ImportCsv");
         HelpList = _locale.T("Lbl_ProductListHelp");
         WmSearch = _locale.T("Wm_SearchProducts");
         ColRef = _locale.T("Lbl_ColRef");
@@ -642,6 +648,63 @@ public partial class ProduitsViewModel : BaseViewModel
 
             await _dialog.ShowInfoAsync(_locale.T("Nav_Produits"), _locale.T("Prod_Saved"), cancellationToken);
             await LoadProduitsAsync(cancellationToken);
+        }
+        finally
+        {
+            IsBusy = false;
+        }
+    }
+
+    [RelayCommand]
+    private async Task ExportCsvAsync(CancellationToken cancellationToken)
+    {
+        IsBusy = true;
+        try
+        {
+            var data = await _importExport.ExportCsvAsync(cancellationToken);
+            var saved = await _dialog.SavePickedFileBytesAsync(
+                _locale.T("Export_CsvPicker"),
+                "produits.csv",
+                new[] { "*.csv" },
+                data,
+                cancellationToken);
+            if (saved)
+                await _dialog.ShowInfoAsync(_locale.T("Nav_Produits"), _locale.T("Export_Done"), cancellationToken);
+        }
+        catch (Exception ex)
+        {
+            await _dialog.ShowErrorAsync(_locale.T("Nav_Produits"), ex.Message, cancellationToken);
+        }
+        finally
+        {
+            IsBusy = false;
+        }
+    }
+
+    [RelayCommand]
+    private async Task ImportCsvAsync(CancellationToken cancellationToken)
+    {
+        var path = await _dialog.PickOpenFileAsync(
+            _locale.T("Export_CsvPicker"),
+            new[] { "*.csv" },
+            cancellationToken);
+        if (string.IsNullOrWhiteSpace(path)) return;
+
+        IsBusy = true;
+        try
+        {
+            var data = await System.IO.File.ReadAllBytesAsync(path, cancellationToken);
+            var (imported, updated, errors) = await _importExport.ImportCsvAsync(data, cancellationToken);
+            var msg = string.Format(
+                System.Globalization.CultureInfo.CurrentUICulture,
+                "{0} créés, {1} mis à jour, {2} erreurs.",
+                imported, updated, errors);
+            await _dialog.ShowInfoAsync(_locale.T("Nav_Produits"), msg, cancellationToken);
+            await LoadProduitsAsync(cancellationToken);
+        }
+        catch (Exception ex)
+        {
+            await _dialog.ShowErrorAsync(_locale.T("Nav_Produits"), ex.Message, cancellationToken);
         }
         finally
         {

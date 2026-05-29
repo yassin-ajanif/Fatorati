@@ -6,6 +6,7 @@ using GestionCommerciale.Modules.Auth.Services;
 using GestionCommerciale.Shared.Database;
 using GestionCommerciale.Shared.Services;
 using GestionCommerciale.Shared.ViewModels;
+using Microsoft.Data.Sqlite;
 using Microsoft.EntityFrameworkCore;
 
 namespace GestionCommerciale.Modules.Auth.ViewModels;
@@ -313,9 +314,27 @@ public partial class SettingsViewModel : BaseViewModel
 
     private async Task ResetDatabaseAsync(CancellationToken cancellationToken)
     {
+        var dbPath = Path.Combine(DatabasePath.GetDirectory(), "data.db");
+
+        Microsoft.Data.Sqlite.SqliteConnection.ClearAllPools();
+
+        for (var i = 0; i < 5; i++)
+        {
+            try
+            {
+                if (File.Exists(dbPath))
+                    File.Delete(dbPath);
+                break;
+            }
+            catch
+            {
+                if (i == 4) throw;
+                await Task.Delay(500, cancellationToken);
+            }
+        }
+
         await using var db = await _dbFactory.CreateDbContextAsync(cancellationToken);
-        await db.Database.EnsureDeletedAsync(cancellationToken);
-        await db.Database.EnsureCreatedAsync(cancellationToken);
+        await db.Database.MigrateAsync(cancellationToken);
         DbSeeder.Seed(db);
     }
 

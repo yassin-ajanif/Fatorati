@@ -9,10 +9,12 @@
     <Border Padding="12" CornerRadius="8" BorderBrush="#28000000" BorderThickness="1"
             Background="#06000000">
       <Grid RowDefinitions="Auto,Auto,Auto,*">
-        <StackPanel Orientation="Horizontal" Spacing="10" Margin="0,0,0,12">
-          <Button Content="{Binding BtnNewProduct}" MinWidth="130" Padding="12,8" Command="{Binding NewProduitCommand}"/>
-          <Button Content="{Binding BtnRefresh}" MinWidth="120" Padding="12,8" Command="{Binding LoadProduitsCommand}"/>
-        </StackPanel>
+        <WrapPanel Margin="0,0,0,12">
+          <Button Content="{Binding BtnNewProduct}" MinWidth="110" Padding="6,4" Margin="0,0,6,4" Command="{Binding NewProduitCommand}"/>
+          <Button Content="{Binding BtnRefresh}" MinWidth="90" Padding="6,4" Margin="0,0,6,4" Command="{Binding LoadProduitsCommand}"/>
+          <Button Content="{Binding BtnExportCsv}" MinWidth="90" Padding="6,4" Margin="0,0,6,4" Command="{Binding ExportCsvCommand}"/>
+          <Button Content="{Binding BtnImportCsv}" MinWidth="90" Padding="6,4" Margin="0,0,6,4" Command="{Binding ImportCsvCommand}"/>
+        </WrapPanel>
         <TextBlock Grid.Row="1" Text="{Binding HelpList}"
                    TextWrapping="Wrap" Opacity="0.75" FontSize="12" Margin="0,0,0,8"/>
         <TextBox Grid.Row="2" Text="{Binding ProductSearch, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"

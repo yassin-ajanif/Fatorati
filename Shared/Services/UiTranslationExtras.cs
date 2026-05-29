@@ -21,6 +21,8 @@ internal static class UiTranslationExtras
         ["Btn_ChooseImageDots"] = ("Choisir une image…", "اختيار صورة…"),
         ["Btn_RemovePhoto"] = ("Retirer la photo", "إزالة الصورة"),
         ["Btn_RefreshList"] = ("Rafraîchir la liste", "تحديث القائمة"),
+        ["Btn_ExportCsv"] = ("Export CSV", "تصدير CSV"),
+        ["Btn_ImportCsv"] = ("Import CSV", "استيراد CSV"),
         ["Btn_ExportStockCsv"] = ("Export stock CSV", "تصدير مخزون CSV"),
         ["Btn_ToggleActif"] = ("Activer/Désactiver", "تفعيل/تعطيل"),
         ["Btn_ValidateStock"] = ("Valider (stock)", "تحقق (مخزون)"),
