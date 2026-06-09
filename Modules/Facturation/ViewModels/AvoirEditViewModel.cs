@@ -6,6 +6,7 @@ using CommunityToolkit.Mvvm.Input;
 using GestionCommerciale.Modules.Auth.Services;
 using GestionCommerciale.Modules.Stock;
 using GestionCommerciale.Modules.Stock.Models;
+using GestionCommerciale.Modules.Stock.Services;
 using GestionCommerciale.Modules.Facturation.Models;
 using GestionCommerciale.Modules.Facturation.Services;
 using GestionCommerciale.Modules.Tiers.Models;
@@ -68,6 +69,7 @@ public partial class AvoirEditViewModel : BaseViewModel
     private readonly ILocaleService _locale;
     private readonly IUiPreferencesService _uiPreferences;
     private readonly IPdfService _pdf;
+    private readonly IStockMovementService _stock;
 
     public AvoirEditViewModel(
         IDbContextFactory<AppDbContext> dbFactory,
@@ -79,7 +81,8 @@ public partial class AvoirEditViewModel : BaseViewModel
         ICurrentUserSession session,
         ILocaleService locale,
         IUiPreferencesService uiPreferences,
-        IPdfService pdf)
+        IPdfService pdf,
+        IStockMovementService stock)
     {
         _dbFactory = dbFactory;
         _numbers = numbers;
@@ -91,6 +94,7 @@ public partial class AvoirEditViewModel : BaseViewModel
         _locale = locale;
         _uiPreferences = uiPreferences;
         _pdf = pdf;
+        _stock = stock;
         _locale.CultureApplied += (_, _) =>
         {
             RefreshAvoirUi();
@@ -108,6 +112,7 @@ public partial class AvoirEditViewModel : BaseViewModel
     public ObservableCollection<AvoirLineRow> Lignes { get; } = [];
 
     [ObservableProperty] private int? _avoirId;
+    partial void OnAvoirIdChanged(int? value) => RemoveAvoirCommand.NotifyCanExecuteChanged();
     [ObservableProperty] private int? _factureId;
     [ObservableProperty] private int _clientId;
     [ObservableProperty] private GestionCommerciale.Modules.Tiers.Models.Tiers? _selectedClient;
@@ -127,6 +132,7 @@ public partial class AvoirEditViewModel : BaseViewModel
     [ObservableProperty] private string _btnSave = string.Empty;
     [ObservableProperty] private string _btnPdf = string.Empty;
     [ObservableProperty] private string _btnValidateAvoir = string.Empty;
+    [ObservableProperty] private string _menuDeleteAvoir = string.Empty;
     [ObservableProperty] private string _lblClient = string.Empty;
     [ObservableProperty] private string _wmClientSearch = string.Empty;
     [ObservableProperty] private string _lblDateAvoir = string.Empty;
@@ -179,6 +185,7 @@ public partial class AvoirEditViewModel : BaseViewModel
         BtnSave = _locale.T("Btn_Save");
         BtnPdf = _locale.T("Btn_Pdf");
         BtnValidateAvoir = _locale.T("Btn_ValidateAvoir");
+        MenuDeleteAvoir = _locale.T("Avoir_MenuDelete");
         LblClient = _locale.T("Lbl_Client");
         WmClientSearch = _locale.T("Wm_SearchClient");
         LblDateAvoir = _locale.T("Lbl_DateAvoir");
@@ -446,35 +453,85 @@ public partial class AvoirEditViewModel : BaseViewModel
         try
         {
             await using var db = await _dbFactory.CreateDbContextAsync(cancellationToken);
-            var num = await _numbers.NextAvoirAsync(cancellationToken);
-            var avoir = new Avoir
+            Avoir entity;
+            if (AvoirId == null)
             {
-                Numero = num,
-                FactureId = FactureId,
-                ClientId = ClientId,
-                Date = Date.DateTime,
-                Motif = Motif,
-                RetourMarchandise = RetourMarchandise,
-                CreatedByUserId = _session.UserId
-            };
-            foreach (var l in Lignes)
-            {
-                avoir.Lignes.Add(new AvoirLigne
+                var num = await _numbers.NextAvoirAsync(cancellationToken);
+                entity = new Avoir
                 {
-                    ProduitId = l.ProduitId,
-                    Designation = l.Designation,
-                    Conditionnement = l.Conditionnement,
-                    Quantite = l.Quantite,
-                    PrixUnitaireHT = l.PrixUnitaireHt,
-                    Remise = l.Remise,
-                    TauxTVA = l.TauxTva
-                });
+                    Numero = num,
+                    FactureId = FactureId,
+                    ClientId = ClientId,
+                    Date = Date.DateTime,
+                    Motif = Motif,
+                    RetourMarchandise = RetourMarchandise,
+                    CreatedByUserId = _session.UserId
+                };
+                foreach (var l in Lignes)
+                {
+                    entity.Lignes.Add(new AvoirLigne
+                    {
+                        ProduitId = l.ProduitId,
+                        Designation = l.Designation,
+                        Conditionnement = l.Conditionnement,
+                        Quantite = l.Quantite,
+                        PrixUnitaireHT = l.PrixUnitaireHt,
+                        Remise = l.Remise,
+                        TauxTVA = l.TauxTva
+                    });
+                }
+
+                db.Avoirs.Add(entity);
+                await db.SaveChangesAsync(cancellationToken);
+                AvoirId = entity.Id;
+                Numero = entity.Numero;
+                Title = _locale.Tf("Avoir_TitleNum", Numero);
+            }
+            else
+            {
+                entity = await db.Avoirs.Include(a => a.Lignes).FirstAsync(a => a.Id == AvoirId, cancellationToken);
+                entity.FactureId = FactureId;
+                entity.ClientId = ClientId;
+                entity.Date = Date.DateTime;
+                entity.Motif = Motif;
+                entity.RetourMarchandise = RetourMarchandise;
+                db.AvoirLignes.RemoveRange(entity.Lignes);
+                foreach (var l in Lignes)
+                {
+                    entity.Lignes.Add(new AvoirLigne
+                    {
+                        ProduitId = l.ProduitId,
+                        Designation = l.Designation,
+                        Conditionnement = l.Conditionnement,
+                        Quantite = l.Quantite,
+                        PrixUnitaireHT = l.PrixUnitaireHt,
+                        Remise = l.Remise,
+                        TauxTVA = l.TauxTva
+                    });
+                }
             }
 
-            db.Avoirs.Add(avoir);
+            await _stock.StripAvoirMovementsAsync(db, entity.Id, cancellationToken);
+            if (RetourMarchandise)
+            {
+                foreach (var l in Lignes)
+                {
+                    if (l.Quantite <= 0) continue;
+                    await _stock.ApplyMovementAsync(
+                        db,
+                        l.ProduitId,
+                        TypeMouvement.Entree,
+                        l.Quantite,
+                        "Avoir",
+                        entity.Id,
+                        $"Avoir {entity.Numero}",
+                        _session.UserId,
+                        cancellationToken);
+                }
+            }
+
             await db.SaveChangesAsync(cancellationToken);
-            AvoirId = avoir.Id;
-            Numero = avoir.Numero;
+            CanEditDraft = false;
             await _dialog.ShowInfoAsync(_locale.T("Avoir_Title"), _locale.T("Avoir_Saved"), cancellationToken);
         }
         finally
@@ -533,5 +590,36 @@ public partial class AvoirEditViewModel : BaseViewModel
     {
         var vm = _sp.GetRequiredService<AvoirListViewModel>();
         _workspace.Open(vm);
+    }
+
+    private bool CanRemoveAvoir() => AvoirId != null;
+
+    [RelayCommand(CanExecute = nameof(CanRemoveAvoir))]
+    private async Task RemoveAvoirAsync(CancellationToken cancellationToken)
+    {
+        if (AvoirId is not { } id) return;
+
+        if (!await _dialog.ConfirmAsync(_locale.T("Avoir_Title"), _locale.Tf("Avoir_ConfirmDelete", Numero), cancellationToken))
+            return;
+
+        IsBusy = true;
+        try
+        {
+            await using var db = await _dbFactory.CreateDbContextAsync(cancellationToken);
+            await _stock.StripAvoirMovementsAsync(db, id, cancellationToken);
+            var entity = await db.Avoirs.Include(a => a.Lignes).FirstAsync(a => a.Id == id, cancellationToken);
+            db.Avoirs.Remove(entity);
+            await db.SaveChangesAsync(cancellationToken);
+            await _dialog.ShowInfoAsync(_locale.T("Avoir_Title"), _locale.T("Avoir_Deleted"), cancellationToken);
+            Back();
+        }
+        catch (Exception ex)
+        {
+            await _dialog.ShowErrorAsync(_locale.T("Avoir_Title"), ex.Message, cancellationToken);
+        }
+        finally
+        {
+            IsBusy = false;
+        }
     }
 }

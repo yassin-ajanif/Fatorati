@@ -4,6 +4,7 @@ using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using GestionCommerciale.Modules.Auth.Services;
 using GestionCommerciale.Modules.Facturation.Models;
+using GestionCommerciale.Modules.Stock.Services;
 using GestionCommerciale.Shared.Database;
 using GestionCommerciale.Shared.Helpers;
 using GestionCommerciale.Shared.Models.Pdf;
@@ -23,6 +24,7 @@ public partial class AvoirListViewModel : BaseViewModel
     private readonly IPdfService _pdf;
     private readonly ILocaleService _locale;
     private readonly ICurrentUserSession _session;
+    private readonly IStockMovementService _stock;
 
     public AvoirListViewModel(
         IDbContextFactory<AppDbContext> dbFactory,
@@ -31,7 +33,8 @@ public partial class AvoirListViewModel : BaseViewModel
         IDialogService dialog,
         IPdfService pdf,
         ILocaleService locale,
-        ICurrentUserSession session)
+        ICurrentUserSession session,
+        IStockMovementService stock)
     {
         _dbFactory = dbFactory;
         _workspace = workspaceNavigator;
@@ -40,6 +43,7 @@ public partial class AvoirListViewModel : BaseViewModel
         _pdf = pdf;
         _locale = locale;
         _session = session;
+        _stock = stock;
         _locale.CultureApplied += (_, _) =>
         {
             RefreshListToolbar();
@@ -64,6 +68,7 @@ public partial class AvoirListViewModel : BaseViewModel
     [ObservableProperty] private string _colMotif = string.Empty;
     [ObservableProperty] private string _colHt = string.Empty;
     [ObservableProperty] private string _colTtc = string.Empty;
+    [ObservableProperty] private string _menuDeleteAvoir = string.Empty;
 
     private void RefreshListToolbar()
     {
@@ -80,6 +85,7 @@ public partial class AvoirListViewModel : BaseViewModel
         ColMotif = _locale.T("Lbl_Motif");
         ColHt = _locale.T("DevisList_ColHt");
         ColTtc = _locale.T("DevisList_ColTtc");
+        MenuDeleteAvoir = _locale.T("Avoir_MenuDelete");
     }
 
     partial void OnSearchTextChanged(string value) => LoadCommand.Execute(null);
@@ -234,6 +240,39 @@ public partial class AvoirListViewModel : BaseViewModel
         catch (Exception ex)
         {
             await _dialog.ShowErrorAsync(_locale.T("Export_Pdf"), ex.Message, cancellationToken);
+        }
+    }
+
+    [RelayCommand]
+    private async Task DeleteAvoirAsync(AvoirListRow? row, CancellationToken cancellationToken)
+    {
+        if (row == null) return;
+        var item = row.Avoir;
+
+        if (!await _dialog.ConfirmAsync(_locale.T("Avoir_Title"), _locale.Tf("Avoir_ConfirmDelete", item.Numero), cancellationToken))
+            return;
+
+        IsBusy = true;
+        try
+        {
+            await using var db = await _dbFactory.CreateDbContextAsync(cancellationToken);
+            await _stock.StripAvoirMovementsAsync(db, item.Id, cancellationToken);
+            var entity = await db.Avoirs.Include(a => a.Lignes).FirstAsync(a => a.Id == item.Id, cancellationToken);
+            db.Avoirs.Remove(entity);
+            await db.SaveChangesAsync(cancellationToken);
+
+            if (Selected?.Avoir.Id == item.Id)
+                Selected = null;
+            Items.Remove(row);
+            await _dialog.ShowInfoAsync(_locale.T("Avoir_Title"), _locale.T("Avoir_Deleted"), cancellationToken);
+        }
+        catch (Exception ex)
+        {
+            await _dialog.ShowErrorAsync(_locale.T("Avoir_Title"), ex.Message, cancellationToken);
+        }
+        finally
+        {
+            IsBusy = false;
         }
     }
 }

@@ -14,6 +14,11 @@
         <Button Content="{Binding BtnPdf}" Command="{Binding ExportPdfCommand}"/>
       </StackPanel>
       <Border Background="{DynamicResource CourseraSurfaceBrush}" CornerRadius="8,8,0,0" Padding="10,8">
+        <Border.ContextMenu>
+          <ContextMenu Opening="OnHeaderContextMenuOpening">
+            <MenuItem Header="{Binding MenuDeleteAvoir}" Command="{Binding RemoveAvoirCommand}"/>
+          </ContextMenu>
+        </Border.ContextMenu>
         <TextBlock Text="{Binding Numero}" FontWeight="Bold"/>
       </Border>
       <Grid ColumnDefinitions="*,Auto" VerticalAlignment="Top">

@@ -8,6 +8,7 @@ public sealed class StockMovementService : IStockMovementService
 {
     public const string OrigineTypeBonLivraison = "BL";
     public const string OrigineTypeBonReception = "BR";
+    public const string OrigineTypeAvoir = "Avoir";
 
     public async Task ApplyMovementAsync(
         AppDbContext db,
@@ -98,6 +99,34 @@ public sealed class StockMovementService : IStockMovementService
     {
         var old = await db.MouvementsStock
             .Where(m => m.OrigineType == OrigineTypeBonReception && m.OrigineId == bonReceptionId)
+            .ToListAsync(cancellationToken);
+
+        foreach (var m in old)
+        {
+            var produit = await db.Produits.FirstAsync(p => p.Id == m.ProduitId, cancellationToken);
+            switch (m.Type)
+            {
+                case TypeMouvement.Entree:
+                    produit.StockActuel -= m.Quantite;
+                    break;
+                case TypeMouvement.Sortie:
+                    produit.StockActuel += m.Quantite;
+                    break;
+                case TypeMouvement.Ajustement:
+                    produit.StockActuel -= m.Quantite;
+                    break;
+                default:
+                    throw new ArgumentOutOfRangeException(nameof(m.Type), m.Type, null);
+            }
+
+            db.MouvementsStock.Remove(m);
+        }
+    }
+
+    public async Task StripAvoirMovementsAsync(AppDbContext db, int avoirId, CancellationToken cancellationToken = default)
+    {
+        var old = await db.MouvementsStock
+            .Where(m => m.OrigineType == OrigineTypeAvoir && m.OrigineId == avoirId)
             .ToListAsync(cancellationToken);
 
         foreach (var m in old)

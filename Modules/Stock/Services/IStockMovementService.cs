@@ -26,4 +26,7 @@ public interface IStockMovementService
 
     /// <summary>Removes mouvements stock liés au BR et annule leur effet sur les quantités produit.</summary>
     Task StripBonReceptionMovementsAsync(AppDbContext db, int bonReceptionId, CancellationToken cancellationToken = default);
+
+    /// <summary>Removes mouvements stock liés à l'avoir et annule leur effet sur les quantités produit.</summary>
+    Task StripAvoirMovementsAsync(AppDbContext db, int avoirId, CancellationToken cancellationToken = default);
 }

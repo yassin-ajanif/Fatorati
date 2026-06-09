@@ -170,9 +170,13 @@ public static class UiTranslations
         ["Avoir_Title"] = ("Avoir", "إشعار دائن"),
         ["Avoir_ErrDenied"] = ("Accès refusé.", "الوصول مرفوض."),
         ["Avoir_NewTitle"] = ("Nouvel avoir", "إشعار دائن جديد"),
+        ["Avoir_TitleNum"] = ("Avoir {0}", "إشعار دائن {0}"),
         ["Avoir_ErrLines"] = ("Ajoutez au moins une ligne.", "أضف سطراً واحداً على الأقل."),
         ["Avoir_Saved"] = ("Avoir enregistré. Validez pour appliquer le retour stock.", "تم الحفظ. أكمل التحقق لتطبيق المخزون."),
         ["Avoir_Validated"] = ("Avoir validé.", "تم التحقق من الإشعار الدائن."),
+        ["Avoir_MenuDelete"] = ("Supprimer l'avoir…", "حذف الإشعار الدائن…"),
+        ["Avoir_ConfirmDelete"] = ("Supprimer définitivement l'avoir {0} ?", "حذف الإشعار الدائن {0} نهائياً؟"),
+        ["Avoir_Deleted"] = ("Avoir supprimé.", "تم حذف الإشعار الدائن."),
 
         ["Avf_Title"] = ("Avoir fournisseur", "إذن دائن للمورد"),
         ["Avf_NewTitle"] = ("Nouvel avoir fournisseur", "إذن دائن جديد للمورد"),
