@@ -131,7 +131,6 @@ public partial class AvoirEditViewModel : BaseViewModel
     [ObservableProperty] private string _btnBack = string.Empty;
     [ObservableProperty] private string _btnSave = string.Empty;
     [ObservableProperty] private string _btnPdf = string.Empty;
-    [ObservableProperty] private string _btnValidateAvoir = string.Empty;
     [ObservableProperty] private string _menuDeleteAvoir = string.Empty;
     [ObservableProperty] private string _lblClient = string.Empty;
     [ObservableProperty] private string _wmClientSearch = string.Empty;
@@ -184,7 +183,6 @@ public partial class AvoirEditViewModel : BaseViewModel
         BtnBack = _locale.T("Btn_Back");
         BtnSave = _locale.T("Btn_Save");
         BtnPdf = _locale.T("Btn_Pdf");
-        BtnValidateAvoir = _locale.T("Btn_ValidateAvoir");
         MenuDeleteAvoir = _locale.T("Avoir_MenuDelete");
         LblClient = _locale.T("Lbl_Client");
         WmClientSearch = _locale.T("Wm_SearchClient");
@@ -533,26 +531,6 @@ public partial class AvoirEditViewModel : BaseViewModel
             await db.SaveChangesAsync(cancellationToken);
             CanEditDraft = false;
             await _dialog.ShowInfoAsync(_locale.T("Avoir_Title"), _locale.T("Avoir_Saved"), cancellationToken);
-        }
-        finally
-        {
-            IsBusy = false;
-        }
-    }
-
-    [RelayCommand]
-    private async Task ValiderAsync(CancellationToken cancellationToken)
-    {
-        if (AvoirId == null) return;
-        try
-        {
-            IsBusy = true;
-            await _workflow.CreerEtValiderAsync(AvoirId.Value, _session.UserId, cancellationToken);
-            await _dialog.ShowInfoAsync(_locale.T("Avoir_Title"), _locale.T("Avoir_Validated"), cancellationToken);
-        }
-        catch (Exception ex)
-        {
-            await _dialog.ShowErrorAsync(_locale.T("Avoir_Title"), ex.Message, cancellationToken);
         }
         finally
         {

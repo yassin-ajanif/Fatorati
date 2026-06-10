@@ -202,8 +202,7 @@
         <CheckBox Content="{Binding ChkRetourStock}" IsChecked="{Binding RetourMarchandise}"
                   IsEnabled="{Binding CanEditDraft}"/>
       </StackPanel>
-      <Button Content="{Binding BtnValidateAvoir}" Command="{Binding ValiderCommand}"
-              IsEnabled="{Binding !CanEditDraft}" HorizontalAlignment="Left"/>
+
     </StackPanel>
   </ScrollViewer>
 </UserControl>
