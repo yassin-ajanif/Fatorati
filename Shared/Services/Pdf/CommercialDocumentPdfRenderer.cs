@@ -69,12 +69,16 @@ public static class CommercialDocumentPdfRenderer
                     if (!string.IsNullOrWhiteSpace(model.Note))
                         main.Item().PaddingTop(6).Text(model.Note!).FontSize(9).FontColor(TextSecondary).Italic();
 
-                    main.Item().PaddingTop(4).Row(bottom =>
-                    {
-                        bottom.RelativeItem(3).Element(c => DrawAmountWordsBox(c, model));
-                        bottom.Spacing(14);
-                        bottom.RelativeItem(2).Element(c => DrawTotalsBox(c, model));
-                    });
+                    main.Item()
+                        .PaddingTop(4)
+                        .PreventPageBreak()
+                        .EnsureSpace(EstimateBottomBoxesHeight(model))
+                        .Row(bottom =>
+                        {
+                            bottom.RelativeItem(3).Element(c => DrawAmountWordsBox(c, model));
+                            bottom.Spacing(14);
+                            bottom.RelativeItem(2).Element(c => DrawTotalsBox(c, model));
+                        });
                 });
 
                 page.Footer().AlignCenter().Column(fc =>
@@ -157,7 +161,7 @@ public static class CommercialDocumentPdfRenderer
     {
         var text = string.IsNullOrWhiteSpace(model.AmountInWords) ? "" : model.AmountInWords;
 
-        container.Element(AmountPanel).Padding(14).Column(col =>
+        container.ShowEntire().Element(AmountPanel).Padding(14).Column(col =>
         {
             col.Item().Text("Arrêté le présent document à la somme de :")
                 .SemiBold()
@@ -169,7 +173,7 @@ public static class CommercialDocumentPdfRenderer
 
     private static void DrawTotalsBox(IContainer container, CommercialDocumentPdfModel model)
     {
-        container.Element(InfoPanel).Padding(14).Column(col =>
+        container.ShowEntire().Element(InfoPanel).Padding(14).Column(col =>
         {
             col.Spacing(6);
             col.Item().Row(r =>
@@ -199,7 +203,7 @@ public static class CommercialDocumentPdfRenderer
 
     private static void DrawTable(IContainer container, CommercialDocumentPdfModel model)
     {
-        var fillerCount = Math.Max(0, 18 - model.Rows.Count);
+        var fillerCount = EstimateFillerRowCount(model);
 
         container
             .Border(1)
@@ -207,18 +211,14 @@ public static class CommercialDocumentPdfRenderer
             .CornerRadius(ComponentCornerRadius)
             .Table(t =>
         {
-            t.ColumnsDefinition(cols =>
-            {
-                foreach (var c in model.Columns)
-                    cols.RelativeColumn(c.RelativeWidth);
-            });
+            DefineTableColumns(t, model);
 
             t.Header(h =>
             {
                 for (var i = 0; i < model.Columns.Count; i++)
                 {
                     var col = model.Columns[i];
-                    var cell = h.Cell().Element(c => TableHeaderCell(c));
+                    var cell = h.Cell().Element(TableHeaderCell);
                     ApplyAlign(cell, col.Align).Text(col.Header).SemiBold().FontSize(9).FontColor(TextPrimary);
                 }
             });
@@ -240,11 +240,7 @@ public static class CommercialDocumentPdfRenderer
             for (var i = 0; i < fillerCount; i++)
             {
                 for (var j = 0; j < model.Columns.Count; j++)
-                {
-                    var col = model.Columns[j];
-                    var cell = t.Cell().Element(c => TableFillerCell(c, TableRowEven));
-                    ApplyAlign(cell, col.Align).Text("").FontSize(9);
-                }
+                    t.Cell().Element(c => TableFillerCell(c, TableRowEven)).Text("").FontSize(9);
             }
 
             if (model.SummaryRow != null)
@@ -255,6 +251,78 @@ public static class CommercialDocumentPdfRenderer
                 foreach (var v in sr.Values)
                     t.Cell().Element(TableSummaryCell).AlignRight().Text(v).SemiBold().FontSize(9).FontColor(TextPrimary);
             }
+        });
+    }
+
+    private static float EstimateBottomBoxesHeight(CommercialDocumentPdfModel model) =>
+        model.ShowTaxAndTtcInTotalsBox ? 104f : 72f;
+
+    private static float EstimateNoteBlockHeight(string? note)
+    {
+        if (string.IsNullOrWhiteSpace(note))
+            return 0f;
+
+        const float charsPerLine = 95f;
+        const float lineHeight = 14f;
+        var lines = Math.Max(1, (int)Math.Ceiling(note.Length / charsPerLine));
+        return 6f + lines * lineHeight;
+    }
+
+    /// <summary>
+    /// Estimates empty rows so the table grows toward the totals boxes while keeping page 1 intact.
+    /// </summary>
+    private static int EstimateFillerRowCount(CommercialDocumentPdfModel model)
+    {
+        const float pageHeight = 842f;
+        const float topMargin = 28f;
+        const float bottomMargin = 32f;
+        const float headerHeight = 84f;
+        const float footerHeight = 72f;
+        const float mainSpacing = 16f;
+        const float tableHeaderRow = 30f;
+        const float dataRowHeight = 32f;
+        const float fillerRowHeight = 25f;
+        const float boxesSpacing = 4f;
+        const float bottomRowPaddingTop = 4f;
+        const float layoutSlack = 24f;
+
+        var infoLines = Math.Max(
+            model.DocumentInfoLines.Count(l => !string.IsNullOrWhiteSpace(l.Value)),
+            model.PartyInfoLines.Count(l => !string.IsNullOrWhiteSpace(l.Value)));
+        var infoPanelHeight = 28f + Math.Max(1, infoLines) * 18f;
+
+        var hasNote = !string.IsNullOrWhiteSpace(model.Note);
+        var noteHeight = EstimateNoteBlockHeight(model.Note);
+        var boxesHeight = EstimateBottomBoxesHeight(model);
+        var summaryRow = model.SummaryRow != null ? 30f : 0f;
+
+        // main.Column spacing between info → table → [note] → bottom boxes
+        var mainItemCount = hasNote ? 4 : 3;
+        var columnSpacing = (mainItemCount - 1) * mainSpacing;
+
+        var content = pageHeight - topMargin - bottomMargin - headerHeight - footerHeight;
+        var reserved = infoPanelHeight
+                       + columnSpacing
+                       + tableHeaderRow + summaryRow
+                       + model.Rows.Count * dataRowHeight
+                       + noteHeight
+                       + boxesSpacing + boxesHeight
+                       + bottomRowPaddingTop
+                       + layoutSlack;
+
+        var available = content - reserved;
+        if (available <= 0)
+            return 0;
+
+        return Math.Max(0, (int)Math.Floor(available / fillerRowHeight));
+    }
+
+    private static void DefineTableColumns(TableDescriptor table, CommercialDocumentPdfModel model)
+    {
+        table.ColumnsDefinition(cols =>
+        {
+            foreach (var c in model.Columns)
+                cols.RelativeColumn(c.RelativeWidth);
         });
     }
 
