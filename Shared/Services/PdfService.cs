@@ -593,6 +593,8 @@ public sealed class PdfService : IPdfService
         ModePaiement.Cheque => "Chèque",
         ModePaiement.Especes => "Espèces",
         ModePaiement.TPE => "TPE",
+        ModePaiement.Virement => "Virement",
+        ModePaiement.Effet => "Effet",
         _ => m.ToString()
     };
 

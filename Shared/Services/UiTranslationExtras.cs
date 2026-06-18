@@ -245,6 +245,8 @@ internal static class UiTranslationExtras
         ["ModePaiement_Credit"] = ("Crédit", "ائتمان"),
         ["ModePaiement_Cheque"] = ("Chèque", "شيك"),
         ["ModePaiement_Especes"] = ("Espèces", "نقداً"),
+        ["ModePaiement_Virement"] = ("Virement", "تحويل بنكي"),
+        ["ModePaiement_Effet"] = ("Effet", "كمبيالة"),
 
         ["TypeMvt_Entree"] = ("Entrée", "إدخال"),
         ["TypeMvt_Sortie"] = ("Sortie", "إخراج"),
