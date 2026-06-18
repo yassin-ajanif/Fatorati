@@ -31,6 +31,16 @@ public sealed class PdfService : IPdfService
         QuestPDF.Settings.License = LicenseType.Community;
     }
 
+    private static readonly CultureInfo PdfCulture = CultureInfo.GetCultureInfo("fr-FR");
+
+    private static string FmtQty(decimal value) => value.ToString("#,##0.##", PdfCulture);
+
+    private static string FmtUnitPrice(decimal value) => value.ToString("#,##0.##", PdfCulture);
+
+    private static string FmtTvaPct(decimal value) => value.ToString("#,##0.##", PdfCulture);
+
+    private static string FmtMoney(decimal value) => value.ToString("N2", PdfCulture);
+
     public async Task<byte[]> BuildDevisPdfAsync(Devis devis, DocumentPartyPdfInfo party, CancellationToken cancellationToken = default)
     {
         var cfg = await _settings.GetAsync(cancellationToken);
@@ -45,13 +55,13 @@ public sealed class PdfService : IPdfService
             lineData.Add(new StandardPdfLine(
                 RefCell(refs, l.ProduitId),
                 l.Designation,
-                l.Quantite.ToString("N2"),
+                FmtQty(l.Quantite),
                 l.Conditionnement,
-                l.PrixUnitaireHT.ToString("N2"),
-                l.TauxTVA.ToString("N2"),
-                l.Remise.ToString("N2"),
-                ht.ToString("N2"),
-                ttc.ToString("N2")));
+                FmtUnitPrice(l.PrixUnitaireHT),
+                FmtTvaPct(l.TauxTVA),
+                FmtMoney(l.Remise),
+                FmtMoney(ht),
+                FmtMoney(ttc)));
         }
 
         var (cols, rows) = BuildStandardPdfTable(vis, supportsLineRemise: true, "Qté", lineData);
@@ -85,12 +95,12 @@ public sealed class PdfService : IPdfService
             lineData.Add(new BlPdfLine(
                 RefCell(refs, l.ProduitId),
                 l.Designation,
-                l.QuantiteCommandee.ToString("N2"),
-                l.QuantiteLivree.ToString("N2"),
-                l.PrixUnitaireHT.ToString("N2"),
-                l.TauxTVA.ToString("N2"),
-                lht.ToString("N2"),
-                ttc.ToString("N2")));
+                FmtQty(l.QuantiteCommandee),
+                FmtQty(l.QuantiteLivree),
+                FmtUnitPrice(l.PrixUnitaireHT),
+                FmtTvaPct(l.TauxTVA),
+                FmtMoney(lht),
+                FmtMoney(ttc)));
         }
 
         var (cols, rows) = BuildBlPdfTable(blVis, lineData);
@@ -121,11 +131,11 @@ public sealed class PdfService : IPdfService
             rows.Add([
                 RefCell(refs, l.ProduitId),
                 l.Designation,
-                l.QuantiteRecue.ToString("N2"),
-                l.PrixUnitaireHT.ToString("N2"),
-                l.TauxTVA.ToString("N2"),
-                lht.ToString("N2"),
-                ttc.ToString("N2")
+                FmtQty(l.QuantiteRecue),
+                FmtUnitPrice(l.PrixUnitaireHT),
+                FmtTvaPct(l.TauxTVA),
+                FmtMoney(lht),
+                FmtMoney(ttc)
             ]);
         }
 
@@ -155,13 +165,13 @@ public sealed class PdfService : IPdfService
             lineData.Add(new StandardPdfLine(
                 RefCell(refs, l.ProduitId),
                 l.Designation,
-                l.QuantiteCommandee.ToString("N2"),
+                FmtQty(l.QuantiteCommandee),
                 l.Conditionnement,
-                l.PrixUnitaireHT.ToString("N2"),
-                l.TauxTVA.ToString("N2"),
+                FmtUnitPrice(l.PrixUnitaireHT),
+                FmtTvaPct(l.TauxTVA),
                 "—",
-                lht.ToString("N2"),
-                ttc.ToString("N2")));
+                FmtMoney(lht),
+                FmtMoney(ttc)));
         }
 
         var (cols, rows) = BuildStandardPdfTable(vis, supportsLineRemise: false, "Qté cmd.", lineData);
@@ -190,13 +200,13 @@ public sealed class PdfService : IPdfService
             lineData.Add(new StandardPdfLine(
                 RefCell(refs, l.ProduitId),
                 l.Designation,
-                l.Quantite.ToString("N2"),
+                FmtQty(l.Quantite),
                 l.Conditionnement,
-                l.PrixUnitaireHT.ToString("N2"),
-                l.TauxTVA.ToString("N2"),
-                l.Remise.ToString("N2"),
-                lht.ToString("N2"),
-                ttc.ToString("N2")));
+                FmtUnitPrice(l.PrixUnitaireHT),
+                FmtTvaPct(l.TauxTVA),
+                FmtMoney(l.Remise),
+                FmtMoney(lht),
+                FmtMoney(ttc)));
         }
 
         var (cols, rows) = BuildStandardPdfTable(vis, supportsLineRemise: true, "Qté", lineData);
@@ -231,11 +241,11 @@ public sealed class PdfService : IPdfService
             rows.Add([
                 RefCell(refs, l.ProduitId),
                 l.Designation,
-                l.Quantite.ToString("N2"),
-                l.PrixUnitaireHT.ToString("N2"),
-                l.TauxTVA.ToString("N2"),
-                lht.ToString("N2"),
-                ttc.ToString("N2")
+                FmtQty(l.Quantite),
+                FmtUnitPrice(l.PrixUnitaireHT),
+                FmtTvaPct(l.TauxTVA),
+                FmtMoney(lht),
+                FmtMoney(ttc)
             ]);
         }
 
@@ -264,11 +274,11 @@ public sealed class PdfService : IPdfService
             rows.Add([
                 RefCell(refs, l.ProduitId),
                 l.Designation,
-                l.Quantite.ToString("N2"),
-                l.PrixUnitaireHT.ToString("N2"),
-                l.TauxTVA.ToString("N2"),
-                lht.ToString("N2"),
-                ttc.ToString("N2")
+                FmtQty(l.Quantite),
+                FmtUnitPrice(l.PrixUnitaireHT),
+                FmtTvaPct(l.TauxTVA),
+                FmtMoney(lht),
+                FmtMoney(ttc)
             ]);
         }
 
@@ -317,7 +327,7 @@ public sealed class PdfService : IPdfService
             leadingSpan = qtyCol;
             summaryValues = new string[columns.Count - qtyCol];
             for (var i = 0; i < summaryValues.Length; i++)
-                summaryValues[i] = i == 0 ? sumQty.ToString("N2") : "";
+                summaryValues[i] = i == 0 ? FmtQty(sumQty) : "";
         }
         else
         {
