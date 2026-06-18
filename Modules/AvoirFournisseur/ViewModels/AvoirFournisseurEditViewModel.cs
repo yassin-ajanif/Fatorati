@@ -29,6 +29,7 @@ public partial class AvoirFournisseurEditViewModel : BaseViewModel
     private readonly ILocaleService _locale;
     private readonly IUiPreferencesService _uiPreferences;
     private readonly IPdfService _pdf;
+    private readonly IAppSettingsService _settings;
 
     public AvoirFournisseurEditViewModel(
         IDbContextFactory<AppDbContext> dbFactory,
@@ -39,7 +40,8 @@ public partial class AvoirFournisseurEditViewModel : BaseViewModel
         ICurrentUserSession session,
         ILocaleService locale,
         IUiPreferencesService uiPreferences,
-        IPdfService pdf)
+        IPdfService pdf,
+        IAppSettingsService settings)
     {
         _dbFactory = dbFactory;
         _numbers = numbers;
@@ -50,6 +52,7 @@ public partial class AvoirFournisseurEditViewModel : BaseViewModel
         _locale = locale;
         _uiPreferences = uiPreferences;
         _pdf = pdf;
+        _settings = settings;
         _locale.CultureApplied += (_, _) =>
         {
             RefreshUi();
@@ -90,7 +93,7 @@ public partial class AvoirFournisseurEditViewModel : BaseViewModel
     [ObservableProperty] private string _btnRemoveLine = string.Empty;
     [ObservableProperty] private string _lblCatalogHint = string.Empty;
     [ObservableProperty] private string _lblTotals = string.Empty;
-    [ObservableProperty] private string _devise = "MAD";
+    [ObservableProperty] private string _devise = string.Empty;
     [ObservableProperty] private string _totalHtLabel = string.Empty;
     [ObservableProperty] private string _totalTvaLabel = string.Empty;
     [ObservableProperty] private string _totalTtcLabel = string.Empty;
@@ -158,9 +161,17 @@ public partial class AvoirFournisseurEditViewModel : BaseViewModel
 
     private void UpdateTotalLines()
     {
-        TotalHtLabel = _locale.Tf("Doc_FmtHt", TotalHt, Devise);
-        TotalTvaLabel = _locale.Tf("Doc_FmtTva", TotalTva, Devise);
-        TotalTtcLabel = _locale.Tf("Doc_FmtTtc", TotalTtc, Devise);
+        TotalHtLabel = _locale.Tf("Doc_FmtHt", TotalHt, Devise).TrimEnd();
+        TotalTvaLabel = _locale.Tf("Doc_FmtTva", TotalTva, Devise).TrimEnd();
+        TotalTtcLabel = _locale.Tf("Doc_FmtTtc", TotalTtc, Devise).TrimEnd();
+    }
+
+    partial void OnDeviseChanged(string value) => RefreshTotals();
+
+    private async Task LoadDeviseAsync(CancellationToken cancellationToken)
+    {
+        var cfg = await _settings.GetAsync(cancellationToken);
+        Devise = CurrencyHelper.FromSettings(cfg);
     }
 
     private void RefreshTotals()
@@ -279,6 +290,7 @@ public partial class AvoirFournisseurEditViewModel : BaseViewModel
         Motif = string.Empty;
         RetourMarchandise = false;
         CanEditDraft = true;
+        await LoadDeviseAsync(cancellationToken);
         await LoadProduitsAsync(cancellationToken);
         RefreshTotals();
         Title = _locale.T("Avf_NewTitle");
@@ -315,6 +327,7 @@ public partial class AvoirFournisseurEditViewModel : BaseViewModel
         }
 
         CanEditDraft = true;
+        await LoadDeviseAsync(cancellationToken);
         await LoadProduitsAsync(cancellationToken);
         RefreshTotals();
         Title = _locale.Tf("Avf_TitleNum", Numero);

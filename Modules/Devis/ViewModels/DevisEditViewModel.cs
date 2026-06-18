@@ -147,10 +147,10 @@ public partial class DevisEditViewModel : BaseViewModel
     [ObservableProperty] private decimal _totalHt;
     [ObservableProperty] private decimal _totalTva;
     [ObservableProperty] private decimal _totalTtc;
-    [ObservableProperty] private string _totalHtLabel = "HT 0,00 MAD";
-    [ObservableProperty] private string _totalTvaLabel = "TVA 0,00 MAD";
-    [ObservableProperty] private string _totalTtcLabel = "TTC 0,00 MAD";
-    [ObservableProperty] private string _devise = "MAD";
+    [ObservableProperty] private string _totalHtLabel = "HT 0,00";
+    [ObservableProperty] private string _totalTvaLabel = "TVA 0,00";
+    [ObservableProperty] private string _totalTtcLabel = "TTC 0,00";
+    [ObservableProperty] private string _devise = string.Empty;
     [ObservableProperty] private bool _isReadOnly;
     [ObservableProperty] private bool _isExpire;
     [ObservableProperty] private DevisLineRow? _selectedLine;
@@ -243,10 +243,15 @@ public partial class DevisEditViewModel : BaseViewModel
         TotalHt = ht;
         TotalTva = tva;
         TotalTtc = ttc;
-        TotalHtLabel = _locale.Tf("Doc_FmtHt", ht, Devise);
-        TotalTvaLabel = _locale.Tf("Doc_FmtTva", tva, Devise);
-        TotalTtcLabel = _locale.Tf("Doc_FmtTtc", ttc, Devise);
+        TotalHtLabel = FormatTotalLabel("Doc_FmtHt", ht);
+        TotalTvaLabel = FormatTotalLabel("Doc_FmtTva", tva);
+        TotalTtcLabel = FormatTotalLabel("Doc_FmtTtc", ttc);
     }
+
+    private string FormatTotalLabel(string key, decimal amount) =>
+        _locale.Tf(key, amount, Devise).TrimEnd();
+
+    partial void OnDeviseChanged(string value) => RefreshTotals();
 
     partial void OnRemiseGlobaleChanged(decimal value) => RefreshTotals();
 
@@ -342,7 +347,7 @@ public partial class DevisEditViewModel : BaseViewModel
     {
         DevisId = id;
         var cfg = await _settings.GetAsync(cancellationToken);
-        Devise = string.IsNullOrWhiteSpace(cfg.Devise) ? "MAD" : cfg.Devise.Trim();
+        Devise = CurrencyHelper.FromSettings(cfg);
 
         Lignes.Clear();
         SelectedLine = null;
@@ -368,6 +373,7 @@ public partial class DevisEditViewModel : BaseViewModel
             IsReadOnly = false;
             IsExpire = false;
             Title = _locale.T("Devis_NewTitle");
+            RefreshTotals();
             return;
         }
 

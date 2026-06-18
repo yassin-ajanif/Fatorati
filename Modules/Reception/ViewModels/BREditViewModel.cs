@@ -35,6 +35,7 @@ public partial class BREditViewModel : BaseViewModel
     private readonly IUiPreferencesService _uiPreferences;
     private readonly IStockMovementService _stock;
     private readonly IPdfService _pdf;
+    private readonly IAppSettingsService _settings;
     private int? _sourceBonCommandeId;
 
     public BREditViewModel(
@@ -48,7 +49,8 @@ public partial class BREditViewModel : BaseViewModel
         ILocaleService locale,
         IUiPreferencesService uiPreferences,
         IStockMovementService stock,
-        IPdfService pdf)
+        IPdfService pdf,
+        IAppSettingsService settings)
     {
         _dbFactory = dbFactory;
         _numbers = numbers;
@@ -61,6 +63,7 @@ public partial class BREditViewModel : BaseViewModel
         _uiPreferences = uiPreferences;
         _stock = stock;
         _pdf = pdf;
+        _settings = settings;
         _locale.CultureApplied += (_, _) => RefreshBrUi();
         LineGridColumns.PropertyChanged += OnLineGridColumnsPropertyChanged;
         _uiPreferences.LoadDocumentLineColumns("bon_reception", LineGridColumns);
@@ -98,10 +101,10 @@ public partial class BREditViewModel : BaseViewModel
     [ObservableProperty] private decimal _totalHt;
     [ObservableProperty] private decimal _totalTva;
     [ObservableProperty] private decimal _totalTtc;
-    [ObservableProperty] private string _totalHtLabel = "HT 0,00 MAD";
-    [ObservableProperty] private string _totalTvaLabel = "TVA 0,00 MAD";
-    [ObservableProperty] private string _totalTtcLabel = "TTC 0,00 MAD";
-    [ObservableProperty] private string _devise = "MAD";
+    [ObservableProperty] private string _totalHtLabel = "HT 0,00";
+    [ObservableProperty] private string _totalTvaLabel = "TVA 0,00";
+    [ObservableProperty] private string _totalTtcLabel = "TTC 0,00";
+    [ObservableProperty] private string _devise = string.Empty;
 
     [ObservableProperty] private string _addLineSearchText = string.Empty;
     [ObservableProperty] private object? _addLineCatalogPick;
@@ -151,10 +154,17 @@ public partial class BREditViewModel : BaseViewModel
         TotalHt = ht;
         TotalTva = tva;
         TotalTtc = ttc;
-        TotalHtLabel = _locale.Tf("Doc_FmtHt", ht, Devise);
-        TotalTvaLabel = _locale.Tf("Doc_FmtTva", tva, Devise);
-        TotalTtcLabel = _locale.Tf("Doc_FmtTtc", ttc, Devise);
+        UpdateTotalLabels(ht, tva, ttc);
     }
+
+    private void UpdateTotalLabels(decimal ht, decimal tva, decimal ttc)
+    {
+        TotalHtLabel = _locale.Tf("Doc_FmtHt", ht, Devise).TrimEnd();
+        TotalTvaLabel = _locale.Tf("Doc_FmtTva", tva, Devise).TrimEnd();
+        TotalTtcLabel = _locale.Tf("Doc_FmtTtc", ttc, Devise).TrimEnd();
+    }
+
+    partial void OnDeviseChanged(string value) => RefreshTotals();
 
     private void RefreshBrUi()
     {
@@ -183,9 +193,7 @@ public partial class BREditViewModel : BaseViewModel
         LblDocColMontantHt = _locale.T("DocLine_ColMontantHt");
         LblDocColMontantTtc = _locale.T("DocLine_ColMontantTtc");
         LblTotals = _locale.T("Lbl_Totals");
-        TotalHtLabel = _locale.Tf("Doc_FmtHt", TotalHt, Devise);
-        TotalTvaLabel = _locale.Tf("Doc_FmtTva", TotalTva, Devise);
-        TotalTtcLabel = _locale.Tf("Doc_FmtTtc", TotalTtc, Devise);
+        UpdateTotalLabels(TotalHt, TotalTva, TotalTtc);
     }
 
     partial void OnIsReadOnlyChanged(bool value) => OnPropertyChanged(nameof(CanEdit));
@@ -291,6 +299,9 @@ public partial class BREditViewModel : BaseViewModel
             .SelectForListWithoutImageData().ToListAsync(cancellationToken);
         Produits.Clear();
         foreach (var p in produits) Produits.Add(p);
+
+        var cfg = await _settings.GetAsync(cancellationToken);
+        Devise = CurrencyHelper.FromSettings(cfg);
 
         if (id == null)
         {

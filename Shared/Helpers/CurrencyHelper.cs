@@ -1,4 +1,5 @@
 using System.Globalization;
+using GestionCommerciale.Shared.Database;
 
 namespace GestionCommerciale.Shared.Helpers;
 
@@ -9,4 +10,7 @@ public static class CurrencyHelper
         var c = CultureInfo.GetCultureInfo("fr-FR");
         return amount.ToString("N2", c) + " " + currencyCode;
     }
+
+    public static string FromSettings(AppSettingsRow cfg) =>
+        string.IsNullOrWhiteSpace(cfg.Devise) ? string.Empty : cfg.Devise.Trim();
 }

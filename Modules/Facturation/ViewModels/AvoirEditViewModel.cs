@@ -70,6 +70,7 @@ public partial class AvoirEditViewModel : BaseViewModel
     private readonly IUiPreferencesService _uiPreferences;
     private readonly IPdfService _pdf;
     private readonly IStockMovementService _stock;
+    private readonly IAppSettingsService _settings;
 
     public AvoirEditViewModel(
         IDbContextFactory<AppDbContext> dbFactory,
@@ -82,7 +83,8 @@ public partial class AvoirEditViewModel : BaseViewModel
         ILocaleService locale,
         IUiPreferencesService uiPreferences,
         IPdfService pdf,
-        IStockMovementService stock)
+        IStockMovementService stock,
+        IAppSettingsService settings)
     {
         _dbFactory = dbFactory;
         _numbers = numbers;
@@ -95,6 +97,7 @@ public partial class AvoirEditViewModel : BaseViewModel
         _uiPreferences = uiPreferences;
         _pdf = pdf;
         _stock = stock;
+        _settings = settings;
         _locale.CultureApplied += (_, _) =>
         {
             RefreshAvoirUi();
@@ -138,7 +141,7 @@ public partial class AvoirEditViewModel : BaseViewModel
     [ObservableProperty] private string _btnRemoveLine = string.Empty;
     [ObservableProperty] private string _lblCatalogHint = string.Empty;
     [ObservableProperty] private string _lblTotals = string.Empty;
-    [ObservableProperty] private string _devise = "MAD";
+    [ObservableProperty] private string _devise = string.Empty;
     [ObservableProperty] private string _totalHtLabel = string.Empty;
     [ObservableProperty] private string _totalTvaLabel = string.Empty;
     [ObservableProperty] private string _totalTtcLabel = string.Empty;
@@ -207,9 +210,17 @@ public partial class AvoirEditViewModel : BaseViewModel
 
     private void UpdateTotalLines()
     {
-        TotalHtLabel = _locale.Tf("Doc_FmtHt", TotalHt, Devise);
-        TotalTvaLabel = _locale.Tf("Doc_FmtTva", TotalTva, Devise);
-        TotalTtcLabel = _locale.Tf("Doc_FmtTtc", TotalTtc, Devise);
+        TotalHtLabel = _locale.Tf("Doc_FmtHt", TotalHt, Devise).TrimEnd();
+        TotalTvaLabel = _locale.Tf("Doc_FmtTva", TotalTva, Devise).TrimEnd();
+        TotalTtcLabel = _locale.Tf("Doc_FmtTtc", TotalTtc, Devise).TrimEnd();
+    }
+
+    partial void OnDeviseChanged(string value) => RefreshTotals();
+
+    private async Task LoadDeviseAsync(CancellationToken cancellationToken)
+    {
+        var cfg = await _settings.GetAsync(cancellationToken);
+        Devise = CurrencyHelper.FromSettings(cfg);
     }
 
     private void RefreshTotals()
@@ -335,6 +346,7 @@ public partial class AvoirEditViewModel : BaseViewModel
         Motif = string.Empty;
         RetourMarchandise = false;
         CanEditDraft = true;
+        await LoadDeviseAsync(cancellationToken);
         await LoadProduitsAsync(cancellationToken);
         RefreshTotals();
         Title = _locale.T("Avoir_NewTitle");
@@ -375,6 +387,7 @@ public partial class AvoirEditViewModel : BaseViewModel
         }
 
         CanEditDraft = true;
+        await LoadDeviseAsync(cancellationToken);
         await LoadProduitsAsync(cancellationToken);
         RefreshTotals();
         Title = _locale.T("Avoir_NewTitle");
@@ -420,6 +433,7 @@ public partial class AvoirEditViewModel : BaseViewModel
         }
 
         CanEditDraft = true;
+        await LoadDeviseAsync(cancellationToken);
         await LoadProduitsAsync(cancellationToken);
         RefreshTotals();
         Title = _locale.Tf("Avoir_TitleNum", Numero);

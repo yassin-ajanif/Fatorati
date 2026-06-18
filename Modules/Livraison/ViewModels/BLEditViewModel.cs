@@ -35,6 +35,7 @@ public partial class BLEditViewModel : BaseViewModel
     private readonly IUiPreferencesService _uiPreferences;
     private readonly IStockMovementService _stock;
     private readonly IPdfService _pdf;
+    private readonly IAppSettingsService _settings;
 
     public BLEditViewModel(
         IDbContextFactory<AppDbContext> dbFactory,
@@ -47,7 +48,8 @@ public partial class BLEditViewModel : BaseViewModel
         ILocaleService locale,
         IUiPreferencesService uiPreferences,
         IStockMovementService stock,
-        IPdfService pdf)
+        IPdfService pdf,
+        IAppSettingsService settings)
     {
         _dbFactory = dbFactory;
         _numbers = numbers;
@@ -60,6 +62,7 @@ public partial class BLEditViewModel : BaseViewModel
         _uiPreferences = uiPreferences;
         _stock = stock;
         _pdf = pdf;
+        _settings = settings;
         _locale.CultureApplied += (_, _) => RefreshBlUi();
         LineGridColumns.PropertyChanged += OnLineGridColumnsPropertyChanged;
         _uiPreferences.LoadDocumentLineColumns("bon_livraison", LineGridColumns);
@@ -97,10 +100,10 @@ public partial class BLEditViewModel : BaseViewModel
     [ObservableProperty] private decimal _totalHt;
     [ObservableProperty] private decimal _totalTva;
     [ObservableProperty] private decimal _totalTtc;
-    [ObservableProperty] private string _totalHtLabel = "HT 0,00 MAD";
-    [ObservableProperty] private string _totalTvaLabel = "TVA 0,00 MAD";
-    [ObservableProperty] private string _totalTtcLabel = "TTC 0,00 MAD";
-    [ObservableProperty] private string _devise = "MAD";
+    [ObservableProperty] private string _totalHtLabel = "HT 0,00";
+    [ObservableProperty] private string _totalTvaLabel = "TVA 0,00";
+    [ObservableProperty] private string _totalTtcLabel = "TTC 0,00";
+    [ObservableProperty] private string _devise = string.Empty;
     [ObservableProperty] private string _addLineSearchText = string.Empty;
     [ObservableProperty] private object? _addLineCatalogPick;
     private bool _suppressAddLinePick;
@@ -167,9 +170,7 @@ public partial class BLEditViewModel : BaseViewModel
         LblDocColMontantHt = _locale.T("DocLine_ColMontantHt");
         LblDocColMontantTtc = _locale.T("DocLine_ColMontantTtc");
         LblTotals = _locale.T("Lbl_Totals");
-        TotalHtLabel = _locale.Tf("Doc_FmtHt", TotalHt, Devise);
-        TotalTvaLabel = _locale.Tf("Doc_FmtTva", TotalTva, Devise);
-        TotalTtcLabel = _locale.Tf("Doc_FmtTtc", TotalTtc, Devise);
+        UpdateTotalLabels(TotalHt, TotalTva, TotalTtc);
     }
 
     public ObservableCollection<GestionCommerciale.Modules.Tiers.Models.Tiers> Clients { get; } = [];
@@ -285,7 +286,8 @@ public partial class BLEditViewModel : BaseViewModel
             .SelectForListWithoutImageData().ToListAsync(cancellationToken);
         Produits.Clear();
         foreach (var p in produits) Produits.Add(p);
-        Devise = "MAD";
+        var cfg = await _settings.GetAsync(cancellationToken);
+        Devise = CurrencyHelper.FromSettings(cfg);
 
         if (id == null)
         {
@@ -339,7 +341,8 @@ public partial class BLEditViewModel : BaseViewModel
             .SelectForListWithoutImageData().ToListAsync(cancellationToken);
         Produits.Clear();
         foreach (var p in produits) Produits.Add(p);
-        Devise = "MAD";
+        var cfg = await _settings.GetAsync(cancellationToken);
+        Devise = CurrencyHelper.FromSettings(cfg);
 
         var d = await db.Devis.Include(x => x.Lignes).FirstAsync(x => x.Id == devisId, cancellationToken);
         DevisId = d.Id;
@@ -423,10 +426,17 @@ public partial class BLEditViewModel : BaseViewModel
         TotalHt = ht;
         TotalTva = tva;
         TotalTtc = ttc;
-        TotalHtLabel = _locale.Tf("Doc_FmtHt", ht, Devise);
-        TotalTvaLabel = _locale.Tf("Doc_FmtTva", tva, Devise);
-        TotalTtcLabel = _locale.Tf("Doc_FmtTtc", ttc, Devise);
+        UpdateTotalLabels(ht, tva, ttc);
     }
+
+    private void UpdateTotalLabels(decimal ht, decimal tva, decimal ttc)
+    {
+        TotalHtLabel = _locale.Tf("Doc_FmtHt", ht, Devise).TrimEnd();
+        TotalTvaLabel = _locale.Tf("Doc_FmtTva", tva, Devise).TrimEnd();
+        TotalTtcLabel = _locale.Tf("Doc_FmtTtc", ttc, Devise).TrimEnd();
+    }
+
+    partial void OnDeviseChanged(string value) => RefreshTotals();
 
     [RelayCommand]
     private void RemoveSelectedLine()

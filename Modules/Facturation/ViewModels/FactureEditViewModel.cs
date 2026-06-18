@@ -112,7 +112,7 @@ public partial class FactureEditViewModel : BaseViewModel
     [ObservableProperty] private string _btnRemoveLine = string.Empty;
     [ObservableProperty] private string _lblCatalogHintFacture = string.Empty;
     [ObservableProperty] private string _lblTotals = string.Empty;
-    [ObservableProperty] private string _devise = "MAD";
+    [ObservableProperty] private string _devise = string.Empty;
     [ObservableProperty] private string _totalHtLabel = string.Empty;
     [ObservableProperty] private string _totalTvaLabel = string.Empty;
     [ObservableProperty] private string _totalTtcLabel = string.Empty;
@@ -204,11 +204,13 @@ public partial class FactureEditViewModel : BaseViewModel
 
     private void UpdateFactureTotalLines()
     {
-        TotalHtLabel = _locale.Tf("Doc_FmtHt", TotalHt, Devise);
-        TotalTvaLabel = _locale.Tf("Doc_FmtTva", TotalTva, Devise);
-        TotalTtcLabel = _locale.Tf("Doc_FmtTtc", TotalTtc, Devise);
+        TotalHtLabel = _locale.Tf("Doc_FmtHt", TotalHt, Devise).TrimEnd();
+        TotalTvaLabel = _locale.Tf("Doc_FmtTva", TotalTva, Devise).TrimEnd();
+        TotalTtcLabel = _locale.Tf("Doc_FmtTtc", TotalTtc, Devise).TrimEnd();
         MontantPayeLine = _locale.Tf("Doc_FmtPaye", MontantPaye);
     }
+
+    partial void OnDeviseChanged(string value) => UpdateFactureTotalLines();
 
     public Array ModesPaiement => Enum.GetValues(typeof(ModePaiement));
 
@@ -415,7 +417,7 @@ public partial class FactureEditViewModel : BaseViewModel
     {
         FactureId = id;
         var cfg = await _settings.GetAsync(cancellationToken);
-        Devise = string.IsNullOrWhiteSpace(cfg.Devise) ? "MAD" : cfg.Devise.Trim();
+        Devise = CurrencyHelper.FromSettings(cfg);
         BlId = null;
         DevisId = null;
         Lignes.Clear();
@@ -491,7 +493,7 @@ public partial class FactureEditViewModel : BaseViewModel
     public async Task LoadFromBLAsync(int blId, CancellationToken cancellationToken = default)
     {
         var cfg = await _settings.GetAsync(cancellationToken);
-        Devise = string.IsNullOrWhiteSpace(cfg.Devise) ? "MAD" : cfg.Devise.Trim();
+        Devise = CurrencyHelper.FromSettings(cfg);
         await using var db = await _dbFactory.CreateDbContextAsync(cancellationToken);
         var b = await db.BonsLivraison.Include(x => x.Lignes).FirstAsync(x => x.Id == blId, cancellationToken);
         BlId = b.Id;
@@ -533,7 +535,7 @@ public partial class FactureEditViewModel : BaseViewModel
     public async Task LoadFromDevisAsync(int devisId, CancellationToken cancellationToken = default)
     {
         var cfg = await _settings.GetAsync(cancellationToken);
-        Devise = string.IsNullOrWhiteSpace(cfg.Devise) ? "MAD" : cfg.Devise.Trim();
+        Devise = CurrencyHelper.FromSettings(cfg);
         await using var db = await _dbFactory.CreateDbContextAsync(cancellationToken);
         var d = await db.Devis.Include(x => x.Lignes).FirstAsync(x => x.Id == devisId, cancellationToken);
         DevisId = d.Id;
