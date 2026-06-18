@@ -199,6 +199,8 @@ public static class CommercialDocumentPdfRenderer
 
     private static void DrawTable(IContainer container, CommercialDocumentPdfModel model)
     {
+        var fillerCount = Math.Max(0, 18 - model.Rows.Count);
+
         container
             .Border(1)
             .BorderColor(TableBorder)
@@ -233,6 +235,17 @@ public static class CommercialDocumentPdfRenderer
                 }
 
                 rowIndex++;
+            }
+
+            for (var i = 0; i < fillerCount; i++)
+            {
+                var bg = (rowIndex + i) % 2 == 0 ? TableRowEven : TableRowAlt;
+                for (var j = 0; j < model.Columns.Count; j++)
+                {
+                    var col = model.Columns[j];
+                    var cell = t.Cell().Element(c => TableBodyCell(c, bg));
+                    ApplyAlign(cell, col.Align).Text("").FontSize(9);
+                }
             }
 
             if (model.SummaryRow != null)
