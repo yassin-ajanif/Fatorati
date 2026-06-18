@@ -239,11 +239,10 @@ public static class CommercialDocumentPdfRenderer
 
             for (var i = 0; i < fillerCount; i++)
             {
-                var bg = (rowIndex + i) % 2 == 0 ? TableRowEven : TableRowAlt;
                 for (var j = 0; j < model.Columns.Count; j++)
                 {
                     var col = model.Columns[j];
-                    var cell = t.Cell().Element(c => TableBodyCell(c, bg));
+                    var cell = t.Cell().Element(c => TableFillerCell(c, TableRowEven));
                     ApplyAlign(cell, col.Align).Text("").FontSize(9);
                 }
             }
@@ -283,6 +282,14 @@ public static class CommercialDocumentPdfRenderer
     private static IContainer TableBodyCell(IContainer c, string backgroundHex) =>
         c.Background(backgroundHex)
             .Border(0.5f)
+            .BorderColor(TableBorder)
+            .PaddingVertical(6)
+            .PaddingHorizontal(6);
+
+    private static IContainer TableFillerCell(IContainer c, string backgroundHex) =>
+        c.Background(backgroundHex)
+            .BorderLeft(0.5f)
+            .BorderRight(0.5f)
             .BorderColor(TableBorder)
             .PaddingVertical(6)
             .PaddingHorizontal(6);
