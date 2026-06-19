@@ -1,76 +1,63 @@
 using System.Collections.ObjectModel;
-
 using CommunityToolkit.Mvvm.ComponentModel;
-
 using CommunityToolkit.Mvvm.Input;
-
+using GestionCommerciale.Modules.Facturation.Services;
 using GestionCommerciale.Modules.Tiers.Models;
-using GestionCommerciale.Modules.Devis.Models;
-using GestionCommerciale.Modules.Facturation.Models;
-using GestionCommerciale.Modules.Livraison.Models;
-using GestionCommerciale.Modules.Reception.Models;
-
 using GestionCommerciale.Shared.Database;
-
+using GestionCommerciale.Shared.Helpers;
+using GestionCommerciale.Shared.Models.Pdf;
 using GestionCommerciale.Shared.Services;
-
 using GestionCommerciale.Shared.ViewModels;
-
 using Microsoft.EntityFrameworkCore;
-
 using Microsoft.Extensions.DependencyInjection;
-
-
 
 namespace GestionCommerciale.Modules.Tiers.ViewModels;
 
-
+public sealed class ClientLedgerDisplayRow
+{
+    public string DateText { get; init; } = string.Empty;
+    public string Designation { get; init; } = string.Empty;
+    public string Observation { get; init; } = string.Empty;
+    public string DebitText { get; init; } = string.Empty;
+    public string CreditText { get; init; } = string.Empty;
+    public string BalanceText { get; init; } = string.Empty;
+}
 
 public partial class TiersDetailViewModel : BaseViewModel
-
 {
-
     private readonly IDbContextFactory<AppDbContext> _dbFactory;
-
     private readonly IDialogService _dialog;
-
     private readonly WorkspaceNavigator _workspace;
-
     private readonly IServiceProvider _sp;
-
     private readonly ILocaleService _locale;
+    private readonly IClientAccountStatementService _ledgerService;
+    private readonly IPdfService _pdf;
+    private readonly IAppSettingsService _settings;
 
     private TiersListScope _returnScope = TiersListScope.Clients;
+    private string _devise = "MAD";
 
-    /// <summary>List context (clients vs fournisseurs) for shell nav highlight.</summary>
     public TiersListScope ListScope => _returnScope;
 
     public TiersDetailViewModel(
-
         IDbContextFactory<AppDbContext> dbFactory,
-
         IDialogService dialog,
-
         WorkspaceNavigator workspaceNavigator,
-
         IServiceProvider sp,
-
-        ILocaleService locale)
-
+        ILocaleService locale,
+        IClientAccountStatementService ledgerService,
+        IPdfService pdf,
+        IAppSettingsService settings)
     {
-
         _dbFactory = dbFactory;
-
         _dialog = dialog;
-
         _workspace = workspaceNavigator;
-
         _sp = sp;
-
         _locale = locale;
-
+        _ledgerService = ledgerService;
+        _pdf = pdf;
+        _settings = settings;
         Title = _locale.T("TiersDetail_Title");
-
         RebuildTypeOptions();
         _locale.CultureApplied += (_, _) =>
         {
@@ -91,7 +78,37 @@ public partial class TiersDetailViewModel : BaseViewModel
     [ObservableProperty] private string _wmConditions = string.Empty;
     [ObservableProperty] private string _chkActif = string.Empty;
     [ObservableProperty] private string _btnSave = string.Empty;
-    [ObservableProperty] private string _lblHistorique = string.Empty;
+
+    [ObservableProperty] private string _lblClientLedger = string.Empty;
+    [ObservableProperty] private string _lblSoldeActuel = string.Empty;
+    [ObservableProperty] private string _soldeActuelText = string.Empty;
+    [ObservableProperty] private string _btnRefreshLedger = string.Empty;
+    [ObservableProperty] private string _btnPdfLedger = string.Empty;
+    [ObservableProperty] private string _lblLedgerDate = string.Empty;
+    [ObservableProperty] private string _lblLedgerDesignation = string.Empty;
+    [ObservableProperty] private string _lblLedgerObservation = string.Empty;
+    [ObservableProperty] private string _lblLedgerDebit = string.Empty;
+    [ObservableProperty] private string _lblLedgerCredit = string.Empty;
+    [ObservableProperty] private string _lblLedgerBalance = string.Empty;
+    [ObservableProperty] private string _lblLedgerEmpty = string.Empty;
+    [ObservableProperty] private string _lblLedgerSaveFirst = string.Empty;
+    [ObservableProperty] private bool _showClientLedger;
+    [ObservableProperty] private bool _showLedgerSaveFirst;
+    [ObservableProperty] private bool _showLedgerEmpty;
+
+    public ObservableCollection<ClientLedgerDisplayRow> LedgerRows { get; } = [];
+    public ObservableCollection<TypeTiers> Types { get; } = [];
+
+    [ObservableProperty] private int? _tiersId;
+    [ObservableProperty] private TypeTiers _type = TypeTiers.Client;
+    [ObservableProperty] private string _nom = string.Empty;
+    [ObservableProperty] private string _ice = string.Empty;
+    [ObservableProperty] private string _adresse = string.Empty;
+    [ObservableProperty] private string _ville = string.Empty;
+    [ObservableProperty] private string _telephone = string.Empty;
+    [ObservableProperty] private string _email = string.Empty;
+    [ObservableProperty] private string _conditionsPaiement = string.Empty;
+    [ObservableProperty] private bool _actif = true;
 
     private void RefreshDetailUi()
     {
@@ -105,363 +122,239 @@ public partial class TiersDetailViewModel : BaseViewModel
         WmConditions = _locale.T("Wm_ConditionsPaiement");
         ChkActif = _locale.T("Lbl_Actif");
         BtnSave = _locale.T("Btn_Save");
-        LblHistorique = _locale.T("Lbl_HistoryDocs");
+        LblClientLedger = _locale.T("ClientLedger_Title");
+        LblSoldeActuel = _locale.T("ClientLedger_SoldeActuel");
+        BtnRefreshLedger = _locale.T("Btn_Refresh");
+        BtnPdfLedger = _locale.T("Btn_Pdf");
+        LblLedgerDate = _locale.T("ClientLedger_ColDate");
+        LblLedgerDesignation = _locale.T("ClientLedger_ColDesignation");
+        LblLedgerObservation = _locale.T("ClientLedger_ColObservation");
+        LblLedgerDebit = _locale.T("ClientLedger_ColDebit");
+        LblLedgerCredit = _locale.T("ClientLedger_ColCredit");
+        LblLedgerBalance = _locale.T("ClientLedger_ColBalance");
+        LblLedgerEmpty = _locale.T("ClientLedger_Empty");
+        LblLedgerSaveFirst = _locale.T("ClientLedger_SaveFirst");
     }
-
-
-
-    public ObservableCollection<string> Historique { get; } = [];
-
-
-
-    public ObservableCollection<TypeTiers> Types { get; } = [];
-
-
-
-    [ObservableProperty] private int? _tiersId;
-
-    [ObservableProperty] private TypeTiers _type = TypeTiers.Client;
-
-    [ObservableProperty] private string _nom = string.Empty;
-
-    [ObservableProperty] private string _ice = string.Empty;
-
-    [ObservableProperty] private string _adresse = string.Empty;
-
-    [ObservableProperty] private string _ville = string.Empty;
-
-    [ObservableProperty] private string _telephone = string.Empty;
-
-    [ObservableProperty] private string _email = string.Empty;
-
-    [ObservableProperty] private string _conditionsPaiement = string.Empty;
-
-    [ObservableProperty] private bool _actif = true;
-
-
 
     private void RebuildTypeOptions()
-
     {
-
         Types.Clear();
-
         switch (_returnScope)
-
         {
-
             case TiersListScope.Clients:
-
                 Types.Add(TypeTiers.Client);
-
                 Types.Add(TypeTiers.LesDeux);
-
                 break;
-
             case TiersListScope.Fournisseurs:
-
                 Types.Add(TypeTiers.Fournisseur);
-
                 Types.Add(TypeTiers.LesDeux);
-
                 break;
-
         }
-
     }
-
-
 
     public void Load(int? tiersId) => Load(tiersId, TiersListScope.Clients);
 
-
-
     public void Load(int? tiersId, TiersListScope returnScope)
-
     {
-
         _returnScope = returnScope;
-
         RebuildTypeOptions();
-
         TiersId = tiersId;
-
-        Historique.Clear();
+        LedgerRows.Clear();
+        SoldeActuelText = string.Empty;
+        ShowClientLedger = returnScope == TiersListScope.Clients;
+        ShowLedgerSaveFirst = tiersId == null && ShowClientLedger;
+        ShowLedgerEmpty = false;
         RefreshDetailUi();
 
         if (tiersId == null)
-
         {
-
             Nom = string.Empty;
-
             Ice = string.Empty;
-
             Adresse = string.Empty;
-
             Ville = string.Empty;
-
             Telephone = string.Empty;
-
             Email = string.Empty;
-
             ConditionsPaiement = string.Empty;
-
             Type = returnScope == TiersListScope.Fournisseurs ? TypeTiers.Fournisseur : TypeTiers.Client;
-
             Actif = true;
-
-            Title = returnScope == TiersListScope.Fournisseurs ? _locale.T("TiersDetail_NewSupplier") : _locale.T("TiersDetail_NewClient");
-
+            Title = returnScope == TiersListScope.Fournisseurs
+                ? _locale.T("TiersDetail_NewSupplier")
+                : _locale.T("TiersDetail_NewClient");
             return;
-
         }
-
-
 
         _ = LoadAsync(tiersId.Value, CancellationToken.None);
-
     }
-
-
 
     private async Task LoadAsync(int id, CancellationToken cancellationToken)
-
     {
-
         IsBusy = true;
-
         try
-
         {
+            var cfg = await _settings.GetAsync(cancellationToken);
+            _devise = string.IsNullOrWhiteSpace(cfg.Devise) ? "MAD" : cfg.Devise.Trim();
 
             await using var db = await _dbFactory.CreateDbContextAsync(cancellationToken);
-
             var t = await db.Tiers.AsNoTracking().FirstOrDefaultAsync(x => x.Id == id, cancellationToken);
-
             if (t == null) return;
 
-
-
             Type = t.Type;
-
             if (!Types.Contains(Type))
-
-            {
-
                 Types.Add(Type);
 
-            }
-
-
-
             Nom = t.Nom;
-
             Ice = t.ICE;
-
             Adresse = t.Adresse;
-
             Ville = t.Ville;
-
             Telephone = t.Telephone;
-
             Email = t.Email;
-
             ConditionsPaiement = t.ConditionsPaiement;
-
             Actif = t.Actif;
-
             Title = _returnScope == TiersListScope.Fournisseurs
-
                 ? _locale.Tf("Tiers_TitleSupplierFmt", t.Nom)
-
                 : _locale.Tf("Tiers_TitleClientFmt", t.Nom);
 
-
-
-            Historique.Clear();
-
+            ShowLedgerSaveFirst = false;
             var isClient = t.Type is TypeTiers.Client or TypeTiers.LesDeux;
+            ShowClientLedger = _returnScope == TiersListScope.Clients && isClient;
 
-            var isFourn = t.Type is TypeTiers.Fournisseur or TypeTiers.LesDeux;
-
-
-
-            if (isClient)
-
+            if (ShowClientLedger)
+                await LoadLedgerAsync(id, cancellationToken);
+            else
             {
-
-                var devisRows = await db.Devis.AsNoTracking().Where(d => d.ClientId == id).OrderByDescending(d => d.Date).Take(50)
-                    .Select(d => new { d.Numero, d.Date }).ToListAsync(cancellationToken);
-                foreach (var d in devisRows)
-                    Historique.Add(_locale.Tf("Hist_LineFmtShort", _locale.T("Hist_Devis"), d.Numero, d.Date.ToString("d")));
-
-                var blRows = await db.BonsLivraison.AsNoTracking().Where(b => b.ClientId == id).OrderByDescending(b => b.Date).Take(50)
-                    .Select(b => new { b.Numero, b.Date }).ToListAsync(cancellationToken);
-                foreach (var b in blRows)
-                    Historique.Add(_locale.Tf("Hist_LineFmtShort", _locale.T("Hist_BL"), b.Numero, b.Date.ToString("d")));
-
-                var facRows = await db.Factures.AsNoTracking().Where(f => f.ClientId == id).OrderByDescending(f => f.Date).Take(50)
-                    .Select(f => new { f.Numero, f.Date, f.EstPayee }).ToListAsync(cancellationToken);
-                foreach (var f in facRows)
-                    Historique.Add(_locale.Tf("Hist_LineFmt", _locale.T("Hist_Facture"), f.Numero, f.Date.ToString("d"),
-                        _locale.T(f.EstPayee ? "Fact_Paid" : "Fact_Unpaid")));
-
+                LedgerRows.Clear();
+                SoldeActuelText = string.Empty;
+                ShowLedgerEmpty = false;
             }
-
-
-
-            if (isFourn)
-
-            {
-
-                var brRows = await db.BonsReception.AsNoTracking().Where(b => b.FournisseurId == id).OrderByDescending(b => b.Date).Take(50)
-                    .Select(b => new { b.Numero, b.Date }).ToListAsync(cancellationToken);
-                foreach (var b in brRows)
-                    Historique.Add(_locale.Tf("Hist_LineFmtShort", _locale.T("Hist_BR"), b.Numero, b.Date.ToString("d")));
-
-            }
-
         }
-
         finally
-
         {
-
             IsBusy = false;
-
         }
-
     }
 
-
-
-    [RelayCommand]
-
-    private async Task SaveAsync(CancellationToken cancellationToken)
-
+    private async Task LoadLedgerAsync(int clientId, CancellationToken cancellationToken)
     {
-
-        if (string.IsNullOrWhiteSpace(Nom))
-
+        var statement = await _ledgerService.GetStatementAsync(clientId, cancellationToken);
+        LedgerRows.Clear();
+        foreach (var row in statement.Rows)
         {
-
-            await _dialog.ShowErrorAsync(_locale.T("Dlg_Validation"), _locale.T("Tiers_ErrName"), cancellationToken);
-
-            return;
-
+            LedgerRows.Add(new ClientLedgerDisplayRow
+            {
+                DateText = row.Date.ToString("dd/MM/yyyy"),
+                Designation = row.Designation,
+                Observation = row.Observation,
+                DebitText = row.Debit > 0 ? FormatAmount(row.Debit) : string.Empty,
+                CreditText = row.Credit > 0 ? FormatAmount(row.Credit) : string.Empty,
+                BalanceText = FormatAmount(row.Balance)
+            });
         }
 
+        SoldeActuelText = FormatAmount(statement.SoldeActuel);
+        ShowLedgerEmpty = LedgerRows.Count == 0;
+    }
 
+    private string FormatAmount(decimal amount) => CurrencyHelper.Format(amount, _devise);
+
+    [RelayCommand]
+    private async Task RefreshLedgerAsync(CancellationToken cancellationToken)
+    {
+        if (TiersId is not { } id || !ShowClientLedger) return;
+        IsBusy = true;
+        try
+        {
+            await LoadLedgerAsync(id, cancellationToken);
+        }
+        finally
+        {
+            IsBusy = false;
+        }
+    }
+
+    [RelayCommand]
+    private async Task ExportLedgerPdfAsync(CancellationToken cancellationToken)
+    {
+        if (TiersId is not { } id || !ShowClientLedger) return;
+        try
+        {
+            await using var db = await _dbFactory.CreateDbContextAsync(cancellationToken);
+            var client = await db.Tiers.AsNoTracking().FirstAsync(t => t.Id == id, cancellationToken);
+            var statement = await _ledgerService.GetStatementAsync(id, cancellationToken);
+            var bytes = await _pdf.BuildClientAccountStatementPdfAsync(
+                client, statement, DocumentPartyPdfInfo.FromTiers(client), cancellationToken);
+            var fileName = $"Etat-{client.Nom}.pdf";
+            var ok = await _dialog.SavePickedFileBytesAsync(
+                _locale.T("Export_PdfPicker"), fileName, new[] { "*.pdf" }, bytes, cancellationToken);
+            if (ok)
+                await _dialog.ShowInfoAsync(_locale.T("ClientLedger_Title"), _locale.T("Export_Done"), cancellationToken);
+        }
+        catch (Exception ex)
+        {
+            await _dialog.ShowErrorAsync(_locale.T("ClientLedger_Title"), ex.Message, cancellationToken);
+        }
+    }
+
+    [RelayCommand]
+    private async Task SaveAsync(CancellationToken cancellationToken)
+    {
+        if (string.IsNullOrWhiteSpace(Nom))
+        {
+            await _dialog.ShowErrorAsync(_locale.T("Dlg_Validation"), _locale.T("Tiers_ErrName"), cancellationToken);
+            return;
+        }
 
         IsBusy = true;
-
         try
-
         {
-
             await using var db = await _dbFactory.CreateDbContextAsync(cancellationToken);
-
             if (TiersId == null)
-
             {
-
-                var t = new GestionCommerciale.Modules.Tiers.Models.Tiers
-
+                var t = new Models.Tiers
                 {
-
                     Type = Type,
-
                     Nom = Nom.Trim(),
-
                     ICE = Ice.Trim(),
-
                     Adresse = Adresse.Trim(),
-
                     Ville = Ville.Trim(),
-
                     Telephone = Telephone.Trim(),
-
                     Email = Email.Trim(),
-
                     ConditionsPaiement = ConditionsPaiement.Trim(),
-
                     Actif = Actif
-
                 };
-
                 db.Tiers.Add(t);
-
                 await db.SaveChangesAsync(cancellationToken);
-
                 TiersId = t.Id;
-
             }
-
             else
-
             {
-
                 var t = await db.Tiers.FirstAsync(x => x.Id == TiersId, cancellationToken);
-
                 t.Type = Type;
-
                 t.Nom = Nom.Trim();
-
                 t.ICE = Ice.Trim();
-
                 t.Adresse = Adresse.Trim();
-
                 t.Ville = Ville.Trim();
-
                 t.Telephone = Telephone.Trim();
-
                 t.Email = Email.Trim();
-
                 t.ConditionsPaiement = ConditionsPaiement.Trim();
-
                 t.Actif = Actif;
-
                 await db.SaveChangesAsync(cancellationToken);
-
             }
-
-
 
             await _dialog.ShowInfoAsync(_locale.T("Tiers_InfoTitle"), _locale.T("Tiers_Saved"), cancellationToken);
-
             if (TiersId.HasValue)
-
                 await LoadAsync(TiersId.Value, cancellationToken);
-
         }
-
         finally
-
         {
-
             IsBusy = false;
-
         }
-
     }
-
-
 
     [RelayCommand]
-
     private void Back()
-
     {
-
         var list = _sp.GetRequiredService<TiersListViewModel>();
-
         list.Configure(_returnScope);
-
         _workspace.Open(list);
-
     }
-
 }
-
-

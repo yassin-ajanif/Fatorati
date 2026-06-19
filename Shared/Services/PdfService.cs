@@ -2,8 +2,10 @@ using GestionCommerciale.Modules.AvoirFournisseur.Models;
 using GestionCommerciale.Modules.Commande.Models;
 using GestionCommerciale.Modules.Devis.Models;
 using GestionCommerciale.Modules.Facturation.Models;
+using GestionCommerciale.Modules.Facturation.Services;
 using GestionCommerciale.Modules.Livraison.Models;
 using GestionCommerciale.Modules.Reception.Models;
+using GestionCommerciale.Modules.Tiers.Models;
 using GestionCommerciale.Shared.Database;
 using GestionCommerciale.Shared.Helpers;
 using GestionCommerciale.Shared.Models.Pdf;
@@ -306,6 +308,23 @@ public sealed class PdfService : IPdfService
 
         var model = BaseModel(cfg, "AVOIR FOURNISSEUR", docLines, PartyLines(party, "Fournisseur"), cols, rows, totals, note);
         return CommercialDocumentPdfRenderer.Render(model, TryLoadLogoBytes(cfg.SocieteLogoPath));
+    }
+
+    public async Task<byte[]> BuildClientAccountStatementPdfAsync(
+        Tiers client,
+        ClientAccountStatementResult statement,
+        DocumentPartyPdfInfo party,
+        CancellationToken cancellationToken = default)
+    {
+        var cfg = await _settings.GetAsync(cancellationToken);
+        var devise = string.IsNullOrWhiteSpace(cfg.Devise) ? "MAD" : cfg.Devise.Trim();
+        return ClientAccountStatementPdfRenderer.Render(
+            cfg.SocieteNom,
+            devise,
+            client,
+            party,
+            statement,
+            TryLoadLogoBytes(cfg.SocieteLogoPath));
     }
 
     private static CommercialDocumentPdfModel BaseModel(
