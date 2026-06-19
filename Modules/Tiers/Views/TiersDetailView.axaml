@@ -3,7 +3,7 @@
              xmlns:vm="using:GestionCommerciale.Modules.Tiers.ViewModels"
              x:Class="GestionCommerciale.Modules.Tiers.Views.TiersDetailView"
              x:DataType="vm:TiersDetailViewModel">
-  <Grid ColumnDefinitions="360,*" Margin="0,0,0,8">
+  <Grid ColumnDefinitions="260,*" Margin="0,0,0,8">
     <ScrollViewer Grid.Column="0">
       <StackPanel Spacing="8">
         <Button Content="{Binding BtnBackList}" Command="{Binding BackCommand}" HorizontalAlignment="Left"/>
