@@ -1,4 +1,4 @@
-using GestionCommerciale.Modules.Commande.Models;
+using GestionCommerciale.Modules.CommandeFournisseur.Models;
 using GestionCommerciale.Shared.Models;
 
 namespace GestionCommerciale.Modules.Reception.Models;

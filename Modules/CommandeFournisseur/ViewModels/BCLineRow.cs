@@ -1,7 +1,7 @@
 using CommunityToolkit.Mvvm.ComponentModel;
 using GestionCommerciale.Modules.Stock.Models;
 
-namespace GestionCommerciale.Modules.Commande.ViewModels;
+namespace GestionCommerciale.Modules.CommandeFournisseur.ViewModels;
 
 public partial class BCLineRow : ObservableObject
 {

@@ -16,6 +16,10 @@ public static class SupplierAccountStatementPdfRenderer
     private const string TableHeaderBg = "#E5E7EB";
     private const string TableBorder = "#D1D5DB";
     private const string TableRowAlt = "#F9FAFB";
+    private const float HeaderLogoWidth = 128f;
+    private const float HeaderLogoHeight = 78f;
+    private const float HeaderTitleFontSize = 17f;
+    private const float HeaderCompanyFontSize = 16f;
 
     public static byte[] Render(
         string societeNom,
@@ -39,11 +43,11 @@ public static class SupplierAccountStatementPdfRenderer
                     header.Item().Row(row =>
                     {
                         if (logoBytes is { Length: > 0 })
-                            row.ConstantItem(72).Height(48).Image(logoBytes).FitArea();
+                            row.ConstantItem(HeaderLogoWidth).Height(HeaderLogoHeight).Image(logoBytes).FitArea();
                         row.RelativeItem().AlignRight().Column(col =>
                         {
-                            col.Item().Text(societeNom).Bold().FontSize(14);
-                            col.Item().Text("ETAT DES RECEPTIONS ET REGLEMENTS").Bold().FontSize(12);
+                            col.Item().Text(societeNom).Bold().FontSize(HeaderCompanyFontSize);
+                            col.Item().Text("ETAT DES RECEPTIONS ET REGLEMENTS").Bold().FontSize(HeaderTitleFontSize);
                         });
                     });
                     header.Item().PaddingTop(4).Row(row =>

@@ -6,7 +6,7 @@ using GestionCommerciale.Shared.Database;
 using GestionCommerciale.Shared.Services;
 using Microsoft.EntityFrameworkCore;
 
-namespace GestionCommerciale.Modules.Commande;
+namespace GestionCommerciale.Modules.CommandeFournisseur;
 
 internal static class BonCommandeDeleteReferencedMessage
 {

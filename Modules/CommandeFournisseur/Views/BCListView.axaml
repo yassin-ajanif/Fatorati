@@ -1,8 +1,8 @@
 <UserControl xmlns="https://github.com/avaloniaui"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-             xmlns:vm="using:GestionCommerciale.Modules.Commande.ViewModels"
+             xmlns:vm="using:GestionCommerciale.Modules.CommandeFournisseur.ViewModels"
              xmlns:beh="using:GestionCommerciale.Shared.Behaviors"
-             x:Class="GestionCommerciale.Modules.Commande.Views.BCListView"
+             x:Class="GestionCommerciale.Modules.CommandeFournisseur.Views.BCListView"
              x:Name="BCListRoot"
              x:DataType="vm:BCListViewModel">
   <Grid RowDefinitions="Auto,*,Auto">

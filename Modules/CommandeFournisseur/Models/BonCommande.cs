@@ -1,6 +1,6 @@
 using GestionCommerciale.Shared.Models;
 
-namespace GestionCommerciale.Modules.Commande.Models;
+namespace GestionCommerciale.Modules.CommandeFournisseur.Models;
 
 public class BonCommande : BaseEntity
 {

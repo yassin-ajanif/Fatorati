@@ -6,7 +6,7 @@ using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using GestionCommerciale.Modules.Auth.Services;
 using GestionCommerciale.Modules.Stock;
-using GestionCommerciale.Modules.Commande.Models;
+using GestionCommerciale.Modules.CommandeFournisseur.Models;
 using GestionCommerciale.Modules.Reception.ViewModels;
 using GestionCommerciale.Modules.Tiers.Models;
 using GestionCommerciale.Shared.Database;
@@ -17,7 +17,7 @@ using GestionCommerciale.Shared.ViewModels;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 
-namespace GestionCommerciale.Modules.Commande.ViewModels;
+namespace GestionCommerciale.Modules.CommandeFournisseur.ViewModels;
 
 public partial class BCEditViewModel : BaseViewModel
 {

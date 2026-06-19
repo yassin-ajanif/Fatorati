@@ -22,6 +22,11 @@ public static class CommercialDocumentPdfRenderer
     private const string TableRowEven = "#FFFFFF";
     /// <summary>Rounded corners for panels, table frame, and bottom boxes (QuestPDF points).</summary>
     private const float ComponentCornerRadius = 8f;
+    private const float HeaderLogoWidth = 128f;
+    private const float HeaderLogoHeight = 78f;
+    private const float HeaderCompanyFontSize = 16f;
+    private const float HeaderDocumentKindFontSize = 17f;
+    private const float HeaderBlockHeight = 108f;
 
     public static byte[] Render(CommercialDocumentPdfModel model, byte[]? logoBytes)
     {
@@ -114,7 +119,7 @@ public static class CommercialDocumentPdfRenderer
             {
                 if (logoBytes is { Length: > 0 })
                 {
-                    row.ConstantItem(96).Height(58).PaddingRight(16)
+                    row.ConstantItem(HeaderLogoWidth).Height(HeaderLogoHeight).PaddingRight(16)
                         .AlignMiddle()
                         .CornerRadius(6)
                         .Image(logoBytes).FitArea();
@@ -122,17 +127,22 @@ public static class CommercialDocumentPdfRenderer
 
                 row.RelativeItem().AlignMiddle().Column(block =>
                 {
-                    block.Item().Text(model.CompanyName.ToUpperInvariant())
-                        .Bold()
-                        .FontSize(15)
-                        .FontColor(TextPrimary)
-                        .LetterSpacing(0.3f);
+                    if (!string.IsNullOrWhiteSpace(model.CompanyName))
+                    {
+                        block.Item().Text(model.CompanyName.ToUpperInvariant())
+                            .Bold()
+                            .FontSize(HeaderCompanyFontSize)
+                            .FontColor(TextPrimary)
+                            .LetterSpacing(0.3f);
+                    }
 
                     if (!string.IsNullOrWhiteSpace(model.DocumentKindLabel))
                     {
-                        block.Item().PaddingTop(4).Text(model.DocumentKindLabel)
-                            .FontSize(11)
-                            .FontColor(TextSecondary);
+                        block.Item().PaddingTop(string.IsNullOrWhiteSpace(model.CompanyName) ? 0 : 4)
+                            .Text(model.DocumentKindLabel)
+                            .Bold()
+                            .FontSize(HeaderDocumentKindFontSize)
+                            .FontColor(TextPrimary);
                     }
                 });
             });
@@ -276,7 +286,7 @@ public static class CommercialDocumentPdfRenderer
         const float pageHeight = 842f;
         const float topMargin = 28f;
         const float bottomMargin = 32f;
-        const float headerHeight = 84f;
+        const float headerHeight = HeaderBlockHeight;
         const float footerHeight = 72f;
         const float mainSpacing = 16f;
         const float tableHeaderRow = 30f;

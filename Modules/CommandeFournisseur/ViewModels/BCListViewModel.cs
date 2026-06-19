@@ -11,7 +11,7 @@ using GestionCommerciale.Shared.ViewModels;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 
-namespace GestionCommerciale.Modules.Commande.ViewModels;
+namespace GestionCommerciale.Modules.CommandeFournisseur.ViewModels;
 
 public partial class BCListViewModel : BaseViewModel
 {

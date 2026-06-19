@@ -6,7 +6,7 @@ using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using GestionCommerciale.Modules.Auth.Services;
 using GestionCommerciale.Modules.Stock;
-using GestionCommerciale.Modules.Commande.Models;
+using GestionCommerciale.Modules.CommandeFournisseur.Models;
 using GestionCommerciale.Modules.FactureFournisseur.Services;
 using GestionCommerciale.Modules.FactureFournisseur.ViewModels;
 using GestionCommerciale.Modules.Reception.Models;

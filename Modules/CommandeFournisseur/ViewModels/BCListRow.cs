@@ -1,9 +1,9 @@
 using System.Globalization;
-using GestionCommerciale.Modules.Commande.Models;
+using GestionCommerciale.Modules.CommandeFournisseur.Models;
 using GestionCommerciale.Shared.Helpers;
 using GestionCommerciale.Shared.Services;
 
-namespace GestionCommerciale.Modules.Commande.ViewModels;
+namespace GestionCommerciale.Modules.CommandeFournisseur.ViewModels;
 
 public sealed class BCListRow
 {

@@ -1,10 +1,10 @@
 <UserControl xmlns="https://github.com/avaloniaui"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-             xmlns:vm="using:GestionCommerciale.Modules.Commande.ViewModels"
+             xmlns:vm="using:GestionCommerciale.Modules.CommandeFournisseur.ViewModels"
              xmlns:m="using:GestionCommerciale.Modules.Tiers.Models"
              xmlns:stock="using:GestionCommerciale.Modules.Stock.Models"
              xmlns:conv="using:GestionCommerciale.Shared.Converters"
-             x:Class="GestionCommerciale.Modules.Commande.Views.BCEditView"
+             x:Class="GestionCommerciale.Modules.CommandeFournisseur.Views.BCEditView"
              x:DataType="vm:BCEditViewModel">
   <ScrollViewer>
     <StackPanel Spacing="10">

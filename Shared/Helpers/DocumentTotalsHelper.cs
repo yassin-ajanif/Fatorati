@@ -1,5 +1,5 @@
 using GestionCommerciale.Modules.AvoirFournisseur.Models;
-using GestionCommerciale.Modules.Commande.Models;
+using GestionCommerciale.Modules.CommandeFournisseur.Models;
 using GestionCommerciale.Modules.Devis.Models;
 using GestionCommerciale.Modules.Facturation.Models;
 using GestionCommerciale.Modules.FactureFournisseur.Models;

@@ -2,7 +2,7 @@ using System.ComponentModel;
 using Avalonia.Controls;
 using Avalonia.Markup.Xaml;
 
-namespace GestionCommerciale.Modules.Commande.Views;
+namespace GestionCommerciale.Modules.CommandeFournisseur.Views;
 
 public partial class BCListView : UserControl
 {
