@@ -1,3 +1,4 @@
+using GestionCommerciale.Modules.Livraison.Models;
 using GestionCommerciale.Shared.Models;
 
 namespace GestionCommerciale.Modules.Facturation.Models;
@@ -6,6 +7,8 @@ public class FactureLigne : BaseEntity
 {
     public int FactureId { get; set; }
     public Facture? Facture { get; set; }
+    public int? BonLivraisonId { get; set; }
+    public BonLivraison? BonLivraison { get; set; }
     public int ProduitId { get; set; }
     public string Designation { get; set; } = string.Empty;
     public decimal Quantite { get; set; }

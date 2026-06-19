@@ -19,6 +19,8 @@ using Microsoft.Extensions.DependencyInjection;
 
 namespace GestionCommerciale.Modules.Facturation.ViewModels;
 
+public sealed record LinkedBlRow(int Id, string Numero, DateTime Date);
+
 public partial class FactureEditViewModel : BaseViewModel
 {
     private readonly IDbContextFactory<AppDbContext> _dbFactory;
@@ -32,12 +34,14 @@ public partial class FactureEditViewModel : BaseViewModel
     private readonly ILocaleService _locale;
     private readonly IUiPreferencesService _uiPreferences;
     private readonly IPdfService _pdf;
+    private readonly IFactureBlLinkService _blLinkService;
 
     public FactureEditViewModel(
         IDbContextFactory<AppDbContext> dbFactory,
         IDocumentNumberService numbers,
         IAppSettingsService settings,
         IFactureWorkflowService factureWorkflow,
+        IFactureBlLinkService blLinkService,
         IDialogService dialog,
         WorkspaceNavigator workspaceNavigator,
         IServiceProvider sp,
@@ -57,6 +61,7 @@ public partial class FactureEditViewModel : BaseViewModel
         _locale = locale;
         _uiPreferences = uiPreferences;
         _pdf = pdf;
+        _blLinkService = blLinkService;
         _locale.CultureApplied += (_, _) =>
         {
             RefreshFactureUi();
@@ -72,9 +77,9 @@ public partial class FactureEditViewModel : BaseViewModel
     public ObservableCollection<GestionCommerciale.Modules.Stock.Models.Produit> Produits { get; } = [];
     public ObservableCollection<FactureLineRow> Lignes { get; } = [];
     public ObservableCollection<FacturePaiementRowViewModel> Paiements { get; } = [];
+    public ObservableCollection<LinkedBlRow> LinkedBls { get; } = [];
 
     [ObservableProperty] private int? _factureId;
-    [ObservableProperty] private int? _blId;
     [ObservableProperty] private int? _devisId;
     [ObservableProperty] private int _clientId;
     [ObservableProperty] private GestionCommerciale.Modules.Tiers.Models.Tiers? _selectedClient;
@@ -139,6 +144,8 @@ public partial class FactureEditViewModel : BaseViewModel
     [ObservableProperty] private string _lblDocColTva = string.Empty;
     [ObservableProperty] private string _lblDocColMontantHt = string.Empty;
     [ObservableProperty] private string _lblDocColMontantTtc = string.Empty;
+    [ObservableProperty] private string _lblLinkedBls = string.Empty;
+    [ObservableProperty] private string _btnAddBl = string.Empty;
 
     public DocumentLineGridColumnState LineGridColumns { get; } = new();
     public bool ShowTotalTva => LineGridColumns.ShowTva && LineGridColumns.ShowMontantTtc;
@@ -200,6 +207,8 @@ public partial class FactureEditViewModel : BaseViewModel
         LblDocColTva = _locale.T("DocLine_ColTva");
         LblDocColMontantHt = _locale.T("DocLine_ColMontantHt");
         LblDocColMontantTtc = _locale.T("DocLine_ColMontantTtc");
+        LblLinkedBls = _locale.T("Fact_LinkedBls");
+        BtnAddBl = _locale.T("Fact_AddBl");
     }
 
     private void UpdateFactureTotalLines()
@@ -418,8 +427,8 @@ public partial class FactureEditViewModel : BaseViewModel
         FactureId = id;
         var cfg = await _settings.GetAsync(cancellationToken);
         Devise = CurrencyHelper.FromSettings(cfg);
-        BlId = null;
         DevisId = null;
+        LinkedBls.Clear();
         Lignes.Clear();
         await using var db = await _dbFactory.CreateDbContextAsync(cancellationToken);
         await LoadLookupsAsync(db, cancellationToken);
@@ -440,7 +449,12 @@ public partial class FactureEditViewModel : BaseViewModel
         }
 
         var f = await db.Factures.Include(x => x.Lignes).Include(x => x.Paiements).FirstAsync(x => x.Id == id, cancellationToken);
-        BlId = f.BLId;
+        var linkedBls = await db.BonsLivraison.AsNoTracking()
+            .Where(b => b.FactureId == id)
+            .OrderBy(b => b.Date).ThenBy(b => b.Numero)
+            .ToListAsync(cancellationToken);
+        foreach (var bl in linkedBls)
+            LinkedBls.Add(new LinkedBlRow(bl.Id, bl.Numero, bl.Date));
         DevisId = f.DevisId;
         Numero = f.Numero;
         ClientId = f.ClientId;
@@ -490,47 +504,101 @@ public partial class FactureEditViewModel : BaseViewModel
 
     public void Load(int? id) => _ = LoadAsync(id, CancellationToken.None);
 
-    public async Task LoadFromBLAsync(int blId, CancellationToken cancellationToken = default)
+    public void LoadFromBL(int blId) => _ = LoadFromBlsAsync([blId], CancellationToken.None);
+
+    [RelayCommand]
+    private void RemoveBlGroup(LinkedBlRow bl)
+    {
+        for (var i = Lignes.Count - 1; i >= 0; i--)
+        {
+            if (Lignes[i].BonLivraisonId == bl.Id)
+            {
+                Lignes[i].PropertyChanged -= LineChanged;
+                Lignes.RemoveAt(i);
+            }
+        }
+        LinkedBls.Remove(bl);
+        RefreshTotals();
+    }
+
+    [RelayCommand]
+    private async Task ShowBlPickerAsync(CancellationToken cancellationToken)
+    {
+        if (ClientId == 0) return;
+        var excludeIds = LinkedBls.Select(b => b.Id).Concat(Lignes.Where(l => l.BonLivraisonId.HasValue).Select(l => l.BonLivraisonId!.Value)).Distinct().ToList();
+        var available = await _blLinkService.GetAvailableBlsForClientAsync(ClientId, FactureId, cancellationToken);
+        var filtered = available.Where(b => !excludeIds.Contains(b.Id)).ToList();
+        if (filtered.Count == 0)
+        {
+            await _dialog.ShowInfoAsync(_locale.T("Fact_Title"), _locale.T("Fact_NoAvailableBls"), cancellationToken);
+            return;
+        }
+
+        var pickerItems = filtered.Select(b => (b.Id, b.Numero, b.Date)).ToList();
+        var selectedIds = await _dialog.ShowBlPickerAsync(_locale.T("Fact_AddBl"), pickerItems, cancellationToken);
+        if (selectedIds == null || selectedIds.Count == 0) return;
+
+        foreach (var blId in selectedIds)
+            await AddBlLinesAsync(blId, cancellationToken);
+    }
+
+    [RelayCommand]
+    private async Task AddBlLinesAsync(int blId, CancellationToken cancellationToken)
+    {
+        var lines = await _blLinkService.LoadBlLinesAsync(blId, cancellationToken);
+        foreach (var l in lines)
+        {
+            var prod = Produits.FirstOrDefault(p => p.Id == l.ProduitId);
+            l.Reference = prod?.Reference ?? string.Empty;
+            l.PropertyChanged += LineChanged;
+            Lignes.Add(l);
+        }
+        await using var db = await _dbFactory.CreateDbContextAsync(cancellationToken);
+        var b = await db.BonsLivraison.AsNoTracking().FirstAsync(b => b.Id == blId, cancellationToken);
+        LinkedBls.Add(new LinkedBlRow(b.Id, b.Numero, b.Date));
+        RefreshTotals();
+    }
+
+    public async Task LoadFromBlsAsync(IReadOnlyList<int> blIds, CancellationToken cancellationToken = default)
     {
         var cfg = await _settings.GetAsync(cancellationToken);
         Devise = CurrencyHelper.FromSettings(cfg);
-        await using var db = await _dbFactory.CreateDbContextAsync(cancellationToken);
-        var b = await db.BonsLivraison.Include(x => x.Lignes).FirstAsync(x => x.Id == blId, cancellationToken);
-        BlId = b.Id;
+        LinkedBls.Clear();
+        Lignes.Clear();
         DevisId = null;
         FactureId = null;
-        ClientId = b.ClientId;
         Date = new DateTimeOffset(DateTime.Today);
         DateEcheance = Date.AddDays(30);
         EstPayee = false;
         Numero = _locale.T("Fact_NewNumPlaceholder");
+        await using var db = await _dbFactory.CreateDbContextAsync(cancellationToken);
         await LoadLookupsAsync(db, cancellationToken);
-        Lignes.Clear();
-        foreach (var l in b.Lignes)
+
+        var firstBlId = blIds[0];
+        var firstBl = await db.BonsLivraison.AsNoTracking().FirstAsync(b => b.Id == firstBlId, cancellationToken);
+        ClientId = firstBl.ClientId;
+
+        foreach (var blId in blIds)
         {
-            var prod = Produits.FirstOrDefault(p => p.Id == l.ProduitId);
-            Lignes.Add(new FactureLineRow
+            var bl = await db.BonsLivraison.AsNoTracking().FirstAsync(b => b.Id == blId, cancellationToken);
+            LinkedBls.Add(new LinkedBlRow(bl.Id, bl.Numero, bl.Date));
+            var lines = await _blLinkService.LoadBlLinesAsync(blId, cancellationToken);
+            foreach (var l in lines)
             {
-                ProduitId = l.ProduitId,
-                Reference = prod?.Reference ?? string.Empty,
-                Designation = l.Designation,
-                Conditionnement = string.Empty,
-                Quantite = l.QuantiteLivree,
-                PrixUnitaireHt = l.PrixUnitaireHT,
-                Remise = 0,
-                TauxTva = l.TauxTVA
-            });
+                var prod = Produits.FirstOrDefault(p => p.Id == l.ProduitId);
+                l.Reference = prod?.Reference ?? string.Empty;
+                l.PropertyChanged += LineChanged;
+                Lignes.Add(l);
+            }
         }
 
         HookLines();
         CanEditDraft = true;
         MontantPaye = 0;
         Paiements.Clear();
-        Title = _locale.T("Fact_FromBl");
+        Title = blIds.Count > 1 ? _locale.T("Fact_FromMultiBl") : _locale.T("Fact_FromBl");
         RefreshTotals();
     }
-
-    public void LoadFromBL(int blId) => _ = LoadFromBLAsync(blId, CancellationToken.None);
 
     public async Task LoadFromDevisAsync(int devisId, CancellationToken cancellationToken = default)
     {
@@ -539,7 +607,7 @@ public partial class FactureEditViewModel : BaseViewModel
         await using var db = await _dbFactory.CreateDbContextAsync(cancellationToken);
         var d = await db.Devis.Include(x => x.Lignes).FirstAsync(x => x.Id == devisId, cancellationToken);
         DevisId = d.Id;
-        BlId = null;
+        LinkedBls.Clear();
         FactureId = null;
         ClientId = d.ClientId;
         Date = new DateTimeOffset(DateTime.Today);
@@ -633,7 +701,6 @@ public partial class FactureEditViewModel : BaseViewModel
                 {
                     Numero = num,
                     ClientId = ClientId,
-                    BLId = BlId,
                     DevisId = DevisId,
                     Date = Date.DateTime,
                     DateEcheance = DateEcheance.DateTime,
@@ -652,20 +719,29 @@ public partial class FactureEditViewModel : BaseViewModel
                         Quantite = l.Quantite,
                         PrixUnitaireHT = l.PrixUnitaireHt,
                         Remise = l.Remise,
-                        TauxTVA = l.TauxTva
+                        TauxTVA = l.TauxTva,
+                        BonLivraisonId = l.BonLivraisonId
                     });
                 }
 
                 db.Factures.Add(entity);
                 await db.SaveChangesAsync(cancellationToken);
                 FactureId = entity.Id;
+
+                foreach (var bl in LinkedBls)
+                {
+                    var blEntity = await db.BonsLivraison.FindAsync(bl.Id);
+                    if (blEntity != null)
+                        blEntity.FactureId = entity.Id;
+                }
+
+                await db.SaveChangesAsync(cancellationToken);
             }
             else
             {
                 entity = await db.Factures.Include(f => f.Lignes).FirstAsync(f => f.Id == FactureId, cancellationToken);
 
                 entity.ClientId = ClientId;
-                entity.BLId = BlId;
                 entity.DevisId = DevisId;
                 entity.Date = Date.DateTime;
                 entity.DateEcheance = DateEcheance.DateTime;
@@ -683,12 +759,30 @@ public partial class FactureEditViewModel : BaseViewModel
                         Quantite = l.Quantite,
                         PrixUnitaireHT = l.PrixUnitaireHt,
                         Remise = l.Remise,
-                        TauxTVA = l.TauxTva
+                        TauxTVA = l.TauxTva,
+                        BonLivraisonId = l.BonLivraisonId
                     });
                 }
 
                 await db.SaveChangesAsync(cancellationToken);
             }
+
+            var linkedBlIds = LinkedBls.Select(b => b.Id).ToHashSet();
+            var existingBls = await db.BonsLivraison.Where(b => b.FactureId == FactureId).ToListAsync(cancellationToken);
+            foreach (var bl in existingBls)
+            {
+                if (!linkedBlIds.Contains(bl.Id))
+                    bl.FactureId = null;
+            }
+
+            foreach (var bl in LinkedBls)
+            {
+                var blEntity = await db.BonsLivraison.FindAsync(bl.Id);
+                if (blEntity != null)
+                    blEntity.FactureId = FactureId;
+            }
+
+            await db.SaveChangesAsync(cancellationToken);
 
             Numero = entity.Numero;
             await _dialog.ShowInfoAsync(_locale.T("Fact_Title"), _locale.T("Fact_Saved"), cancellationToken);

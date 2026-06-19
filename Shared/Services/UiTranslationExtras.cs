@@ -173,6 +173,18 @@ internal static class UiTranslationExtras
         ["Wm_FilterStatut"] = ("Filtre statut", "تصفية الحالة"),
 
         ["Fact_NewNumPlaceholder"] = ("(nouvelle)", "(جديدة)"),
+        ["Fact_FromMultiBl"] = ("Facture depuis BLs", "فاتورة من أوامر تسليم"),
+        ["Fact_LinkedBls"] = ("Bons de livraison liés", "أوامر التسليم المرتبطة"),
+        ["Fact_AddBl"] = ("+ Ajouter BL", "+ إضافة أمر تسليم"),
+        ["Fact_RemoveBl"] = ("Retirer ce BL", "إزالة أمر التسليم"),
+        ["BL_ColInvoiced"] = ("Facturé", "مفوتر"),
+        ["BL_FacturerSelection"] = ("Facturer la sélection", "فوترة المحدد"),
+        ["BL_ErrNoSelection"] = ("Sélectionnez au moins un BL non facturé.", "اختر أمر تسليم غير مفوتر واحد على الأقل."),
+        ["BL_ErrDifferentClients"] = ("Tous les BL doivent appartenir au même client.", "يجب أن تكون جميع أوامر التسليم لنفس العميل."),
+        ["BL_FacturedOn"] = ("Facturé : {0}", "مفوتر: {0}"),
+        ["BL_ErrAlreadyInvoiced"] = ("Ce BL est déjà facturé sur {0}.", "أمر التسليم هذا مفوتر بالفعل على {0}."),
+        ["BL_ErrDeleteAlreadyInvoiced"] = ("Impossible de supprimer le bon de livraison {0} : il est déjà facturé sur {1}.", "لا يمكن حذف أمر التسليم {0} : إنه مفوتر بالفعل على {1}."),
+        ["Fact_NoAvailableBls"] = ("Aucun bon de livraison disponible pour ce client.", "لا توجد أوامر تسليم متاحة لهذا العميل."),
         ["Avoir_DraftPlaceholder"] = ("(brouillon)", "(مسودة)"),
 
         ["Login_AppTitle"] = ("faturati", "faturati"),

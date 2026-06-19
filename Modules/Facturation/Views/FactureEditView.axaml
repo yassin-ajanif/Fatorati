@@ -64,6 +64,33 @@
           <DatePicker SelectedDate="{Binding DateEcheance}"/>
         </StackPanel>
       </StackPanel>
+      <StackPanel>
+        <TextBlock Text="{Binding LblLinkedBls}" Opacity="0.7" Margin="0,0,0,4"/>
+        <StackPanel Orientation="Horizontal" Spacing="8">
+        <Button Content="{Binding BtnAddBl}" Command="{Binding ShowBlPickerCommand}" IsEnabled="{Binding CanEditDraft}"/>
+      </StackPanel>
+        <ItemsControl ItemsSource="{Binding LinkedBls}">
+          <ItemsControl.ItemsPanel>
+            <ItemsPanelTemplate>
+              <StackPanel Orientation="Horizontal" Spacing="4"/>
+            </ItemsPanelTemplate>
+          </ItemsControl.ItemsPanel>
+          <ItemsControl.ItemTemplate>
+            <DataTemplate DataType="vm:LinkedBlRow">
+              <Border Padding="6,4" Background="#EEF2FF" BorderBrush="#C7D2FE" BorderThickness="1" CornerRadius="4">
+                <StackPanel Orientation="Horizontal" Spacing="4">
+                  <TextBlock Text="{Binding Numero}" VerticalAlignment="Center" FontWeight="SemiBold" FontSize="12"/>
+                  <Button Content="×" FontSize="12" Padding="2,0" MinWidth="0" MinHeight="0"
+                          ToolTip.Tip="{Binding $parent[UserControl].((vm:FactureEditViewModel)DataContext).LblLinkedBls}"
+                          Command="{Binding $parent[UserControl].((vm:FactureEditViewModel)DataContext).RemoveBlGroupCommand}"
+                          CommandParameter="{Binding}"
+                          Background="Transparent" Foreground="#666"/>
+                </StackPanel>
+              </Border>
+            </DataTemplate>
+          </ItemsControl.ItemTemplate>
+        </ItemsControl>
+      </StackPanel>
       <StackPanel Orientation="Horizontal" Spacing="8">
         <AutoCompleteBox MinWidth="360" MaxWidth="520" VerticalAlignment="Center"
                          MinimumPrefixLength="1" MaxDropDownHeight="320"

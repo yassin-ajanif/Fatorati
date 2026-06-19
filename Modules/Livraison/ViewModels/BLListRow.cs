@@ -1,11 +1,12 @@
 using System.Globalization;
+using CommunityToolkit.Mvvm.ComponentModel;
 using GestionCommerciale.Modules.Livraison.Models;
 using GestionCommerciale.Shared.Helpers;
 using GestionCommerciale.Shared.Services;
 
 namespace GestionCommerciale.Modules.Livraison.ViewModels;
 
-public sealed class BLListRow
+public partial class BLListRow : ObservableObject
 {
     public required BonLivraison Bl { get; init; }
     public string ClientNom { get; init; } = string.Empty;
@@ -13,6 +14,11 @@ public sealed class BLListRow
     public string HtLabel { get; init; } = string.Empty;
     public string TtcLabel { get; init; } = string.Empty;
     public string NotePreview { get; init; } = string.Empty;
+
+    [ObservableProperty] private bool _isSelected;
+    [ObservableProperty] private string _invoicedLabel = string.Empty;
+
+    public bool CanInvoice => Bl.FactureId == null;
 
     public static BLListRow Create(BonLivraison bl, string clientNom, string devise, ILocaleService locale)
     {

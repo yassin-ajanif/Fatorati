@@ -7,6 +7,7 @@ using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using GestionCommerciale.Modules.Auth.Services;
 using GestionCommerciale.Modules.Stock;
+using GestionCommerciale.Modules.Facturation.Services;
 using GestionCommerciale.Modules.Facturation.ViewModels;
 using GestionCommerciale.Modules.Livraison.Models;
 using GestionCommerciale.Modules.Livraison.Services;
@@ -36,6 +37,7 @@ public partial class BLEditViewModel : BaseViewModel
     private readonly IStockMovementService _stock;
     private readonly IPdfService _pdf;
     private readonly IAppSettingsService _settings;
+    private readonly IFactureBlLinkService _blLinkService;
 
     public BLEditViewModel(
         IDbContextFactory<AppDbContext> dbFactory,
@@ -49,7 +51,8 @@ public partial class BLEditViewModel : BaseViewModel
         IUiPreferencesService uiPreferences,
         IStockMovementService stock,
         IPdfService pdf,
-        IAppSettingsService settings)
+        IAppSettingsService settings,
+        IFactureBlLinkService blLinkService)
     {
         _dbFactory = dbFactory;
         _numbers = numbers;
@@ -63,6 +66,7 @@ public partial class BLEditViewModel : BaseViewModel
         _stock = stock;
         _pdf = pdf;
         _settings = settings;
+        _blLinkService = blLinkService;
         _locale.CultureApplied += (_, _) => RefreshBlUi();
         LineGridColumns.PropertyChanged += OnLineGridColumnsPropertyChanged;
         _uiPreferences.LoadDocumentLineColumns("bon_livraison", LineGridColumns);
@@ -96,6 +100,10 @@ public partial class BLEditViewModel : BaseViewModel
     [ObservableProperty] private string _lblDocColMontantHt = string.Empty;
     [ObservableProperty] private string _lblDocColMontantTtc = string.Empty;
     [ObservableProperty] private string _lblTotals = string.Empty;
+    [ObservableProperty] private string _invoicedLabel = string.Empty;
+    public bool HasInvoicedLabel => !string.IsNullOrEmpty(InvoicedLabel);
+
+    partial void OnInvoicedLabelChanged(string value) => OnPropertyChanged(nameof(HasInvoicedLabel));
 
     [ObservableProperty] private decimal _totalHt;
     [ObservableProperty] private decimal _totalTva;
@@ -289,6 +297,8 @@ public partial class BLEditViewModel : BaseViewModel
         var cfg = await _settings.GetAsync(cancellationToken);
         Devise = CurrencyHelper.FromSettings(cfg);
 
+        InvoicedLabel = string.Empty;
+
         if (id == null)
         {
             Numero = "(brouillon)";
@@ -298,6 +308,10 @@ public partial class BLEditViewModel : BaseViewModel
             RefreshTotals();
             return;
         }
+
+        var factNum = await _blLinkService.GetInvoicingStatusAsync(id.Value, cancellationToken);
+        if (factNum != null)
+            InvoicedLabel = _locale.Tf("BL_FacturedOn", factNum);
 
         var b = await db.BonsLivraison.Include(x => x.Lignes).FirstAsync(x => x.Id == id, cancellationToken);
         DevisId = b.DevisId;
@@ -541,9 +555,16 @@ public partial class BLEditViewModel : BaseViewModel
     }
 
     [RelayCommand]
-    private void ToFacture()
+    private async Task ToFactureAsync(CancellationToken cancellationToken)
     {
         if (BlId == null) return;
+        var factNum = await _blLinkService.GetInvoicingStatusAsync(BlId.Value, cancellationToken);
+        if (factNum != null)
+        {
+            await _dialog.ShowErrorAsync(_locale.T("BL_DlgShort"), _locale.Tf("BL_ErrAlreadyInvoiced", factNum), cancellationToken);
+            return;
+        }
+
         var vm = _sp.GetRequiredService<FactureEditViewModel>();
         vm.LoadFromBL(BlId.Value);
         _workspace.Open(vm);

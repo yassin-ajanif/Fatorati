@@ -63,6 +63,10 @@ public class AppDbContext : DbContext
         modelBuilder.Entity<BonLivraison>(e =>
         {
             e.HasMany(b => b.Lignes).WithOne(l => l.BonLivraison).HasForeignKey(l => l.BLId).OnDelete(DeleteBehavior.Cascade);
+            e.HasOne(b => b.Facture).WithMany()
+                .HasForeignKey(b => b.FactureId)
+                .OnDelete(DeleteBehavior.SetNull);
+            e.HasIndex(b => b.FactureId);
         });
 
         modelBuilder.Entity<BonCommande>(e =>
@@ -80,6 +84,14 @@ public class AppDbContext : DbContext
         {
             e.HasMany(f => f.Lignes).WithOne(l => l.Facture).HasForeignKey(l => l.FactureId).OnDelete(DeleteBehavior.Cascade);
             e.HasMany(f => f.Paiements).WithOne(p => p.Facture).HasForeignKey(p => p.FactureId).OnDelete(DeleteBehavior.Cascade);
+        });
+
+        modelBuilder.Entity<FactureLigne>(e =>
+        {
+            e.HasOne(l => l.BonLivraison).WithMany()
+                .HasForeignKey(l => l.BonLivraisonId)
+                .OnDelete(DeleteBehavior.SetNull);
+            e.HasIndex(l => l.BonLivraisonId);
         });
 
         modelBuilder.Entity<Paiement>(e =>

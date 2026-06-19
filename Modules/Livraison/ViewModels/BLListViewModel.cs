@@ -1,6 +1,8 @@
 using System.Collections.ObjectModel;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
+using GestionCommerciale.Modules.Facturation.Services;
+using GestionCommerciale.Modules.Facturation.ViewModels;
 using GestionCommerciale.Modules.Livraison.Models;
 using GestionCommerciale.Modules.Stock.Services;
 using GestionCommerciale.Shared.Helpers;
@@ -23,6 +25,7 @@ public partial class BLListViewModel : BaseViewModel
     private readonly ILocaleService _locale;
     private readonly IStockMovementService _stock;
     private readonly IAppSettingsService _settings;
+    private readonly IFactureBlLinkService _blLinkService;
 
     public BLListViewModel(
         IDbContextFactory<AppDbContext> dbFactory,
@@ -32,7 +35,8 @@ public partial class BLListViewModel : BaseViewModel
         IPdfService pdf,
         ILocaleService locale,
         IStockMovementService stock,
-        IAppSettingsService settings)
+        IAppSettingsService settings,
+        IFactureBlLinkService blLinkService)
     {
         _dbFactory = dbFactory;
         _workspace = workspaceNavigator;
@@ -42,6 +46,7 @@ public partial class BLListViewModel : BaseViewModel
         _locale = locale;
         _stock = stock;
         _settings = settings;
+        _blLinkService = blLinkService;
         _locale.CultureApplied += (_, _) => RefreshListToolbar();
         RefreshListToolbar();
         Title = _locale.T("BLList_Title");
@@ -61,6 +66,8 @@ public partial class BLListViewModel : BaseViewModel
     [ObservableProperty] private string _colHeaderHt = string.Empty;
     [ObservableProperty] private string _colHeaderTtc = string.Empty;
     [ObservableProperty] private string _colHeaderNote = string.Empty;
+    [ObservableProperty] private string _colHeaderInvoiced = string.Empty;
+    [ObservableProperty] private string _btnFacturerSelection = string.Empty;
     [ObservableProperty] private string _searchWatermark = string.Empty;
 
     public PaginationHelper Pagination { get; }
@@ -78,6 +85,8 @@ public partial class BLListViewModel : BaseViewModel
         ColHeaderHt = _locale.T("DevisList_ColHt");
         ColHeaderTtc = _locale.T("DevisList_ColTtc");
         ColHeaderNote = _locale.T("DevisList_ColNote");
+        ColHeaderInvoiced = _locale.T("BL_ColInvoiced");
+        BtnFacturerSelection = _locale.T("BL_FacturerSelection");
         SearchWatermark = _locale.T("DocList_SearchPlaceholderClient");
     }
 
@@ -117,10 +126,19 @@ public partial class BLListViewModel : BaseViewModel
             var noms = await db.Tiers.AsNoTracking()
                 .Where(t => ids.Contains(t.Id))
                 .ToDictionaryAsync(t => t.Id, t => t.Nom, ct);
+            var invoicedNums = await db.BonsLivraison.AsNoTracking()
+                .Where(b => list.Select(x => x.Id).Contains(b.Id) && b.FactureId != null)
+                .Include(b => b.Facture)
+                .ToDictionaryAsync(b => b.Id, b => b.Facture!.Numero, ct);
             var selId = Selected?.Bl.Id;
             Items.Clear();
             foreach (var b in list)
-                Items.Add(BLListRow.Create(b, noms.GetValueOrDefault(b.ClientId) ?? string.Empty, devise, _locale));
+            {
+                var row = BLListRow.Create(b, noms.GetValueOrDefault(b.ClientId) ?? string.Empty, devise, _locale);
+                if (invoicedNums.TryGetValue(b.Id, out var factNum))
+                    row.InvoicedLabel = factNum;
+                Items.Add(row);
+            }
             Pagination.TotalCount = total;
             if (selId is { } id)
                 Selected = Items.FirstOrDefault(x => x.Bl.Id == id);
@@ -235,5 +253,35 @@ public partial class BLListViewModel : BaseViewModel
         {
             await _dialog.ShowErrorAsync(_locale.T("Export_Pdf"), ex.Message, cancellationToken);
         }
+    }
+
+    [RelayCommand]
+    private async Task FacturerSelectionAsync(CancellationToken cancellationToken)
+    {
+        var selected = Items.Where(r => r.IsSelected && r.CanInvoice).ToList();
+        if (selected.Count == 0)
+        {
+            await _dialog.ShowErrorAsync(_locale.T("BL_DlgShort"), _locale.T("BL_ErrNoSelection"), cancellationToken);
+            return;
+        }
+
+        var clientIds = selected.Select(r => r.Bl.ClientId).Distinct().ToList();
+        if (clientIds.Count > 1)
+        {
+            await _dialog.ShowErrorAsync(_locale.T("BL_DlgShort"), _locale.T("BL_ErrDifferentClients"), cancellationToken);
+            return;
+        }
+
+        var blIds = selected.Select(r => r.Bl.Id).ToList();
+        var errors = await _blLinkService.ValidateBlsForFactureAsync(clientIds[0], blIds, cancellationToken);
+        if (errors.Count > 0)
+        {
+            await _dialog.ShowErrorAsync(_locale.T("BL_DlgShort"), string.Join("\n", errors), cancellationToken);
+            return;
+        }
+
+        var vm = _sp.GetRequiredService<FactureEditViewModel>();
+        await vm.LoadFromBlsAsync(blIds, cancellationToken);
+        _workspace.Open(vm);
     }
 }

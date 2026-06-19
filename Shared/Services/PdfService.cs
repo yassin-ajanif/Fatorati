@@ -217,6 +217,11 @@ public sealed class PdfService : IPdfService
             new("Date", facture.Date.ToString("dd/MM/yyyy")),
             new("Échéance", facture.DateEcheance.ToString("dd/MM/yyyy"))
         };
+
+        var blNums = await GetLinkedBlNumerosAsync(facture.Id, cancellationToken);
+        if (blNums.Count > 0)
+            docLines.Add(new("BL", string.Join(", ", blNums)));
+
         var pay = SummarizePaiements(facture.Paiements);
         if (!string.IsNullOrWhiteSpace(pay))
             docLines.Add(new("Payé par", pay!));
@@ -225,6 +230,16 @@ public sealed class PdfService : IPdfService
 
         var model = BaseModel(cfg, "FACTURE", docLines, PartyLines(party, "Client"), cols, rows, totals, facture.Note, vis.ShowMontantTtc);
         return CommercialDocumentPdfRenderer.Render(model, TryLoadLogoBytes(cfg.SocieteLogoPath));
+    }
+
+    private async Task<List<string>> GetLinkedBlNumerosAsync(int factureId, CancellationToken cancellationToken)
+    {
+        await using var db = await _dbFactory.CreateDbContextAsync(cancellationToken);
+        return await db.BonsLivraison.AsNoTracking()
+            .Where(b => b.FactureId == factureId)
+            .OrderBy(b => b.Date).ThenBy(b => b.Numero)
+            .Select(b => b.Numero)
+            .ToListAsync(cancellationToken);
     }
 
     public async Task<byte[]> BuildAvoirPdfAsync(Avoir avoir, DocumentPartyPdfInfo party, CancellationToken cancellationToken = default)

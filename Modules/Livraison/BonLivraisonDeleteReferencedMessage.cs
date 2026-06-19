@@ -1,6 +1,3 @@
-using System;
-using System.Collections.Generic;
-using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using GestionCommerciale.Shared.Database;
@@ -18,17 +15,17 @@ internal static class BonLivraisonDeleteReferencedMessage
         ILocaleService locale,
         CancellationToken cancellationToken = default)
     {
-        var factNums = await db.Factures.AsNoTracking()
-            .Where(f => f.BLId == bonLivraisonId)
-            .OrderBy(f => f.Numero)
-            .Select(f => f.Numero)
-            .ToListAsync(cancellationToken);
+        var bl = await db.BonsLivraison.AsNoTracking()
+            .FirstOrDefaultAsync(b => b.Id == bonLivraisonId, cancellationToken);
 
-        if (factNums.Count == 0)
+        if (bl?.FactureId == null)
             return null;
 
-        return string.Join(Environment.NewLine,
-            locale.T("BL_ErrDeleteReferencedIntro"),
-            locale.Tf("BL_ErrRefFact", string.Join(", ", factNums)));
+        var factNum = await db.Factures.AsNoTracking()
+            .Where(f => f.Id == bl.FactureId)
+            .Select(f => f.Numero)
+            .FirstOrDefaultAsync(cancellationToken);
+
+        return locale.Tf("BL_ErrDeleteAlreadyInvoiced", bl.Numero, factNum ?? $"#{bl.FactureId}");
     }
 }

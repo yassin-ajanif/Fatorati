@@ -117,7 +117,6 @@ public sealed class PosService : IPosService
         {
             Numero = numero,
             ClientId = clientId,
-            BLId = bl.Id,
             Date = DateTime.Today,
             DateEcheance = DateTime.Today.AddDays(30),
             EstPayee = payments.All(p => p.Mode == ModePaiement.Especes),
@@ -125,6 +124,9 @@ public sealed class PosService : IPosService
             Note = "Vente POS"
         };
         db.Factures.Add(facture);
+        await db.SaveChangesAsync(cancellationToken);
+
+        bl.FactureId = facture.Id;
         await db.SaveChangesAsync(cancellationToken);
 
         foreach (var line in cart)

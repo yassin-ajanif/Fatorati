@@ -105,7 +105,6 @@ public static class UiTranslations
         ["BL_ConfirmDelete"] = ("Supprimer définitivement le bon de livraison {0} ?", "حذف أمر التسليم {0} نهائياً؟"),
         ["BL_Deleted"] = ("Bon de livraison supprimé.", "تم حذف أمر التسليم."),
         ["BL_ErrDeleteReferencedIntro"] = ("Impossible de supprimer : ce bon de livraison est encore référencé par :", "لا يمكن الحذف: أمر التسليم لا يزال مرتبطاً بـ :"),
-        ["BL_ErrRefFact"] = ("Facture(s) : {0}", "الفواتير : {0}"),
         ["BL_Validated"] = ("Validé — sorties de stock enregistrées.", "تم التحقق — تم تسجيل مخارج المخزون."),
         ["BR_Title"] = ("Bon de réception", "أمر استلام"),
         ["BR_NewTitle"] = ("Nouveau BR", "أمر استلام جديد"),

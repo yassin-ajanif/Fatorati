@@ -282,6 +282,62 @@ public sealed class DialogService : IDialogService
         return result;
     }
 
+    public async Task<List<int>?> ShowBlPickerAsync(string title, IReadOnlyList<(int Id, string Numero, DateTime Date)> availableBls, CancellationToken cancellationToken = default)
+    {
+        var owner = GetMainWindow();
+        var w = new Window
+        {
+            Title = title,
+            MinWidth = 400,
+            MaxWidth = 600,
+            MinHeight = 300,
+            MaxHeight = 500,
+            SizeToContent = SizeToContent.WidthAndHeight,
+            WindowStartupLocation = WindowStartupLocation.CenterOwner,
+            CanResize = false
+        };
+
+        List<int>? result = null;
+        var panel = new StackPanel { Margin = new Avalonia.Thickness(16), Spacing = 12 };
+
+        var checkboxes = new List<CheckBox>();
+        var listPanel = new StackPanel { Spacing = 4, MaxHeight = 320, Margin = new Avalonia.Thickness(0, 0, 0, 8) };
+        foreach (var bl in availableBls)
+        {
+            var cb = new CheckBox
+            {
+                Content = $"{bl.Numero}  —  {bl.Date:d}",
+                Tag = bl.Id
+            };
+            checkboxes.Add(cb);
+            listPanel.Children.Add(cb);
+        }
+
+        panel.Children.Add(listPanel);
+
+        var actions = new StackPanel { Orientation = Orientation.Horizontal, HorizontalAlignment = HorizontalAlignment.Right, Spacing = 8 };
+        var btnCancel = new Button { Content = "Annuler" };
+        btnCancel.Click += (_, _) => w.Close();
+        var btnAdd = new Button { Content = "Ajouter", IsDefault = true };
+        btnAdd.Click += (_, _) =>
+        {
+            result = checkboxes.Where(cb => cb.IsChecked == true).Select(cb => (int)cb.Tag!).ToList();
+            w.Close();
+        };
+        actions.Children.Add(btnCancel);
+        actions.Children.Add(btnAdd);
+        panel.Children.Add(actions);
+
+        w.Content = panel;
+
+        if (owner != null)
+            await w.ShowDialog(owner);
+        else
+            w.Show();
+
+        return result;
+    }
+
     public async Task<(DateTime from, DateTime to)?> PickDateRangeAsync(string title, CancellationToken cancellationToken = default)
     {
         var owner = GetMainWindow();
