@@ -30,11 +30,10 @@ public sealed class AvoirWorkflowService : IAvoirWorkflowService
         if (avoir.FactureId.HasValue)
         {
             var facture = await db.Factures
-                .Include(f => f.Lignes)
                 .Include(f => f.Paiements)
                 .FirstAsync(f => f.Id == avoir.FactureId.Value, cancellationToken);
 
-            var (_, _, ttcFacture) = DocumentTotalsHelper.FactureTotals(facture.Lignes, facture.RemiseGlobale);
+            var ttcFacture = facture.TotalTtc;
             var (_, _, ttcAvoir) = DocumentTotalsHelper.AvoirTotals(avoir.Lignes);
 
             var existingAvoirs = await db.Avoirs

@@ -6,6 +6,7 @@ using GestionCommerciale.Modules.Stock.Services;
 using TiersEntity = GestionCommerciale.Modules.Tiers.Models.Tiers;
 using GestionCommerciale.Modules.Tiers.Models;
 using GestionCommerciale.Shared.Database;
+using GestionCommerciale.Shared.Helpers;
 using Microsoft.EntityFrameworkCore;
 
 namespace GestionCommerciale.Modules.Pos.Services;
@@ -143,6 +144,15 @@ public sealed class PosService : IPosService
                 Conditionnement = string.Empty
             });
         }
+        facture.TotalTtc = DocumentTotalsHelper.FactureTtc(
+            cart.Select(line => new FactureLigne
+            {
+                Quantite = line.Quantite,
+                PrixUnitaireHT = line.PrixUnitaireHt,
+                Remise = line.Remise,
+                TauxTVA = line.TauxTva
+            }),
+            remiseGlobale);
         await db.SaveChangesAsync(cancellationToken);
 
         foreach (var (mode, montant) in payments.Where(p => p.Montant > 0))

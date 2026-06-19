@@ -19,6 +19,8 @@ public sealed class FactureListRow
     public static FactureListRow Create(FactureEntity f, string clientNom, string devise, ILocaleService locale)
     {
         var (ht, _, ttc) = DocumentTotalsHelper.FactureTotals(f.Lignes ?? [], f.RemiseGlobale);
+        if (f.TotalTtc > 0)
+            ttc = f.TotalTtc;
         return new FactureListRow
         {
             Facture = f,

@@ -28,14 +28,7 @@ public sealed class ClientAccountStatementService : IClientAccountStatementServi
                 f.Id,
                 f.Numero,
                 f.Date,
-                f.RemiseGlobale,
-                Lignes = f.Lignes!.Select(l => new
-                {
-                    l.Quantite,
-                    l.PrixUnitaireHT,
-                    l.Remise,
-                    l.TauxTVA
-                }).ToList(),
+                f.TotalTtc,
                 Paiements = f.Paiements!.Select(p => new
                 {
                     p.Id,
@@ -69,14 +62,7 @@ public sealed class ClientAccountStatementService : IClientAccountStatementServi
 
         foreach (var f in factures)
         {
-            var lignes = f.Lignes.Select(l => new FactureLigne
-            {
-                Quantite = l.Quantite,
-                PrixUnitaireHT = l.PrixUnitaireHT,
-                Remise = l.Remise,
-                TauxTVA = l.TauxTVA
-            }).ToList();
-            var (_, _, ttc) = DocumentTotalsHelper.FactureTotals(lignes, f.RemiseGlobale);
+            var ttc = f.TotalTtc;
             if (ttc <= 0) continue;
 
             entries.Add((

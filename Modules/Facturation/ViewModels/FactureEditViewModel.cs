@@ -724,6 +724,7 @@ public partial class FactureEditViewModel : BaseViewModel
                     });
                 }
 
+                DocumentTotalsHelper.SyncFactureTotalTtc(entity);
                 db.Factures.Add(entity);
                 await db.SaveChangesAsync(cancellationToken);
                 FactureId = entity.Id;
@@ -764,6 +765,7 @@ public partial class FactureEditViewModel : BaseViewModel
                     });
                 }
 
+                DocumentTotalsHelper.SyncFactureTotalTtc(entity);
                 await db.SaveChangesAsync(cancellationToken);
             }
 

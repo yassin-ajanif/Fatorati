@@ -1,6 +1,5 @@
 using GestionCommerciale.Modules.Facturation.Models;
 using GestionCommerciale.Shared.Database;
-using GestionCommerciale.Shared.Helpers;
 using Microsoft.EntityFrameworkCore;
 
 namespace GestionCommerciale.Modules.Facturation.Services;
@@ -26,11 +25,10 @@ public sealed class FactureWorkflowService : IFactureWorkflowService
     {
         await using var db = await _dbFactory.CreateDbContextAsync(cancellationToken);
         var f = await db.Factures
-            .Include(x => x.Lignes)
             .Include(x => x.Paiements)
             .FirstAsync(x => x.Id == factureId, cancellationToken);
 
-        var (_, _, ttc) = DocumentTotalsHelper.FactureTotals(f.Lignes, f.RemiseGlobale);
+        var ttc = f.TotalTtc;
         var totalApres = f.Paiements.Sum(p => p.Montant) + paiement.Montant;
         EnsureTotalPaiementsNotOverTtc(ttc, totalApres);
 
@@ -46,11 +44,10 @@ public sealed class FactureWorkflowService : IFactureWorkflowService
 
         await using var db = await _dbFactory.CreateDbContextAsync(cancellationToken);
         var f = await db.Factures
-            .Include(x => x.Lignes)
             .Include(x => x.Paiements)
             .FirstAsync(x => x.Id == factureId, cancellationToken);
 
-        var (_, _, ttc) = DocumentTotalsHelper.FactureTotals(f.Lignes, f.RemiseGlobale);
+        var ttc = f.TotalTtc;
         var totalApres = f.Paiements.Where(x => x.Id != paiementId).Sum(x => x.Montant) + montant;
         EnsureTotalPaiementsNotOverTtc(ttc, totalApres);
 

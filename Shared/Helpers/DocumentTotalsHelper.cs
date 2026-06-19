@@ -52,6 +52,12 @@ public static class DocumentTotalsHelper
         return (ht, tva, ht + tva);
     }
 
+    public static decimal FactureTtc(IEnumerable<FactureLigne> lignes, decimal remiseGlobalePct) =>
+        FactureTotals(lignes, remiseGlobalePct).ttc;
+
+    public static void SyncFactureTotalTtc(Facture facture) =>
+        facture.TotalTtc = FactureTtc(facture.Lignes, facture.RemiseGlobale);
+
     public static (decimal ht, decimal tva, decimal ttc) AvoirTotals(IEnumerable<AvoirLigne> lignes)
     {
         decimal ht = 0, tva = 0;
