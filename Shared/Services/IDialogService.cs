@@ -14,4 +14,5 @@ public interface IDialogService
     Task<string?> ShowPromptAsync(string title, string message, CancellationToken cancellationToken = default);
     Task<(DateTime from, DateTime to)?> PickDateRangeAsync(string title, CancellationToken cancellationToken = default);
     Task<List<int>?> ShowBlPickerAsync(string title, IReadOnlyList<(int Id, string Numero, DateTime Date)> availableBls, CancellationToken cancellationToken = default);
+    Task<List<int>?> ShowBrPickerAsync(string title, IReadOnlyList<(int Id, string Numero, DateTime Date)> availableBrs, CancellationToken cancellationToken = default);
 }

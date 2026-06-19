@@ -45,6 +45,13 @@ public sealed class DocumentNumberService : IDocumentNumberService
             return list;
         }, "FAC", cancellationToken);
 
+    public Task<string> NextFactureFournisseurAsync(CancellationToken cancellationToken = default) =>
+        NextFromDbAsync(async db =>
+        {
+            var list = await db.FacturesFournisseurs.AsNoTracking().Select(d => d.Numero).ToListAsync(cancellationToken);
+            return list;
+        }, "FAF", cancellationToken);
+
     public Task<string> NextAvoirAsync(CancellationToken cancellationToken = default) =>
         NextFromDbAsync(async db =>
         {

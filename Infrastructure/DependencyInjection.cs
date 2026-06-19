@@ -4,6 +4,8 @@ using GestionCommerciale.Modules.Auth.ViewModels;
 using GestionCommerciale.Modules.Devis.ViewModels;
 using GestionCommerciale.Modules.Facturation.Services;
 using GestionCommerciale.Modules.Facturation.ViewModels;
+using GestionCommerciale.Modules.FactureFournisseur.Services;
+using GestionCommerciale.Modules.FactureFournisseur.ViewModels;
 using GestionCommerciale.Modules.Livraison.Services;
 using GestionCommerciale.Modules.Livraison.ViewModels;
 using GestionCommerciale.Modules.Commande.ViewModels;
@@ -47,7 +49,10 @@ public static class DependencyInjection
         services.AddSingleton<IBonLivraisonWorkflowService, BonLivraisonWorkflowService>();
         services.AddSingleton<IBonReceptionWorkflowService, BonReceptionWorkflowService>();
         services.AddSingleton<IFactureBlLinkService, FactureBlLinkService>();
+        services.AddSingleton<IFactureFournisseurBrLinkService, FactureFournisseurBrLinkService>();
+        services.AddSingleton<IFactureFournisseurWorkflowService, FactureFournisseurWorkflowService>();
         services.AddSingleton<IClientAccountStatementService, ClientAccountStatementService>();
+        services.AddSingleton<ISupplierAccountStatementService, SupplierAccountStatementService>();
         services.AddSingleton<IFactureWorkflowService, FactureWorkflowService>();
         services.AddSingleton<IAvoirWorkflowService, AvoirWorkflowService>();
         services.AddSingleton<IReportService, ReportService>();
@@ -77,6 +82,8 @@ public static class DependencyInjection
         services.AddTransient<BCEditViewModel>();
         services.AddTransient<FactureListViewModel>();
         services.AddTransient<FactureEditViewModel>();
+        services.AddTransient<FactureFournisseurListViewModel>();
+        services.AddTransient<FactureFournisseurEditViewModel>();
         services.AddTransient<AvoirListViewModel>();
         services.AddTransient<AvoirEditViewModel>();
         services.AddTransient<AvoirFournisseurListViewModel>();

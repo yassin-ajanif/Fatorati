@@ -7,7 +7,8 @@ using CommunityToolkit.Mvvm.Input;
 using GestionCommerciale.Modules.Auth.Services;
 using GestionCommerciale.Modules.Stock;
 using GestionCommerciale.Modules.Commande.Models;
-using GestionCommerciale.Modules.Facturation.ViewModels;
+using GestionCommerciale.Modules.FactureFournisseur.Services;
+using GestionCommerciale.Modules.FactureFournisseur.ViewModels;
 using GestionCommerciale.Modules.Reception.Models;
 using GestionCommerciale.Modules.Reception.Services;
 using GestionCommerciale.Modules.Stock.Services;
@@ -36,6 +37,7 @@ public partial class BREditViewModel : BaseViewModel
     private readonly IStockMovementService _stock;
     private readonly IPdfService _pdf;
     private readonly IAppSettingsService _settings;
+    private readonly IFactureFournisseurBrLinkService _brLinkService;
     private int? _sourceBonCommandeId;
 
     public BREditViewModel(
@@ -50,7 +52,8 @@ public partial class BREditViewModel : BaseViewModel
         IUiPreferencesService uiPreferences,
         IStockMovementService stock,
         IPdfService pdf,
-        IAppSettingsService settings)
+        IAppSettingsService settings,
+        IFactureFournisseurBrLinkService brLinkService)
     {
         _dbFactory = dbFactory;
         _numbers = numbers;
@@ -64,6 +67,7 @@ public partial class BREditViewModel : BaseViewModel
         _stock = stock;
         _pdf = pdf;
         _settings = settings;
+        _brLinkService = brLinkService;
         _locale.CultureApplied += (_, _) => RefreshBrUi();
         LineGridColumns.PropertyChanged += OnLineGridColumnsPropertyChanged;
         _uiPreferences.LoadDocumentLineColumns("bon_reception", LineGridColumns);
@@ -75,6 +79,7 @@ public partial class BREditViewModel : BaseViewModel
     [ObservableProperty] private string _btnPdf = string.Empty;
     [ObservableProperty] private string _btnBack = string.Empty;
     [ObservableProperty] private string _btnSave = string.Empty;
+    [ObservableProperty] private string _btnToInvoice = string.Empty;
     [ObservableProperty] private string _menuDeleteBr = string.Empty;
     [ObservableProperty] private string _lblSupplier = string.Empty;
     [ObservableProperty] private string _wmSupplierSearch = string.Empty;
@@ -97,6 +102,11 @@ public partial class BREditViewModel : BaseViewModel
     [ObservableProperty] private string _lblDocColMontantTtc = string.Empty;
     [ObservableProperty] private string _lblTotals = string.Empty;
     [ObservableProperty] private string _wmNote = string.Empty;
+    [ObservableProperty] private string _invoicedLabel = string.Empty;
+
+    public bool HasInvoicedLabel => !string.IsNullOrEmpty(InvoicedLabel);
+
+    partial void OnInvoicedLabelChanged(string value) => OnPropertyChanged(nameof(HasInvoicedLabel));
 
     [ObservableProperty] private decimal _totalHt;
     [ObservableProperty] private decimal _totalTva;
@@ -171,6 +181,7 @@ public partial class BREditViewModel : BaseViewModel
         BtnPdf = _locale.T("Btn_Pdf");
         BtnBack = _locale.T("Btn_Back");
         BtnSave = _locale.T("Btn_Save");
+        BtnToInvoice = _locale.T("Btn_ToInvoice");
         MenuDeleteBr = _locale.T("BR_MenuDelete");
         LblSupplier = _locale.T("Lbl_Supplier");
         WmSupplierSearch = _locale.T("Wm_SearchSupplier");
@@ -302,6 +313,7 @@ public partial class BREditViewModel : BaseViewModel
 
         var cfg = await _settings.GetAsync(cancellationToken);
         Devise = CurrencyHelper.FromSettings(cfg);
+        InvoicedLabel = string.Empty;
 
         if (id == null)
         {
@@ -312,6 +324,10 @@ public partial class BREditViewModel : BaseViewModel
             RefreshTotals();
             return;
         }
+
+        var factNum = await _brLinkService.GetInvoicingStatusAsync(id.Value, cancellationToken);
+        if (factNum != null)
+            InvoicedLabel = _locale.Tf("BR_FacturedOn", factNum);
 
         var b = await db.BonsReception.Include(x => x.Lignes).FirstAsync(x => x.Id == id, cancellationToken);
         Numero = b.Numero;
@@ -472,6 +488,7 @@ public partial class BREditViewModel : BaseViewModel
                     });
                 }
 
+                DocumentTotalsHelper.SyncBonReceptionTotalTtc(entity);
                 db.BonsReception.Add(entity);
                 await db.SaveChangesAsync(cancellationToken);
                 BrId = entity.Id;
@@ -496,6 +513,7 @@ public partial class BREditViewModel : BaseViewModel
                     });
                 }
 
+                DocumentTotalsHelper.SyncBonReceptionTotalTtc(entity);
                 await db.SaveChangesAsync(cancellationToken);
             }
 
@@ -518,6 +536,22 @@ public partial class BREditViewModel : BaseViewModel
         {
             IsBusy = false;
         }
+    }
+
+    [RelayCommand]
+    private async Task ToFactureAsync(CancellationToken cancellationToken)
+    {
+        if (BrId == null) return;
+        var factNum = await _brLinkService.GetInvoicingStatusAsync(BrId.Value, cancellationToken);
+        if (factNum != null)
+        {
+            await _dialog.ShowErrorAsync(_locale.T("BR_DlgShort"), _locale.Tf("BR_ErrAlreadyInvoiced", factNum), cancellationToken);
+            return;
+        }
+
+        var vm = _sp.GetRequiredService<FactureFournisseurEditViewModel>();
+        vm.LoadFromBR(BrId.Value);
+        _workspace.Open(vm);
     }
 
     [RelayCommand]

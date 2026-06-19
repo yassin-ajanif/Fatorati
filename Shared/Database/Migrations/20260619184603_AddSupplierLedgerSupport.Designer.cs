@@ -3,6 +3,7 @@ using System;
 using GestionCommerciale.Shared.Database;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 
 #nullable disable
@@ -10,9 +11,11 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace GestionCommerciale.Shared.Database.Migrations
 {
     [DbContext(typeof(AppDbContext))]
-    partial class AppDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260619184603_AddSupplierLedgerSupport")]
+    partial class AddSupplierLedgerSupport
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder.HasAnnotation("ProductVersion", "9.0.0");
@@ -499,143 +502,6 @@ namespace GestionCommerciale.Shared.Database.Migrations
                     b.ToTable("Paiements");
                 });
 
-            modelBuilder.Entity("GestionCommerciale.Modules.FactureFournisseur.Models.FactureFournisseur", b =>
-                {
-                    b.Property<int>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("INTEGER");
-
-                    b.Property<DateTime>("CreatedAt")
-                        .HasColumnType("TEXT");
-
-                    b.Property<int?>("CreatedByUserId")
-                        .HasColumnType("INTEGER");
-
-                    b.Property<DateTime>("Date")
-                        .HasColumnType("TEXT");
-
-                    b.Property<DateTime>("DateEcheance")
-                        .HasColumnType("TEXT");
-
-                    b.Property<bool>("EstPayee")
-                        .HasColumnType("INTEGER");
-
-                    b.Property<int>("FournisseurId")
-                        .HasColumnType("INTEGER");
-
-                    b.Property<string>("Note")
-                        .IsRequired()
-                        .HasColumnType("TEXT");
-
-                    b.Property<string>("Numero")
-                        .IsRequired()
-                        .HasColumnType("TEXT");
-
-                    b.Property<decimal>("RemiseGlobale")
-                        .HasColumnType("TEXT");
-
-                    b.Property<decimal>("TotalTtc")
-                        .HasColumnType("TEXT");
-
-                    b.Property<DateTime>("UpdatedAt")
-                        .HasColumnType("TEXT");
-
-                    b.HasKey("Id");
-
-                    b.ToTable("FacturesFournisseurs");
-                });
-
-            modelBuilder.Entity("GestionCommerciale.Modules.FactureFournisseur.Models.FactureFournisseurLigne", b =>
-                {
-                    b.Property<int>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("INTEGER");
-
-                    b.Property<int?>("BonReceptionId")
-                        .HasColumnType("INTEGER");
-
-                    b.Property<string>("Conditionnement")
-                        .IsRequired()
-                        .HasColumnType("TEXT");
-
-                    b.Property<DateTime>("CreatedAt")
-                        .HasColumnType("TEXT");
-
-                    b.Property<int?>("CreatedByUserId")
-                        .HasColumnType("INTEGER");
-
-                    b.Property<string>("Designation")
-                        .IsRequired()
-                        .HasColumnType("TEXT");
-
-                    b.Property<int>("FactureFournisseurId")
-                        .HasColumnType("INTEGER");
-
-                    b.Property<decimal>("PrixUnitaireHT")
-                        .HasColumnType("TEXT");
-
-                    b.Property<int>("ProduitId")
-                        .HasColumnType("INTEGER");
-
-                    b.Property<decimal>("Quantite")
-                        .HasColumnType("TEXT");
-
-                    b.Property<decimal>("Remise")
-                        .HasColumnType("TEXT");
-
-                    b.Property<decimal>("TauxTVA")
-                        .HasColumnType("TEXT");
-
-                    b.Property<DateTime>("UpdatedAt")
-                        .HasColumnType("TEXT");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("BonReceptionId");
-
-                    b.HasIndex("FactureFournisseurId");
-
-                    b.ToTable("FactureFournisseurLignes");
-                });
-
-            modelBuilder.Entity("GestionCommerciale.Modules.FactureFournisseur.Models.PaiementFournisseur", b =>
-                {
-                    b.Property<int>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("INTEGER");
-
-                    b.Property<DateTime>("CreatedAt")
-                        .HasColumnType("TEXT");
-
-                    b.Property<int?>("CreatedByUserId")
-                        .HasColumnType("INTEGER");
-
-                    b.Property<DateTime>("Date")
-                        .HasColumnType("TEXT");
-
-                    b.Property<int>("FactureFournisseurId")
-                        .HasColumnType("INTEGER");
-
-                    b.Property<int>("Mode")
-                        .HasColumnType("INTEGER");
-
-                    b.Property<decimal>("Montant")
-                        .HasColumnType("TEXT");
-
-                    b.Property<string>("Reference")
-                        .IsRequired()
-                        .HasColumnType("TEXT");
-
-                    b.Property<DateTime>("UpdatedAt")
-                        .HasColumnType("TEXT");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("FactureFournisseurId");
-
-                    b.ToTable("PaiementsFournisseurs");
-                });
-
             modelBuilder.Entity("GestionCommerciale.Modules.Livraison.Models.BonLivraison", b =>
                 {
                     b.Property<int>("Id")
@@ -740,9 +606,6 @@ namespace GestionCommerciale.Shared.Database.Migrations
                     b.Property<DateTime>("Date")
                         .HasColumnType("TEXT");
 
-                    b.Property<int?>("FactureFournisseurId")
-                        .HasColumnType("INTEGER");
-
                     b.Property<int>("FournisseurId")
                         .HasColumnType("INTEGER");
 
@@ -763,8 +626,6 @@ namespace GestionCommerciale.Shared.Database.Migrations
                     b.HasKey("Id");
 
                     b.HasIndex("BonCommandeId");
-
-                    b.HasIndex("FactureFournisseurId");
 
                     b.ToTable("BonsReception");
                 });
@@ -808,6 +669,44 @@ namespace GestionCommerciale.Shared.Database.Migrations
                     b.HasIndex("BRId");
 
                     b.ToTable("BonReceptionLignes");
+                });
+
+            modelBuilder.Entity("GestionCommerciale.Modules.Reception.Models.PaiementFournisseur", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("INTEGER");
+
+                    b.Property<int>("BonReceptionId")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("TEXT");
+
+                    b.Property<int?>("CreatedByUserId")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<DateTime>("Date")
+                        .HasColumnType("TEXT");
+
+                    b.Property<int>("Mode")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<decimal>("Montant")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Reference")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime>("UpdatedAt")
+                        .HasColumnType("TEXT");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("BonReceptionId");
+
+                    b.ToTable("PaiementsFournisseurs");
                 });
 
             modelBuilder.Entity("GestionCommerciale.Modules.Stock.Models.Categorie", b =>
@@ -1156,35 +1055,6 @@ namespace GestionCommerciale.Shared.Database.Migrations
                     b.Navigation("Facture");
                 });
 
-            modelBuilder.Entity("GestionCommerciale.Modules.FactureFournisseur.Models.FactureFournisseurLigne", b =>
-                {
-                    b.HasOne("GestionCommerciale.Modules.Reception.Models.BonReception", "BonReception")
-                        .WithMany()
-                        .HasForeignKey("BonReceptionId")
-                        .OnDelete(DeleteBehavior.SetNull);
-
-                    b.HasOne("GestionCommerciale.Modules.FactureFournisseur.Models.FactureFournisseur", "FactureFournisseur")
-                        .WithMany("Lignes")
-                        .HasForeignKey("FactureFournisseurId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.Navigation("BonReception");
-
-                    b.Navigation("FactureFournisseur");
-                });
-
-            modelBuilder.Entity("GestionCommerciale.Modules.FactureFournisseur.Models.PaiementFournisseur", b =>
-                {
-                    b.HasOne("GestionCommerciale.Modules.FactureFournisseur.Models.FactureFournisseur", "FactureFournisseur")
-                        .WithMany("Paiements")
-                        .HasForeignKey("FactureFournisseurId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.Navigation("FactureFournisseur");
-                });
-
             modelBuilder.Entity("GestionCommerciale.Modules.Livraison.Models.BonLivraison", b =>
                 {
                     b.HasOne("GestionCommerciale.Modules.Facturation.Models.Facture", "Facture")
@@ -1213,11 +1083,6 @@ namespace GestionCommerciale.Shared.Database.Migrations
                         .HasForeignKey("BonCommandeId")
                         .OnDelete(DeleteBehavior.SetNull);
 
-                    b.HasOne("GestionCommerciale.Modules.FactureFournisseur.Models.FactureFournisseur", null)
-                        .WithMany()
-                        .HasForeignKey("FactureFournisseurId")
-                        .OnDelete(DeleteBehavior.SetNull);
-
                     b.Navigation("BonCommande");
                 });
 
@@ -1226,6 +1091,17 @@ namespace GestionCommerciale.Shared.Database.Migrations
                     b.HasOne("GestionCommerciale.Modules.Reception.Models.BonReception", "BonReception")
                         .WithMany("Lignes")
                         .HasForeignKey("BRId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("BonReception");
+                });
+
+            modelBuilder.Entity("GestionCommerciale.Modules.Reception.Models.PaiementFournisseur", b =>
+                {
+                    b.HasOne("GestionCommerciale.Modules.Reception.Models.BonReception", "BonReception")
+                        .WithMany("Paiements")
+                        .HasForeignKey("BonReceptionId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
@@ -1280,13 +1156,6 @@ namespace GestionCommerciale.Shared.Database.Migrations
                     b.Navigation("Paiements");
                 });
 
-            modelBuilder.Entity("GestionCommerciale.Modules.FactureFournisseur.Models.FactureFournisseur", b =>
-                {
-                    b.Navigation("Lignes");
-
-                    b.Navigation("Paiements");
-                });
-
             modelBuilder.Entity("GestionCommerciale.Modules.Livraison.Models.BonLivraison", b =>
                 {
                     b.Navigation("Lignes");
@@ -1295,6 +1164,8 @@ namespace GestionCommerciale.Shared.Database.Migrations
             modelBuilder.Entity("GestionCommerciale.Modules.Reception.Models.BonReception", b =>
                 {
                     b.Navigation("Lignes");
+
+                    b.Navigation("Paiements");
                 });
 #pragma warning restore 612, 618
         }

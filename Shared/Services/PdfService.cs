@@ -3,6 +3,7 @@ using GestionCommerciale.Modules.Commande.Models;
 using GestionCommerciale.Modules.Devis.Models;
 using GestionCommerciale.Modules.Facturation.Models;
 using GestionCommerciale.Modules.Facturation.Services;
+using GestionCommerciale.Modules.FactureFournisseur.Models;
 using GestionCommerciale.Modules.Livraison.Models;
 using GestionCommerciale.Modules.Reception.Models;
 using GestionCommerciale.Modules.Tiers.Models;
@@ -234,6 +235,69 @@ public sealed class PdfService : IPdfService
         return CommercialDocumentPdfRenderer.Render(model, TryLoadLogoBytes(cfg.SocieteLogoPath));
     }
 
+    public async Task<byte[]> BuildFactureFournisseurPdfAsync(FactureFournisseur factureFournisseur, DocumentPartyPdfInfo party, CancellationToken cancellationToken = default)
+    {
+        var cfg = await _settings.GetAsync(cancellationToken);
+        var refs = await LoadProductRefsAsync(factureFournisseur.Lignes.Select(l => l.ProduitId), cancellationToken);
+        var totals = DocumentTotalsHelper.FactureFournisseurTotals(factureFournisseur.Lignes, factureFournisseur.RemiseGlobale);
+        var vis = _uiPreferences.GetDocumentLineColumnVisibility("facture_fournisseur");
+        var lineData = new List<StandardPdfLine>();
+        foreach (var l in factureFournisseur.Lignes)
+        {
+            var lht = DocumentTotalsHelper.LigneHT(l.Quantite, l.PrixUnitaireHT, l.Remise);
+            var ttc = lht * (1 + l.TauxTVA / 100m);
+            lineData.Add(new StandardPdfLine(
+                RefCell(refs, l.ProduitId),
+                l.Designation,
+                FmtQty(l.Quantite),
+                l.Conditionnement,
+                FmtUnitPrice(l.PrixUnitaireHT),
+                FmtTvaPct(l.TauxTVA),
+                FmtMoney(l.Remise),
+                FmtMoney(lht),
+                FmtMoney(ttc)));
+        }
+
+        var (cols, rows) = BuildStandardPdfTable(vis, supportsLineRemise: true, "Qté", lineData);
+
+        var docLines = new List<PdfKeyValueLine>
+        {
+            new("N°", factureFournisseur.Numero),
+            new("Date", factureFournisseur.Date.ToString("dd/MM/yyyy")),
+            new("Échéance", factureFournisseur.DateEcheance.ToString("dd/MM/yyyy"))
+        };
+
+        var brNums = await GetLinkedBrNumerosAsync(factureFournisseur.Id, cancellationToken);
+        if (brNums.Count > 0)
+            docLines.Add(new("BR", string.Join(", ", brNums)));
+
+        var pay = SummarizePaiementsFournisseur(factureFournisseur.Paiements);
+        if (!string.IsNullOrWhiteSpace(pay))
+            docLines.Add(new("Payé par", pay!));
+        if (factureFournisseur.RemiseGlobale > 0)
+            docLines.Add(new("Remise globale", $"{factureFournisseur.RemiseGlobale:N2} %"));
+
+        var model = BaseModel(cfg, "FACTURE FOURNISSEUR", docLines, PartyLines(party, "Fournisseur"), cols, rows, totals, factureFournisseur.Note, vis.ShowMontantTtc);
+        return CommercialDocumentPdfRenderer.Render(model, TryLoadLogoBytes(cfg.SocieteLogoPath));
+    }
+
+    private async Task<List<string>> GetLinkedBrNumerosAsync(int factureFournisseurId, CancellationToken cancellationToken)
+    {
+        await using var db = await _dbFactory.CreateDbContextAsync(cancellationToken);
+        return await db.BonsReception.AsNoTracking()
+            .Where(b => b.FactureFournisseurId == factureFournisseurId)
+            .OrderBy(b => b.Date).ThenBy(b => b.Numero)
+            .Select(b => b.Numero)
+            .ToListAsync(cancellationToken);
+    }
+
+    private static string? SummarizePaiementsFournisseur(IEnumerable<PaiementFournisseur> paiements)
+    {
+        var list = paiements.OrderBy(p => p.Date).ToList();
+        if (list.Count == 0) return null;
+        return string.Join(", ", list.Select(p => $"{p.Montant:N2} ({p.Date:dd/MM/yyyy})"));
+    }
+
     private async Task<List<string>> GetLinkedBlNumerosAsync(int factureId, CancellationToken cancellationToken)
     {
         await using var db = await _dbFactory.CreateDbContextAsync(cancellationToken);
@@ -322,6 +386,23 @@ public sealed class PdfService : IPdfService
             cfg.SocieteNom,
             devise,
             client,
+            party,
+            statement,
+            TryLoadLogoBytes(cfg.SocieteLogoPath));
+    }
+
+    public async Task<byte[]> BuildSupplierAccountStatementPdfAsync(
+        Tiers fournisseur,
+        ClientAccountStatementResult statement,
+        DocumentPartyPdfInfo party,
+        CancellationToken cancellationToken = default)
+    {
+        var cfg = await _settings.GetAsync(cancellationToken);
+        var devise = string.IsNullOrWhiteSpace(cfg.Devise) ? "MAD" : cfg.Devise.Trim();
+        return SupplierAccountStatementPdfRenderer.Render(
+            cfg.SocieteNom,
+            devise,
+            fournisseur,
             party,
             statement,
             TryLoadLogoBytes(cfg.SocieteLogoPath));

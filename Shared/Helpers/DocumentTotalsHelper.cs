@@ -2,6 +2,7 @@ using GestionCommerciale.Modules.AvoirFournisseur.Models;
 using GestionCommerciale.Modules.Commande.Models;
 using GestionCommerciale.Modules.Devis.Models;
 using GestionCommerciale.Modules.Facturation.Models;
+using GestionCommerciale.Modules.FactureFournisseur.Models;
 using GestionCommerciale.Modules.Livraison.Models;
 using GestionCommerciale.Modules.Reception.Models;
 
@@ -57,6 +58,38 @@ public static class DocumentTotalsHelper
 
     public static void SyncFactureTotalTtc(Facture facture) =>
         facture.TotalTtc = FactureTtc(facture.Lignes, facture.RemiseGlobale);
+
+    public static (decimal ht, decimal tva, decimal ttc) FactureFournisseurTotals(IEnumerable<FactureFournisseurLigne> lignes, decimal remiseGlobalePct)
+    {
+        decimal ht = 0, tva = 0;
+        foreach (var l in lignes)
+        {
+            var lht = LigneHT(l.Quantite, l.PrixUnitaireHT, l.Remise);
+            ht += lht;
+            tva += lht * (l.TauxTVA / 100m);
+        }
+
+        if (remiseGlobalePct > 0)
+        {
+            var factor = 1 - remiseGlobalePct / 100m;
+            ht *= factor;
+            tva *= factor;
+        }
+
+        return (ht, tva, ht + tva);
+    }
+
+    public static decimal FactureFournisseurTtc(IEnumerable<FactureFournisseurLigne> lignes, decimal remiseGlobalePct) =>
+        FactureFournisseurTotals(lignes, remiseGlobalePct).ttc;
+
+    public static void SyncFactureFournisseurTotalTtc(FactureFournisseur facture) =>
+        facture.TotalTtc = FactureFournisseurTtc(facture.Lignes, facture.RemiseGlobale);
+
+    public static decimal BonReceptionTtc(IEnumerable<BonReceptionLigne> lignes) =>
+        BonReceptionTotals(lignes).ttc;
+
+    public static void SyncBonReceptionTotalTtc(BonReception bonReception) =>
+        bonReception.TotalTtc = BonReceptionTtc(bonReception.Lignes);
 
     public static (decimal ht, decimal tva, decimal ttc) AvoirTotals(IEnumerable<AvoirLigne> lignes)
     {

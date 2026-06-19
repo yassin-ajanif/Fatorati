@@ -49,9 +49,9 @@
       </StackPanel>
     </ScrollViewer>
 
-    <DockPanel Grid.Column="1" Margin="16,0,0,0" IsVisible="{Binding ShowClientLedger}">
+    <DockPanel Grid.Column="1" Margin="16,0,0,0" IsVisible="{Binding ShowLedger}">
       <StackPanel DockPanel.Dock="Top" Spacing="8" Margin="0,0,0,8">
-        <TextBlock Text="{Binding LblClientLedger}" FontWeight="SemiBold" FontSize="16"/>
+        <TextBlock Text="{Binding LblLedgerTitle}" FontWeight="SemiBold" FontSize="16"/>
         <Grid ColumnDefinitions="*,Auto,Auto">
           <StackPanel Grid.Column="0" Orientation="Horizontal" Spacing="8" VerticalAlignment="Center">
             <TextBlock Text="{Binding LblSoldeActuel}" FontWeight="SemiBold" VerticalAlignment="Center"/>

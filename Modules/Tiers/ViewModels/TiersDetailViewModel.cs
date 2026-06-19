@@ -2,6 +2,7 @@ using System.Collections.ObjectModel;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using GestionCommerciale.Modules.Facturation.Services;
+using GestionCommerciale.Modules.Reception.Services;
 using GestionCommerciale.Modules.Tiers.Models;
 using GestionCommerciale.Shared.Database;
 using GestionCommerciale.Shared.Helpers;
@@ -30,7 +31,8 @@ public partial class TiersDetailViewModel : BaseViewModel
     private readonly WorkspaceNavigator _workspace;
     private readonly IServiceProvider _sp;
     private readonly ILocaleService _locale;
-    private readonly IClientAccountStatementService _ledgerService;
+    private readonly IClientAccountStatementService _clientLedgerService;
+    private readonly ISupplierAccountStatementService _supplierLedgerService;
     private readonly IPdfService _pdf;
     private readonly IAppSettingsService _settings;
 
@@ -45,7 +47,8 @@ public partial class TiersDetailViewModel : BaseViewModel
         WorkspaceNavigator workspaceNavigator,
         IServiceProvider sp,
         ILocaleService locale,
-        IClientAccountStatementService ledgerService,
+        IClientAccountStatementService clientLedgerService,
+        ISupplierAccountStatementService supplierLedgerService,
         IPdfService pdf,
         IAppSettingsService settings)
     {
@@ -54,7 +57,8 @@ public partial class TiersDetailViewModel : BaseViewModel
         _workspace = workspaceNavigator;
         _sp = sp;
         _locale = locale;
-        _ledgerService = ledgerService;
+        _clientLedgerService = clientLedgerService;
+        _supplierLedgerService = supplierLedgerService;
         _pdf = pdf;
         _settings = settings;
         Title = _locale.T("TiersDetail_Title");
@@ -79,7 +83,7 @@ public partial class TiersDetailViewModel : BaseViewModel
     [ObservableProperty] private string _chkActif = string.Empty;
     [ObservableProperty] private string _btnSave = string.Empty;
 
-    [ObservableProperty] private string _lblClientLedger = string.Empty;
+    [ObservableProperty] private string _lblLedgerTitle = string.Empty;
     [ObservableProperty] private string _lblSoldeActuel = string.Empty;
     [ObservableProperty] private string _soldeActuelText = string.Empty;
     [ObservableProperty] private string _btnRefreshLedger = string.Empty;
@@ -92,7 +96,7 @@ public partial class TiersDetailViewModel : BaseViewModel
     [ObservableProperty] private string _lblLedgerBalance = string.Empty;
     [ObservableProperty] private string _lblLedgerEmpty = string.Empty;
     [ObservableProperty] private string _lblLedgerSaveFirst = string.Empty;
-    [ObservableProperty] private bool _showClientLedger;
+    [ObservableProperty] private bool _showLedger;
     [ObservableProperty] private bool _showLedgerSaveFirst;
     [ObservableProperty] private bool _showLedgerEmpty;
 
@@ -122,7 +126,9 @@ public partial class TiersDetailViewModel : BaseViewModel
         WmConditions = _locale.T("Wm_ConditionsPaiement");
         ChkActif = _locale.T("Lbl_Actif");
         BtnSave = _locale.T("Btn_Save");
-        LblClientLedger = _locale.T("ClientLedger_Title");
+        LblLedgerTitle = _returnScope == TiersListScope.Fournisseurs
+            ? _locale.T("SupplierLedger_Title")
+            : _locale.T("ClientLedger_Title");
         LblSoldeActuel = _locale.T("ClientLedger_SoldeActuel");
         BtnRefreshLedger = _locale.T("Btn_Refresh");
         BtnPdfLedger = _locale.T("Btn_Pdf");
@@ -132,8 +138,12 @@ public partial class TiersDetailViewModel : BaseViewModel
         LblLedgerDebit = _locale.T("ClientLedger_ColDebit");
         LblLedgerCredit = _locale.T("ClientLedger_ColCredit");
         LblLedgerBalance = _locale.T("ClientLedger_ColBalance");
-        LblLedgerEmpty = _locale.T("ClientLedger_Empty");
-        LblLedgerSaveFirst = _locale.T("ClientLedger_SaveFirst");
+        LblLedgerEmpty = _returnScope == TiersListScope.Fournisseurs
+            ? _locale.T("SupplierLedger_Empty")
+            : _locale.T("ClientLedger_Empty");
+        LblLedgerSaveFirst = _returnScope == TiersListScope.Fournisseurs
+            ? _locale.T("SupplierLedger_SaveFirst")
+            : _locale.T("ClientLedger_SaveFirst");
     }
 
     private void RebuildTypeOptions()
@@ -161,8 +171,8 @@ public partial class TiersDetailViewModel : BaseViewModel
         TiersId = tiersId;
         LedgerRows.Clear();
         SoldeActuelText = string.Empty;
-        ShowClientLedger = returnScope == TiersListScope.Clients;
-        ShowLedgerSaveFirst = tiersId == null && ShowClientLedger;
+        ShowLedger = returnScope == TiersListScope.Clients || returnScope == TiersListScope.Fournisseurs;
+        ShowLedgerSaveFirst = tiersId == null && ShowLedger;
         ShowLedgerEmpty = false;
         RefreshDetailUi();
 
@@ -216,9 +226,15 @@ public partial class TiersDetailViewModel : BaseViewModel
 
             ShowLedgerSaveFirst = false;
             var isClient = t.Type is TypeTiers.Client or TypeTiers.LesDeux;
-            ShowClientLedger = _returnScope == TiersListScope.Clients && isClient;
+            var isSupplier = t.Type is TypeTiers.Fournisseur or TypeTiers.LesDeux;
+            ShowLedger = _returnScope switch
+            {
+                TiersListScope.Clients => isClient,
+                TiersListScope.Fournisseurs => isSupplier,
+                _ => false
+            };
 
-            if (ShowClientLedger)
+            if (ShowLedger)
                 await LoadLedgerAsync(id, cancellationToken);
             else
             {
@@ -233,9 +249,11 @@ public partial class TiersDetailViewModel : BaseViewModel
         }
     }
 
-    private async Task LoadLedgerAsync(int clientId, CancellationToken cancellationToken)
+    private async Task LoadLedgerAsync(int tiersId, CancellationToken cancellationToken)
     {
-        var statement = await _ledgerService.GetStatementAsync(clientId, cancellationToken);
+        var statement = _returnScope == TiersListScope.Fournisseurs
+            ? await _supplierLedgerService.GetStatementAsync(tiersId, cancellationToken)
+            : await _clientLedgerService.GetStatementAsync(tiersId, cancellationToken);
         LedgerRows.Clear();
         foreach (var row in statement.Rows)
         {
@@ -259,7 +277,7 @@ public partial class TiersDetailViewModel : BaseViewModel
     [RelayCommand]
     private async Task RefreshLedgerAsync(CancellationToken cancellationToken)
     {
-        if (TiersId is not { } id || !ShowClientLedger) return;
+        if (TiersId is not { } id || !ShowLedger) return;
         IsBusy = true;
         try
         {
@@ -274,23 +292,36 @@ public partial class TiersDetailViewModel : BaseViewModel
     [RelayCommand]
     private async Task ExportLedgerPdfAsync(CancellationToken cancellationToken)
     {
-        if (TiersId is not { } id || !ShowClientLedger) return;
+        if (TiersId is not { } id || !ShowLedger) return;
         try
         {
             await using var db = await _dbFactory.CreateDbContextAsync(cancellationToken);
-            var client = await db.Tiers.AsNoTracking().FirstAsync(t => t.Id == id, cancellationToken);
-            var statement = await _ledgerService.GetStatementAsync(id, cancellationToken);
-            var bytes = await _pdf.BuildClientAccountStatementPdfAsync(
-                client, statement, DocumentPartyPdfInfo.FromTiers(client), cancellationToken);
-            var fileName = $"Etat-{client.Nom}.pdf";
+            var tiers = await db.Tiers.AsNoTracking().FirstAsync(t => t.Id == id, cancellationToken);
+            var statement = _returnScope == TiersListScope.Fournisseurs
+                ? await _supplierLedgerService.GetStatementAsync(id, cancellationToken)
+                : await _clientLedgerService.GetStatementAsync(id, cancellationToken);
+            var bytes = _returnScope == TiersListScope.Fournisseurs
+                ? await _pdf.BuildSupplierAccountStatementPdfAsync(
+                    tiers, statement, DocumentPartyPdfInfo.FromTiers(tiers), cancellationToken)
+                : await _pdf.BuildClientAccountStatementPdfAsync(
+                    tiers, statement, DocumentPartyPdfInfo.FromTiers(tiers), cancellationToken);
+            var fileName = $"Etat-{tiers.Nom}.pdf";
             var ok = await _dialog.SavePickedFileBytesAsync(
                 _locale.T("Export_PdfPicker"), fileName, new[] { "*.pdf" }, bytes, cancellationToken);
             if (ok)
-                await _dialog.ShowInfoAsync(_locale.T("ClientLedger_Title"), _locale.T("Export_Done"), cancellationToken);
+            {
+                var title = _returnScope == TiersListScope.Fournisseurs
+                    ? _locale.T("SupplierLedger_Title")
+                    : _locale.T("ClientLedger_Title");
+                await _dialog.ShowInfoAsync(title, _locale.T("Export_Done"), cancellationToken);
+            }
         }
         catch (Exception ex)
         {
-            await _dialog.ShowErrorAsync(_locale.T("ClientLedger_Title"), ex.Message, cancellationToken);
+            var title = _returnScope == TiersListScope.Fournisseurs
+                ? _locale.T("SupplierLedger_Title")
+                : _locale.T("ClientLedger_Title");
+            await _dialog.ShowErrorAsync(title, ex.Message, cancellationToken);
         }
     }
 

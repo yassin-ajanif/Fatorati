@@ -338,6 +338,9 @@ public sealed class DialogService : IDialogService
         return result;
     }
 
+    public Task<List<int>?> ShowBrPickerAsync(string title, IReadOnlyList<(int Id, string Numero, DateTime Date)> availableBrs, CancellationToken cancellationToken = default) =>
+        ShowBlPickerAsync(title, availableBrs, cancellationToken);
+
     public async Task<(DateTime from, DateTime to)?> PickDateRangeAsync(string title, CancellationToken cancellationToken = default)
     {
         var owner = GetMainWindow();

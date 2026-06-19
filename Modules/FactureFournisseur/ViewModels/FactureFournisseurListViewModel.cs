@@ -1,10 +1,6 @@
 using System.Collections.ObjectModel;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
-using GestionCommerciale.Modules.FactureFournisseur.Services;
-using GestionCommerciale.Modules.FactureFournisseur.ViewModels;
-using GestionCommerciale.Modules.Reception.Models;
-using GestionCommerciale.Modules.Stock.Services;
 using GestionCommerciale.Shared.Helpers;
 using GestionCommerciale.Shared.Database;
 using GestionCommerciale.Shared.Models.Pdf;
@@ -13,9 +9,9 @@ using GestionCommerciale.Shared.ViewModels;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 
-namespace GestionCommerciale.Modules.Reception.ViewModels;
+namespace GestionCommerciale.Modules.FactureFournisseur.ViewModels;
 
-public partial class BRListViewModel : BaseViewModel
+public partial class FactureFournisseurListViewModel : BaseViewModel
 {
     private readonly IDbContextFactory<AppDbContext> _dbFactory;
     private readonly WorkspaceNavigator _workspace;
@@ -23,20 +19,16 @@ public partial class BRListViewModel : BaseViewModel
     private readonly IDialogService _dialog;
     private readonly IPdfService _pdf;
     private readonly ILocaleService _locale;
-    private readonly IStockMovementService _stock;
     private readonly IAppSettingsService _settings;
-    private readonly IFactureFournisseurBrLinkService _brLinkService;
 
-    public BRListViewModel(
+    public FactureFournisseurListViewModel(
         IDbContextFactory<AppDbContext> dbFactory,
         WorkspaceNavigator workspaceNavigator,
         IServiceProvider sp,
         IDialogService dialog,
         IPdfService pdf,
         ILocaleService locale,
-        IStockMovementService stock,
-        IAppSettingsService settings,
-        IFactureFournisseurBrLinkService brLinkService)
+        IAppSettingsService settings)
     {
         _dbFactory = dbFactory;
         _workspace = workspaceNavigator;
@@ -44,12 +36,10 @@ public partial class BRListViewModel : BaseViewModel
         _dialog = dialog;
         _pdf = pdf;
         _locale = locale;
-        _stock = stock;
         _settings = settings;
-        _brLinkService = brLinkService;
         _locale.CultureApplied += (_, _) => RefreshListToolbar();
         RefreshListToolbar();
-        Title = _locale.T("BRList_Title");
+        Title = _locale.T("Faf_List_Title");
         Pagination = new PaginationHelper(() => _ = LoadPageAsync(CancellationToken.None));
     }
 
@@ -57,43 +47,52 @@ public partial class BRListViewModel : BaseViewModel
     [ObservableProperty] private string _btnNew = string.Empty;
     [ObservableProperty] private string _btnPdf = string.Empty;
     [ObservableProperty] private string _btnFilterDate = string.Empty;
-    [ObservableProperty] private string _btnFacturerSelection = string.Empty;
-    [ObservableProperty] private string _menuDeleteBr = string.Empty;
-    private DateTime? _dateFrom;
-    private DateTime? _dateTo;
+    [ObservableProperty] private string _wmFilterPayee = string.Empty;
+    [ObservableProperty] private string _menuDeleteFactureFournisseur = string.Empty;
     [ObservableProperty] private string _colHeaderRef = string.Empty;
     [ObservableProperty] private string _colHeaderParty = string.Empty;
     [ObservableProperty] private string _colHeaderDate = string.Empty;
-    [ObservableProperty] private string _colHeaderHt = string.Empty;
+    [ObservableProperty] private string _colHeaderEcheance = string.Empty;
+    [ObservableProperty] private string _colHeaderPayee = string.Empty;
     [ObservableProperty] private string _colHeaderTtc = string.Empty;
     [ObservableProperty] private string _colHeaderNote = string.Empty;
-    [ObservableProperty] private string _colHeaderInvoiced = string.Empty;
     [ObservableProperty] private string _searchWatermark = string.Empty;
+    [ObservableProperty] private string _lblPayeeFilterAll = string.Empty;
+    [ObservableProperty] private string _lblPayeeFilterUnpaid = string.Empty;
+    [ObservableProperty] private string _lblPayeeFilterPaid = string.Empty;
 
     public PaginationHelper Pagination { get; }
 
     private void RefreshListToolbar()
     {
         BtnRefresh = _locale.T("Btn_Refresh");
-        BtnNew = _locale.T("Btn_New");
+        BtnNew = _locale.T("Btn_NewFactureFournisseur");
         BtnPdf = _locale.T("Btn_Pdf");
-        BtnFilterDate = _locale.T("Btn_FilterDate");
-        BtnFacturerSelection = _locale.T("BR_FacturerSelection");
         UpdateBtnFilterDateText();
-        MenuDeleteBr = _locale.T("BR_MenuDelete");
+        WmFilterPayee = _locale.T("Faf_FilterPayee");
+        LblPayeeFilterAll = _locale.T("Faf_FilterAll");
+        LblPayeeFilterUnpaid = _locale.T("Faf_Unpaid");
+        LblPayeeFilterPaid = _locale.T("Faf_Paid");
+        MenuDeleteFactureFournisseur = _locale.T("Faf_MenuDelete");
         ColHeaderRef = _locale.T("DevisList_ColRef");
         ColHeaderParty = _locale.T("Lbl_Supplier");
         ColHeaderDate = _locale.T("DevisList_ColDate");
-        ColHeaderHt = _locale.T("DevisList_ColHt");
+        ColHeaderEcheance = _locale.T("DocList_ColEcheance");
+        ColHeaderPayee = _locale.T("FafList_ColPayee");
         ColHeaderTtc = _locale.T("DevisList_ColTtc");
         ColHeaderNote = _locale.T("DevisList_ColNote");
-        ColHeaderInvoiced = _locale.T("BLList_ColInvoiced");
         SearchWatermark = _locale.T("DocList_SearchPlaceholderSupplier");
     }
 
-    public ObservableCollection<BRListRow> Items { get; } = [];
-    [ObservableProperty] private BRListRow? _selected;
+    public ObservableCollection<FactureFournisseurListRow> Items { get; } = [];
+    [ObservableProperty] private FactureFournisseurListRow? _selected;
+    /// <summary>0 = all, 1 = unpaid, 2 = paid.</summary>
+    [ObservableProperty] private int _payeeFilterIndex;
     [ObservableProperty] private string _searchText = string.Empty;
+    private DateTime? _dateFrom;
+    private DateTime? _dateTo;
+
+    partial void OnPayeeFilterIndexChanged(int value) => _ = LoadPageAsync(CancellationToken.None, true);
 
     partial void OnSearchTextChanged(string value) => _ = LoadPageAsync(CancellationToken.None, true);
 
@@ -108,45 +107,38 @@ public partial class BRListViewModel : BaseViewModel
             var cfg = await _settings.GetAsync(ct);
             var devise = string.IsNullOrWhiteSpace(cfg.Devise) ? "MAD" : cfg.Devise.Trim();
             await using var db = await _dbFactory.CreateDbContextAsync(ct);
-            var q = db.BonsReception.AsNoTracking().Include(b => b.Lignes).AsQueryable();
+            var q = db.FacturesFournisseurs.AsNoTracking().Include(f => f.Lignes).AsQueryable();
+            q = PayeeFilterIndex switch
+            {
+                1 => q.Where(f => !f.EstPayee),
+                2 => q.Where(f => f.EstPayee),
+                _ => q,
+            };
             if (_dateFrom.HasValue)
-                q = q.Where(b => b.Date >= _dateFrom.Value);
+                q = q.Where(f => f.Date >= _dateFrom.Value);
             if (_dateTo.HasValue)
-                q = q.Where(b => b.Date <= _dateTo.Value);
+                q = q.Where(f => f.Date <= _dateTo.Value);
 
             var search = SearchText?.Trim();
             if (!string.IsNullOrEmpty(search))
-                q = q.Where(b => EF.Functions.Like(b.Numero, $"%{search}%")
-                    || db.Tiers.AsNoTracking().Any(t => t.Id == b.FournisseurId && EF.Functions.Like(t.Nom, $"%{search}%")));
+                q = q.Where(f => EF.Functions.Like(f.Numero, $"%{search}%")
+                    || db.Tiers.AsNoTracking().Any(t => t.Id == f.FournisseurId && EF.Functions.Like(t.Nom, $"%{search}%")));
 
             var total = await q.CountAsync(ct);
-            var list = await q.OrderByDescending(b => b.Date)
+            var list = await q.OrderByDescending(f => f.Date)
                 .Skip(Pagination.Skip).Take(Pagination.PageSize)
                 .ToListAsync(ct);
-            var ids = list.Select(b => b.FournisseurId).Distinct().ToList();
+            var ids = list.Select(f => f.FournisseurId).Distinct().ToList();
             var noms = await db.Tiers.AsNoTracking()
                 .Where(t => ids.Contains(t.Id))
                 .ToDictionaryAsync(t => t.Id, t => t.Nom, ct);
-            var brIds = list.Select(b => b.Id).ToList();
-            var invoicedNums = await db.BonsReception.AsNoTracking()
-                .Where(b => brIds.Contains(b.Id) && b.FactureFournisseurId != null)
-                .Join(db.FacturesFournisseurs.AsNoTracking(),
-                    b => b.FactureFournisseurId,
-                    f => f.Id,
-                    (b, f) => new { b.Id, f.Numero })
-                .ToDictionaryAsync(x => x.Id, x => x.Numero, ct);
-            var selId = Selected?.Br.Id;
+            var selId = Selected?.FactureFournisseur.Id;
             Items.Clear();
-            foreach (var b in list)
-            {
-                var row = BRListRow.Create(b, noms.GetValueOrDefault(b.FournisseurId) ?? string.Empty, devise, _locale);
-                if (invoicedNums.TryGetValue(b.Id, out var factNum))
-                    row.InvoicedLabel = factNum;
-                Items.Add(row);
-            }
+            foreach (var f in list)
+                Items.Add(FactureFournisseurListRow.Create(f, noms.GetValueOrDefault(f.FournisseurId) ?? string.Empty, devise, _locale));
             Pagination.TotalCount = total;
             if (selId is { } id)
-                Selected = Items.FirstOrDefault(x => x.Br.Id == id);
+                Selected = Items.FirstOrDefault(x => x.FactureFournisseur.Id == id);
         }
         finally
         {
@@ -185,9 +177,9 @@ public partial class BRListViewModel : BaseViewModel
     }
 
     [RelayCommand]
-    private void NewBr()
+    private void NewFactureFournisseur()
     {
-        var vm = _sp.GetRequiredService<BREditViewModel>();
+        var vm = _sp.GetRequiredService<FactureFournisseurEditViewModel>();
         vm.Load(null);
         _workspace.Open(vm);
     }
@@ -196,36 +188,36 @@ public partial class BRListViewModel : BaseViewModel
     private void OpenSelected()
     {
         if (Selected == null) return;
-        var vm = _sp.GetRequiredService<BREditViewModel>();
-        vm.Load(Selected.Br.Id);
+        var vm = _sp.GetRequiredService<FactureFournisseurEditViewModel>();
+        vm.Load(Selected.FactureFournisseur.Id);
         _workspace.Open(vm);
     }
 
     [RelayCommand]
-    private async Task DeleteBrAsync(BRListRow? row, CancellationToken cancellationToken)
+    private async Task DeleteFactureFournisseurAsync(FactureFournisseurListRow? row, CancellationToken cancellationToken)
     {
         if (row == null) return;
-        var item = row.Br;
+        var item = row.FactureFournisseur;
 
-        if (!await _dialog.ConfirmAsync(_locale.T("BR_DlgShort"), _locale.Tf("BR_ConfirmDelete", item.Numero), cancellationToken))
+        if (!await _dialog.ConfirmAsync(_locale.T("Faf_Title"), _locale.Tf("Faf_ConfirmDelete", item.Numero), cancellationToken))
             return;
 
         IsBusy = true;
         try
         {
             await using var db = await _dbFactory.CreateDbContextAsync(cancellationToken);
-            var entity = await db.BonsReception.Include(b => b.Lignes).FirstAsync(b => b.Id == item.Id, cancellationToken);
-            await _stock.StripBonReceptionMovementsAsync(db, entity.Id, cancellationToken);
-            db.BonsReception.Remove(entity);
+            var entity = await db.FacturesFournisseurs.Include(f => f.Lignes).Include(f => f.Paiements).FirstAsync(f => f.Id == item.Id, cancellationToken);
+            db.FacturesFournisseurs.Remove(entity);
             await db.SaveChangesAsync(cancellationToken);
-            if (Selected?.Br.Id == item.Id)
+
+            if (Selected?.FactureFournisseur.Id == item.Id)
                 Selected = null;
             Items.Remove(row);
-            await _dialog.ShowInfoAsync(_locale.T("BR_DlgShort"), _locale.T("BR_Deleted"), cancellationToken);
+            await _dialog.ShowInfoAsync(_locale.T("Faf_Title"), _locale.T("Faf_Deleted"), cancellationToken);
         }
         catch (Exception ex)
         {
-            await _dialog.ShowErrorAsync(_locale.T("BR_DlgShort"), ex.Message, cancellationToken);
+            await _dialog.ShowErrorAsync(_locale.T("Faf_Title"), ex.Message, cancellationToken);
         }
         finally
         {
@@ -240,10 +232,10 @@ public partial class BRListViewModel : BaseViewModel
         try
         {
             await using var db = await _dbFactory.CreateDbContextAsync(cancellationToken);
-            var b = await db.BonsReception.Include(x => x.Lignes).FirstAsync(x => x.Id == Selected.Br.Id, cancellationToken);
-            var f = await db.Tiers.AsNoTracking().FirstAsync(t => t.Id == b.FournisseurId, cancellationToken);
-            var bytes = await _pdf.BuildBonReceptionPdfAsync(b, DocumentPartyPdfInfo.FromTiers(f), cancellationToken);
-            var ok = await _dialog.SavePickedFileBytesAsync(_locale.T("Export_PdfPicker"), $"{b.Numero}.pdf", new[] { "*.pdf" }, bytes, cancellationToken);
+            var f = await db.FacturesFournisseurs.Include(x => x.Lignes).Include(x => x.Paiements).FirstAsync(x => x.Id == Selected.FactureFournisseur.Id, cancellationToken);
+            var fournisseur = await db.Tiers.AsNoTracking().FirstAsync(t => t.Id == f.FournisseurId, cancellationToken);
+            var bytes = await _pdf.BuildFactureFournisseurPdfAsync(f, DocumentPartyPdfInfo.FromTiers(fournisseur), cancellationToken);
+            var ok = await _dialog.SavePickedFileBytesAsync(_locale.T("Export_PdfPicker"), $"{f.Numero}.pdf", new[] { "*.pdf" }, bytes, cancellationToken);
             if (ok)
                 await _dialog.ShowInfoAsync(_locale.T("Export_Pdf"), _locale.T("Export_Done"), cancellationToken);
         }
@@ -251,35 +243,5 @@ public partial class BRListViewModel : BaseViewModel
         {
             await _dialog.ShowErrorAsync(_locale.T("Export_Pdf"), ex.Message, cancellationToken);
         }
-    }
-
-    [RelayCommand]
-    private async Task FacturerSelectionAsync(CancellationToken cancellationToken)
-    {
-        var selected = Items.Where(r => r.IsSelected && r.CanInvoice).ToList();
-        if (selected.Count == 0)
-        {
-            await _dialog.ShowErrorAsync(_locale.T("BR_DlgShort"), _locale.T("BL_ErrNoSelection"), cancellationToken);
-            return;
-        }
-
-        var fournisseurIds = selected.Select(r => r.Br.FournisseurId).Distinct().ToList();
-        if (fournisseurIds.Count > 1)
-        {
-            await _dialog.ShowErrorAsync(_locale.T("BR_DlgShort"), _locale.T("BR_ErrDifferentSuppliers"), cancellationToken);
-            return;
-        }
-
-        var brIds = selected.Select(r => r.Br.Id).ToList();
-        var errors = await _brLinkService.ValidateBrsForFactureFournisseurAsync(fournisseurIds[0], brIds, cancellationToken);
-        if (errors.Count > 0)
-        {
-            await _dialog.ShowErrorAsync(_locale.T("BR_DlgShort"), string.Join("\n", errors), cancellationToken);
-            return;
-        }
-
-        var vm = _sp.GetRequiredService<FactureFournisseurEditViewModel>();
-        await vm.LoadFromBrsAsync(brIds, cancellationToken);
-        _workspace.Open(vm);
     }
 }

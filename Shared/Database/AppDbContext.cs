@@ -3,6 +3,7 @@ using GestionCommerciale.Modules.Facturation.Models;
 using GestionCommerciale.Modules.Livraison.Models;
 using GestionCommerciale.Modules.AvoirFournisseur.Models;
 using GestionCommerciale.Modules.Commande.Models;
+using GestionCommerciale.Modules.FactureFournisseur.Models;
 using GestionCommerciale.Modules.Reception.Models;
 using GestionCommerciale.Modules.Stock.Models;
 using GestionCommerciale.Modules.Tiers.Models;
@@ -26,6 +27,9 @@ public class AppDbContext : DbContext
     public DbSet<BonCommandeLigne> BonCommandeLignes => Set<BonCommandeLigne>();
     public DbSet<BonReception> BonsReception => Set<BonReception>();
     public DbSet<BonReceptionLigne> BonReceptionLignes => Set<BonReceptionLigne>();
+    public DbSet<FactureFournisseur> FacturesFournisseurs => Set<FactureFournisseur>();
+    public DbSet<FactureFournisseurLigne> FactureFournisseurLignes => Set<FactureFournisseurLigne>();
+    public DbSet<PaiementFournisseur> PaiementsFournisseurs => Set<PaiementFournisseur>();
     public DbSet<Facture> Factures => Set<Facture>();
     public DbSet<FactureLigne> FactureLignes => Set<FactureLigne>();
     public DbSet<Paiement> Paiements => Set<Paiement>();
@@ -78,6 +82,24 @@ public class AppDbContext : DbContext
         {
             e.HasOne(b => b.BonCommande).WithMany().HasForeignKey(b => b.BonCommandeId).OnDelete(DeleteBehavior.SetNull);
             e.HasMany(b => b.Lignes).WithOne(l => l.BonReception).HasForeignKey(l => l.BRId).OnDelete(DeleteBehavior.Cascade);
+            e.HasOne<FactureFournisseur>().WithMany()
+                .HasForeignKey(b => b.FactureFournisseurId)
+                .OnDelete(DeleteBehavior.SetNull);
+            e.HasIndex(b => b.FactureFournisseurId);
+        });
+
+        modelBuilder.Entity<FactureFournisseur>(e =>
+        {
+            e.HasMany(f => f.Lignes).WithOne(l => l.FactureFournisseur).HasForeignKey(l => l.FactureFournisseurId).OnDelete(DeleteBehavior.Cascade);
+            e.HasMany(f => f.Paiements).WithOne(p => p.FactureFournisseur).HasForeignKey(p => p.FactureFournisseurId).OnDelete(DeleteBehavior.Cascade);
+        });
+
+        modelBuilder.Entity<FactureFournisseurLigne>(e =>
+        {
+            e.HasOne(l => l.BonReception).WithMany()
+                .HasForeignKey(l => l.BonReceptionId)
+                .OnDelete(DeleteBehavior.SetNull);
+            e.HasIndex(l => l.BonReceptionId);
         });
 
         modelBuilder.Entity<Facture>(e =>
@@ -95,6 +117,11 @@ public class AppDbContext : DbContext
         });
 
         modelBuilder.Entity<Paiement>(e =>
+        {
+            e.Property(p => p.Mode).HasConversion<int>();
+        });
+
+        modelBuilder.Entity<PaiementFournisseur>(e =>
         {
             e.Property(p => p.Mode).HasConversion<int>();
         });

@@ -1,11 +1,12 @@
 using System.Globalization;
+using CommunityToolkit.Mvvm.ComponentModel;
 using GestionCommerciale.Modules.Reception.Models;
 using GestionCommerciale.Shared.Helpers;
 using GestionCommerciale.Shared.Services;
 
 namespace GestionCommerciale.Modules.Reception.ViewModels;
 
-public sealed class BRListRow
+public partial class BRListRow : ObservableObject
 {
     public required BonReception Br { get; init; }
     public string FournisseurNom { get; init; } = string.Empty;
@@ -14,9 +15,16 @@ public sealed class BRListRow
     public string TtcLabel { get; init; } = string.Empty;
     public string NotePreview { get; init; } = string.Empty;
 
+    [ObservableProperty] private bool _isSelected;
+    [ObservableProperty] private string _invoicedLabel = string.Empty;
+
+    public bool CanInvoice => Br.FactureFournisseurId == null;
+
     public static BRListRow Create(BonReception br, string fournisseurNom, string devise, ILocaleService locale)
     {
         var (ht, _, ttc) = DocumentTotalsHelper.BonReceptionTotals(br.Lignes ?? []);
+        if (br.TotalTtc > 0)
+            ttc = br.TotalTtc;
         return new BRListRow
         {
             Br = br,

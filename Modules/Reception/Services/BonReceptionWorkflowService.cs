@@ -1,3 +1,4 @@
+using GestionCommerciale.Modules.Facturation.Models;
 using GestionCommerciale.Modules.Reception.Models;
 using GestionCommerciale.Modules.Stock.Models;
 using GestionCommerciale.Modules.Stock.Services;
