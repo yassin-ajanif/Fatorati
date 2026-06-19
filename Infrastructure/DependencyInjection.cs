@@ -9,6 +9,7 @@ using GestionCommerciale.Modules.FactureFournisseur.ViewModels;
 using GestionCommerciale.Modules.Livraison.Services;
 using GestionCommerciale.Modules.Livraison.ViewModels;
 using GestionCommerciale.Modules.Commande.ViewModels;
+using GestionCommerciale.Modules.CommandeClient.ViewModels;
 using GestionCommerciale.Modules.Pos.Services;
 using GestionCommerciale.Modules.Pos.ViewModels;
 using GestionCommerciale.Modules.Reception.Services;
@@ -74,6 +75,8 @@ public static class DependencyInjection
         services.AddTransient<ProduitsViewModel>();
         services.AddTransient<DevisListViewModel>();
         services.AddTransient<DevisEditViewModel>();
+        services.AddTransient<BCVListViewModel>();
+        services.AddTransient<BCVEditViewModel>();
         services.AddTransient<BLListViewModel>();
         services.AddTransient<BLEditViewModel>();
         services.AddTransient<BRListViewModel>();

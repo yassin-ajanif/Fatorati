@@ -3,6 +3,7 @@ using GestionCommerciale.Modules.Facturation.Models;
 using GestionCommerciale.Modules.Livraison.Models;
 using GestionCommerciale.Modules.AvoirFournisseur.Models;
 using GestionCommerciale.Modules.Commande.Models;
+using GestionCommerciale.Modules.CommandeClient.Models;
 using GestionCommerciale.Modules.FactureFournisseur.Models;
 using GestionCommerciale.Modules.Reception.Models;
 using GestionCommerciale.Modules.Stock.Models;
@@ -25,6 +26,8 @@ public class AppDbContext : DbContext
     public DbSet<BonLivraisonLigne> BonLivraisonLignes => Set<BonLivraisonLigne>();
     public DbSet<BonCommande> BonsCommande => Set<BonCommande>();
     public DbSet<BonCommandeLigne> BonCommandeLignes => Set<BonCommandeLigne>();
+    public DbSet<BonCommandeClient> BonsCommandeClient => Set<BonCommandeClient>();
+    public DbSet<BonCommandeClientLigne> BonCommandeClientLignes => Set<BonCommandeClientLigne>();
     public DbSet<BonReception> BonsReception => Set<BonReception>();
     public DbSet<BonReceptionLigne> BonReceptionLignes => Set<BonReceptionLigne>();
     public DbSet<FactureFournisseur> FacturesFournisseurs => Set<FactureFournisseur>();
@@ -70,7 +73,16 @@ public class AppDbContext : DbContext
             e.HasOne(b => b.Facture).WithMany()
                 .HasForeignKey(b => b.FactureId)
                 .OnDelete(DeleteBehavior.SetNull);
+            e.HasOne<BonCommandeClient>().WithMany()
+                .HasForeignKey(b => b.BonCommandeClientId)
+                .OnDelete(DeleteBehavior.SetNull);
             e.HasIndex(b => b.FactureId);
+            e.HasIndex(b => b.BonCommandeClientId);
+        });
+
+        modelBuilder.Entity<BonCommandeClient>(e =>
+        {
+            e.HasMany(b => b.Lignes).WithOne(l => l.BonCommandeClient).HasForeignKey(l => l.BonCommandeClientId).OnDelete(DeleteBehavior.Cascade);
         });
 
         modelBuilder.Entity<BonCommande>(e =>

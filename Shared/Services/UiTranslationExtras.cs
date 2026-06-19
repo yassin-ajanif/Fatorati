@@ -30,6 +30,7 @@ internal static class UiTranslationExtras
         ["Btn_ToInvoice"] = ("Facturer", "إلى فاتورة"),
         ["Btn_ToBL"] = ("Vers BL", "إلى أمر تسليم"),
         ["Btn_ToBR"] = ("Vers BR", "إلى أمر استلام"),
+        ["Btn_ToBL"] = ("Vers BL", "إلى أمر تسليم"),
         ["Btn_ToFacture"] = ("Vers Facture", "إلى فاتورة"),
         ["Btn_ReapplyCatalog"] = ("Réappliquer prix catalogue (ligne)", "إعادة تطبيق أسعار الكتالوج"),
         ["Btn_RemoveSelectedLine"] = ("Supprimer ligne sélectionnée", "حذف السطر المحدد"),

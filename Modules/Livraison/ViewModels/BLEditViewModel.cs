@@ -38,6 +38,7 @@ public partial class BLEditViewModel : BaseViewModel
     private readonly IPdfService _pdf;
     private readonly IAppSettingsService _settings;
     private readonly IFactureBlLinkService _blLinkService;
+    private int? _sourceBonCommandeClientId;
 
     public BLEditViewModel(
         IDbContextFactory<AppDbContext> dbFactory,
@@ -281,6 +282,7 @@ public partial class BLEditViewModel : BaseViewModel
     public async Task LoadAsync(int? id, CancellationToken cancellationToken = default)
     {
         BlId = id;
+        _sourceBonCommandeClientId = null;
         DevisId = null;
         Lignes.Clear();
         await using var db = await _dbFactory.CreateDbContextAsync(cancellationToken);
@@ -341,6 +343,51 @@ public partial class BLEditViewModel : BaseViewModel
     }
 
     public void Load(int? id) => _ = LoadAsync(id, CancellationToken.None);
+
+    public async Task LoadNewFromBonCommandeClientAsync(int bonCommandeClientId, CancellationToken cancellationToken = default)
+    {
+        BlId = null;
+        _sourceBonCommandeClientId = bonCommandeClientId;
+        Lignes.Clear();
+        await using var db = await _dbFactory.CreateDbContextAsync(cancellationToken);
+
+        var bcc = await db.BonsCommandeClient.Include(x => x.Lignes).FirstAsync(x => x.Id == bonCommandeClientId, cancellationToken);
+
+        var clients = await db.Tiers.AsNoTracking()
+            .Where(t => t.Actif && (t.Type == TypeTiers.Client || t.Type == TypeTiers.LesDeux))
+            .OrderBy(t => t.Nom).ToListAsync(cancellationToken);
+        Clients.Clear();
+        foreach (var c in clients) Clients.Add(c);
+
+        var produits = await db.Produits.AsNoTracking().Where(p => p.Actif)
+            .SelectForListWithoutImageData().ToListAsync(cancellationToken);
+        Produits.Clear();
+        foreach (var p in produits) Produits.Add(p);
+
+        ClientId = bcc.ClientId;
+        DevisId = bcc.DevisId;
+        Date = new DateTimeOffset(DateTime.Today);
+        Note = string.Empty;
+        Numero = "(brouillon)";
+        foreach (var l in bcc.Lignes.OrderBy(x => x.Id))
+        {
+            var prod = Produits.FirstOrDefault(p => p.Id == l.ProduitId);
+            Lignes.Add(new BLLineRow
+            {
+                ProduitId = l.ProduitId,
+                Reference = prod?.Reference ?? string.Empty,
+                Designation = l.Designation,
+                QuantiteCommandee = l.QuantiteCommandee,
+                QuantiteLivree = l.QuantiteCommandee,
+                PrixUnitaireHt = l.PrixUnitaireHT,
+                TauxTva = l.TauxTVA
+            });
+        }
+
+        IsReadOnly = false;
+        Title = _locale.Tf("BL_NewFromBcc", bcc.Numero);
+        RefreshTotals();
+    }
 
     public async Task LoadFromDevisAsync(int devisId, CancellationToken cancellationToken = default)
     {
@@ -488,6 +535,7 @@ public partial class BLEditViewModel : BaseViewModel
                     Numero = num,
                     ClientId = ClientId,
                     DevisId = DevisId,
+                    BonCommandeClientId = _sourceBonCommandeClientId,
                     Date = Date.DateTime,
                     Note = Note,
                     CreatedByUserId = _session.UserId
@@ -508,6 +556,7 @@ public partial class BLEditViewModel : BaseViewModel
                 db.BonsLivraison.Add(entity);
                 await db.SaveChangesAsync(cancellationToken);
                 BlId = entity.Id;
+                _sourceBonCommandeClientId = null;
             }
             else
             {

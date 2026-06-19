@@ -38,6 +38,13 @@ public sealed class DocumentNumberService : IDocumentNumberService
             return list;
         }, "BC", cancellationToken);
 
+    public Task<string> NextBCClientAsync(CancellationToken cancellationToken = default) =>
+        NextFromDbAsync(async db =>
+        {
+            var list = await db.BonsCommandeClient.AsNoTracking().Select(d => d.Numero).ToListAsync(cancellationToken);
+            return list;
+        }, "BCC", cancellationToken);
+
     public Task<string> NextFactureAsync(CancellationToken cancellationToken = default) =>
         NextFromDbAsync(async db =>
         {
