@@ -11,5 +11,6 @@ public class BonLivraisonLigne : BaseEntity
     public decimal QuantiteCommandee { get; set; }
     public decimal QuantiteLivree { get; set; }
     public decimal PrixUnitaireHT { get; set; }
+    public decimal Remise { get; set; }
     public decimal TauxTVA { get; set; }
 }

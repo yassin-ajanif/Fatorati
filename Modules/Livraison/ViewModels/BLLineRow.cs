@@ -1,5 +1,6 @@
 using CommunityToolkit.Mvvm.ComponentModel;
 using GestionCommerciale.Modules.Stock.Models;
+using GestionCommerciale.Shared.Helpers;
 
 namespace GestionCommerciale.Modules.Livraison.ViewModels;
 
@@ -12,13 +13,15 @@ public partial class BLLineRow : ObservableObject
     [ObservableProperty] private decimal _quantiteCommandee;
     [ObservableProperty] private decimal _quantiteLivree;
     [ObservableProperty] private decimal _prixUnitaireHt;
+    [ObservableProperty] private decimal _remise;
     [ObservableProperty] private decimal _tauxTva;
 
-    public decimal MontantHt => QuantiteLivree * PrixUnitaireHt;
+    public decimal MontantHt => DocumentTotalsHelper.LigneHT(QuantiteLivree, PrixUnitaireHt, Remise);
     public decimal MontantTtc => MontantHt * (1 + TauxTva / 100m);
 
     partial void OnQuantiteLivreeChanged(decimal value) => NotifyMontants();
     partial void OnPrixUnitaireHtChanged(decimal value) => NotifyMontants();
+    partial void OnRemiseChanged(decimal value) => NotifyMontants();
     partial void OnTauxTvaChanged(decimal value) => NotifyMontants();
 
     public void ApplyCatalogProduct(Produit p)

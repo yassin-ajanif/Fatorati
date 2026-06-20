@@ -124,7 +124,7 @@ public static class DocumentTotalsHelper
         decimal ht = 0, tva = 0;
         foreach (var l in lignes)
         {
-            var lht = l.QuantiteLivree * l.PrixUnitaireHT;
+            var lht = LigneHT(l.QuantiteLivree, l.PrixUnitaireHT, l.Remise);
             ht += lht;
             tva += lht * (l.TauxTVA / 100m);
         }

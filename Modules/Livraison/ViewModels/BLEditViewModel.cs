@@ -117,7 +117,7 @@ public partial class BLEditViewModel : BaseViewModel
     [ObservableProperty] private object? _addLineCatalogPick;
     private bool _suppressAddLinePick;
 
-    public DocumentLineGridColumnState LineGridColumns { get; } = new(supportsLineRemise: false);
+    public DocumentLineGridColumnState LineGridColumns { get; } = new(supportsLineRemise: true);
 
     public AutoCompleteFilterPredicate<object?> ProduitAutocompleteFilter => ProductAutoComplete.ItemFilter;
     public AutoCompleteFilterPredicate<object?> PartyAutocompleteFilter => PartyAutoComplete.ItemFilter;
@@ -333,6 +333,7 @@ public partial class BLEditViewModel : BaseViewModel
                 QuantiteCommandee = l.QuantiteCommandee,
                 QuantiteLivree = l.QuantiteLivree,
                 PrixUnitaireHt = l.PrixUnitaireHT,
+                Remise = l.Remise,
                 TauxTva = l.TauxTVA
             });
         }
@@ -380,6 +381,7 @@ public partial class BLEditViewModel : BaseViewModel
                 QuantiteCommandee = l.QuantiteCommandee,
                 QuantiteLivree = l.QuantiteCommandee,
                 PrixUnitaireHt = l.PrixUnitaireHT,
+                Remise = l.Remise,
                 TauxTva = l.TauxTVA
             });
         }
@@ -424,6 +426,7 @@ public partial class BLEditViewModel : BaseViewModel
                 QuantiteCommandee = l.Quantite,
                 QuantiteLivree = l.Quantite,
                 PrixUnitaireHt = l.PrixUnitaireHT,
+                Remise = l.Remise,
                 TauxTva = l.TauxTVA
             });
         }
@@ -546,9 +549,10 @@ public partial class BLEditViewModel : BaseViewModel
                     {
                         ProduitId = l.ProduitId,
                         Designation = l.Designation,
-                        QuantiteCommandee = l.QuantiteCommandee,
+                        QuantiteCommandee = l.QuantiteLivree,
                         QuantiteLivree = l.QuantiteLivree,
                         PrixUnitaireHT = l.PrixUnitaireHt,
+                        Remise = l.Remise,
                         TauxTVA = l.TauxTva
                     });
                 }
@@ -572,9 +576,10 @@ public partial class BLEditViewModel : BaseViewModel
                     {
                         ProduitId = l.ProduitId,
                         Designation = l.Designation,
-                        QuantiteCommandee = l.QuantiteCommandee,
+                        QuantiteCommandee = l.QuantiteLivree,
                         QuantiteLivree = l.QuantiteLivree,
                         PrixUnitaireHT = l.PrixUnitaireHt,
+                        Remise = l.Remise,
                         TauxTVA = l.TauxTva
                     });
                 }

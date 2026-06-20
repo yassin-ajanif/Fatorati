@@ -92,17 +92,17 @@ public sealed class PdfService : IPdfService
         var lineData = new List<BlPdfLine>();
         foreach (var l in bl.Lignes)
         {
-            var lht = l.QuantiteLivree * l.PrixUnitaireHT;
+            var lht = DocumentTotalsHelper.LigneHT(l.QuantiteLivree, l.PrixUnitaireHT, l.Remise);
             ht += lht;
             tva += lht * (l.TauxTVA / 100m);
             var ttc = lht * (1 + l.TauxTVA / 100m);
             lineData.Add(new BlPdfLine(
                 RefCell(refs, l.ProduitId),
                 l.Designation,
-                FmtQty(l.QuantiteCommandee),
                 FmtQty(l.QuantiteLivree),
                 FmtUnitPrice(l.PrixUnitaireHT),
                 FmtTvaPct(l.TauxTVA),
+                FmtMoney(l.Remise),
                 FmtMoney(lht),
                 FmtMoney(ttc)));
         }
@@ -178,7 +178,7 @@ public sealed class PdfService : IPdfService
                 FmtMoney(ttc)));
         }
 
-        var (cols, rows) = BuildStandardPdfTable(vis, supportsLineRemise: true, "Qté cmd.", lineData);
+        var (cols, rows) = BuildStandardPdfTable(vis, supportsLineRemise: true, "Qté", lineData);
 
         var docLines = new List<PdfKeyValueLine>
         {
@@ -215,7 +215,7 @@ public sealed class PdfService : IPdfService
                 FmtMoney(ttc)));
         }
 
-        var (cols, rows) = BuildStandardPdfTable(vis, supportsLineRemise: true, "Qté cmd.", lineData);
+        var (cols, rows) = BuildStandardPdfTable(vis, supportsLineRemise: true, "Qté", lineData);
 
         var docLines = new List<PdfKeyValueLine>
         {
@@ -638,10 +638,10 @@ public sealed class PdfService : IPdfService
     private readonly record struct BlPdfLine(
         string Ref,
         string Designation,
-        string QteCmd,
-        string QteLivr,
+        string Qte,
         string PuHt,
         string Tva,
+        string Remise,
         string MntHt,
         string MntTtc);
 
@@ -668,13 +668,12 @@ public sealed class PdfService : IPdfService
         if (v.ShowDesignation)
             columns.Add(new PdfTableColumn("Désignation", 2f));
         if (v.ShowQuantite)
-        {
-            columns.Add(new PdfTableColumn("Qté cmd.", 0.7f, PdfTextAlignment.End));
-            columns.Add(new PdfTableColumn("Qté livr.", 0.75f, PdfTextAlignment.End));
-        }
+            columns.Add(new PdfTableColumn("Qté", 0.75f, PdfTextAlignment.End));
 
         if (v.ShowPuHt)
             columns.Add(new PdfTableColumn("PU HT", 0.85f, PdfTextAlignment.End));
+        if (v.ShowRemise)
+            columns.Add(new PdfTableColumn("Rem. %", 0.55f, PdfTextAlignment.End));
         if (v.ShowTva)
             columns.Add(new PdfTableColumn("TVA %", 0.55f, PdfTextAlignment.End));
         if (v.ShowMontantHt)
@@ -692,13 +691,12 @@ public sealed class PdfService : IPdfService
         if (v.ShowDesignation)
             cells.Add(line.Designation);
         if (v.ShowQuantite)
-        {
-            cells.Add(line.QteCmd);
-            cells.Add(line.QteLivr);
-        }
+            cells.Add(line.Qte);
 
         if (v.ShowPuHt)
             cells.Add(line.PuHt);
+        if (v.ShowRemise)
+            cells.Add(line.Remise);
         if (v.ShowTva)
             cells.Add(line.Tva);
         if (v.ShowMontantHt)

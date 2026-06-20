@@ -68,7 +68,7 @@ public sealed class FactureBlLinkService : IFactureBlLinkService
             Conditionnement = string.Empty,
             Quantite = l.QuantiteLivree,
             PrixUnitaireHt = l.PrixUnitaireHT,
-            Remise = 0,
+            Remise = l.Remise,
             TauxTva = l.TauxTVA
         }).ToList();
     }
