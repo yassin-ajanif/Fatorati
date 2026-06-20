@@ -16,7 +16,6 @@ public static class CommercialDocumentPdfRenderer
     private const string TextSecondary = "#4B5563";
     private const string TextMuted = "#6B7280";
     private const string AmountBoxBg = "#FFFBEB";
-    private const string AmountBoxBorder = "#FDE047";
     private const string TtcBlue = "#3730A3";
     private const string SummaryRowBg = "#E5E7EB";
     private const string TableRowEven = "#FFFFFF";
@@ -68,18 +67,7 @@ public static class CommercialDocumentPdfRenderer
                         row.RelativeItem().Element(c => DrawKeyValuePanel(c, model.PartyInfoLines));
                     });
 
-                    main.Item().ExtendVertical().AlignBottom().Column(block =>
-                    {
-                        block.Spacing(12);
-                        block.Item().Element(c => DrawTable(c, model));
-
-                        block.Item().ShowEntire().Row(bottom =>
-                        {
-                            bottom.RelativeItem(3).Element(c => DrawAmountWordsBox(c, model));
-                            bottom.Spacing(14);
-                            bottom.RelativeItem(2).Element(c => DrawTotalsBox(c, model));
-                        });
-                    });
+                    main.Item().ExtendVertical().Element(c => DrawTable(c, model));
                 });
 
                 page.Footer().AlignCenter().Column(fc =>
@@ -163,48 +151,69 @@ public static class CommercialDocumentPdfRenderer
         });
     }
 
-    private static void DrawAmountWordsBox(IContainer container, CommercialDocumentPdfModel model)
+    private static void DrawTableFooterRow(IContainer container, CommercialDocumentPdfModel model)
     {
-        var text = string.IsNullOrWhiteSpace(model.AmountInWords) ? "" : model.AmountInWords;
+        var leftSpan = FooterLeftColumnSpan(model);
+        var rightSpan = model.Columns.Count - leftSpan;
+        var amountText = string.IsNullOrWhiteSpace(model.AmountInWords) ? "" : model.AmountInWords;
 
-        container.ShowEntire().Element(AmountPanel).Padding(14).Column(col =>
+        container.Table(t =>
         {
-            col.Item().Text("Arrêté le présent document à la somme de :")
-                .SemiBold()
-                .FontSize(9)
-                .FontColor(TextSecondary);
-            col.Item().PaddingTop(6).Text(text).FontSize(10).FontColor(TextPrimary).LineHeight(1.35f);
+            DefineTableColumns(t, model);
+
+            t.Cell().ColumnSpan((uint)leftSpan).Element(c => TableFooterCell(c, AmountBoxBg)).Column(col =>
+            {
+                col.Item().Text("Arrêté le présent document à la somme de :")
+                    .SemiBold()
+                    .FontSize(9)
+                    .FontColor(TextSecondary);
+                col.Item().PaddingTop(6).Text(amountText).FontSize(10).FontColor(TextPrimary).LineHeight(1.35f);
+            });
+
+            t.Cell().ColumnSpan((uint)rightSpan).Element(c => TableFooterCell(c, PanelBg)).Column(col =>
+            {
+                col.Spacing(6);
+                col.Item().Row(r =>
+                {
+                    r.RelativeItem().Text("Total HT :").FontColor(TextSecondary);
+                    r.AutoItem().Text($"{model.TotalHt:N2} {model.Devise}").SemiBold();
+                });
+                if (model.ShowTaxAndTtcInTotalsBox)
+                {
+                    col.Item().Row(r =>
+                    {
+                        r.RelativeItem().Text("Taxe :").FontColor(TextSecondary);
+                        r.AutoItem().Text($"{model.TotalTva:N2} {model.Devise}").SemiBold();
+                    });
+                    col.Item().PaddingTop(4).LineHorizontal(0.5f).LineColor(TableBorder);
+                    col.Item().PaddingTop(6).Row(r =>
+                    {
+                        r.RelativeItem().Text("Total TTC :").SemiBold().FontSize(10);
+                        r.AutoItem().Text($"{model.TotalTtc:N2} {model.Devise}")
+                            .Bold()
+                            .FontSize(13)
+                            .FontColor(TtcBlue);
+                    });
+                }
+            });
         });
     }
 
-    private static void DrawTotalsBox(IContainer container, CommercialDocumentPdfModel model)
+    private static int FooterLeftColumnSpan(CommercialDocumentPdfModel model)
     {
-        container.ShowEntire().Element(InfoPanel).Padding(14).Column(col =>
+        var totalWidth = model.Columns.Sum(c => c.RelativeWidth);
+        var target = totalWidth * 0.6f;
+        var accumulated = 0f;
+        var span = 1;
+        for (var i = 0; i < model.Columns.Count; i++)
         {
-            col.Spacing(6);
-            col.Item().Row(r =>
-            {
-                r.RelativeItem().Text("Total HT :").FontColor(TextSecondary);
-                r.AutoItem().Text($"{model.TotalHt:N2} {model.Devise}").SemiBold();
-            });
-            if (model.ShowTaxAndTtcInTotalsBox)
-            {
-                col.Item().Row(r =>
-                {
-                    r.RelativeItem().Text("Taxe :").FontColor(TextSecondary);
-                    r.AutoItem().Text($"{model.TotalTva:N2} {model.Devise}").SemiBold();
-                });
-                col.Item().PaddingTop(4).LineHorizontal(0.5f).LineColor(TableBorder);
-                col.Item().PaddingTop(6).Row(r =>
-                {
-                    r.RelativeItem().Text("Total TTC :").SemiBold().FontSize(10);
-                    r.AutoItem().Text($"{model.TotalTtc:N2} {model.Devise}")
-                        .Bold()
-                        .FontSize(13)
-                        .FontColor(TtcBlue);
-                });
-            }
-        });
+            accumulated += model.Columns[i].RelativeWidth;
+            span = i + 1;
+            if (accumulated >= target)
+                break;
+        }
+
+        return Math.Clamp(span, 1, model.Columns.Count - 1);
     }
 
     private static void DrawTable(IContainer container, CommercialDocumentPdfModel model)
@@ -249,6 +258,8 @@ public static class CommercialDocumentPdfRenderer
                 {
                     if (model.SummaryRow != null)
                         bottom.Item().Element(c => DrawTableSummaryRow(c, model));
+
+                    bottom.Item().Element(c => DrawTableFooterRow(c, model));
                 });
             });
     }
@@ -287,8 +298,12 @@ public static class CommercialDocumentPdfRenderer
     private static IContainer InfoPanel(IContainer c) =>
         c.Background(PanelBg).Border(1).BorderColor(PanelBorder).CornerRadius(ComponentCornerRadius);
 
-    private static IContainer AmountPanel(IContainer c) =>
-        c.Background(AmountBoxBg).Border(1).BorderColor(AmountBoxBorder).CornerRadius(ComponentCornerRadius);
+    private static IContainer TableFooterCell(IContainer c, string backgroundHex) =>
+        c.Background(backgroundHex)
+            .Border(0.5f)
+            .BorderColor(TableBorder)
+            .PaddingVertical(10)
+            .PaddingHorizontal(8);
 
     private static IContainer TableHeaderCell(IContainer c) =>
         c.Background(TableHeaderBg)
