@@ -156,9 +156,83 @@ public partial class StockMainViewModel : BaseViewModel
             .OrderByDescending(m => m.CreatedAt)
             .Skip(MouvementPagination.Skip).Take(MouvementPagination.PageSize)
             .ToListAsync(cancellationToken);
+        await EnrichMovementPartyNamesAsync(db, list, cancellationToken);
         Mouvements.Clear();
         foreach (var m in list) Mouvements.Add(m);
         MouvementPagination.TotalCount = total;
+    }
+
+    private static async Task EnrichMovementPartyNamesAsync(
+        AppDbContext db,
+        IReadOnlyList<MouvementStock> movements,
+        CancellationToken cancellationToken)
+    {
+        if (movements.Count == 0) return;
+
+        var blIds = movements
+            .Where(m => m.OrigineType == StockMovementService.OrigineTypeBonLivraison && m.OrigineId.HasValue)
+            .Select(m => m.OrigineId!.Value)
+            .Distinct()
+            .ToList();
+        var brIds = movements
+            .Where(m => m.OrigineType == StockMovementService.OrigineTypeBonReception && m.OrigineId.HasValue)
+            .Select(m => m.OrigineId!.Value)
+            .Distinct()
+            .ToList();
+        var avoirIds = movements
+            .Where(m => m.OrigineType == StockMovementService.OrigineTypeAvoir && m.OrigineId.HasValue)
+            .Select(m => m.OrigineId!.Value)
+            .Distinct()
+            .ToList();
+
+        var blParties = blIds.Count == 0
+            ? []
+            : await db.BonsLivraison.AsNoTracking()
+                .Where(b => blIds.Contains(b.Id))
+                .Select(b => new { b.Id, b.ClientId })
+                .ToListAsync(cancellationToken);
+
+        var brParties = brIds.Count == 0
+            ? []
+            : await db.BonsReception.AsNoTracking()
+                .Where(b => brIds.Contains(b.Id))
+                .Select(b => new { b.Id, b.FournisseurId })
+                .ToListAsync(cancellationToken);
+
+        var avoirParties = avoirIds.Count == 0
+            ? []
+            : await db.Avoirs.AsNoTracking()
+                .Where(a => avoirIds.Contains(a.Id))
+                .Select(a => new { a.Id, a.ClientId })
+                .ToListAsync(cancellationToken);
+
+        var tierIds = blParties.Select(x => x.ClientId)
+            .Concat(brParties.Select(x => x.FournisseurId))
+            .Concat(avoirParties.Select(x => x.ClientId))
+            .Distinct()
+            .ToList();
+
+        var tierNames = tierIds.Count == 0
+            ? new Dictionary<int, string>()
+            : await db.Tiers.AsNoTracking()
+                .Where(t => tierIds.Contains(t.Id))
+                .ToDictionaryAsync(t => t.Id, t => t.Nom, cancellationToken);
+
+        var blMap = blParties.ToDictionary(x => x.Id, x => tierNames.GetValueOrDefault(x.ClientId, string.Empty));
+        var brMap = brParties.ToDictionary(x => x.Id, x => tierNames.GetValueOrDefault(x.FournisseurId, string.Empty));
+        var avoirMap = avoirParties.ToDictionary(x => x.Id, x => tierNames.GetValueOrDefault(x.ClientId, string.Empty));
+
+        foreach (var m in movements)
+        {
+            m.PartyName = m.OrigineType switch
+            {
+                StockMovementService.OrigineTypeBonLivraison when m.OrigineId is int blId => blMap.GetValueOrDefault(blId),
+                StockMovementService.OrigineTypeBonReception when m.OrigineId is int brId => brMap.GetValueOrDefault(brId),
+                StockMovementService.OrigineTypeAvoir when m.OrigineId is int avoirId => avoirMap.GetValueOrDefault(avoirId),
+                _ => string.Empty
+            };
+            m.PartyIsSupplier = m.OrigineType == StockMovementService.OrigineTypeBonReception;
+        }
     }
 
     [RelayCommand]
