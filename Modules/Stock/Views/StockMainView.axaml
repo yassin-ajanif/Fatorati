@@ -3,6 +3,7 @@
              xmlns:vm="using:GestionCommerciale.Modules.Stock.ViewModels"
              xmlns:m="using:GestionCommerciale.Modules.Stock.Models"
              xmlns:conv="using:GestionCommerciale.Shared.Converters"
+             xmlns:shared="using:GestionCommerciale.Shared.Views"
              x:Class="GestionCommerciale.Modules.Stock.Views.StockMainView"
              x:DataType="vm:StockMainViewModel">
   <Grid RowDefinitions="Auto,*">
@@ -50,18 +51,7 @@
                 </DataTemplate>
               </ListBox.ItemTemplate>
             </ListBox>
-            <WrapPanel Grid.Row="2" Margin="0,4" HorizontalAlignment="Center">
-              <Button Content="⏮ Premier" Command="{Binding Pagination.FirstPageCommand}" IsEnabled="{Binding Pagination.HasPrevious}" Margin="0,0,4,2" FontSize="11" Padding="4,2" />
-              <Button Content="◀ Précédent" Command="{Binding Pagination.PreviousPageCommand}" IsEnabled="{Binding Pagination.HasPrevious}" Margin="0,0,4,2" FontSize="11" Padding="4,2" />
-              <TextBlock VerticalAlignment="Center" Margin="4,0,4,2">
-                <Run Text="{Binding Pagination.CurrentPage}" />
-                <Run Text="/" />
-                <Run Text="{Binding Pagination.TotalPages}" />
-              </TextBlock>
-              <Button Content="Suivant ▶" Command="{Binding Pagination.NextPageCommand}" IsEnabled="{Binding Pagination.HasNext}" Margin="0,0,4,2" FontSize="11" Padding="4,2" />
-              <Button Content="Dernier ⏭" Command="{Binding Pagination.LastPageCommand}" IsEnabled="{Binding Pagination.HasNext}" Margin="0,0,4,2" FontSize="11" Padding="4,2" />
-              <TextBlock Text="{Binding Pagination.TotalCount, StringFormat='Total: {0}'}" VerticalAlignment="Center" FontSize="11" Foreground="{StaticResource CourseraSurfaceMutedBrush}" />
-            </WrapPanel>
+            <shared:ListPaginationBar Grid.Row="2" DataContext="{Binding Pagination}"/>
           </Grid>
         </Grid>
       </Border>
@@ -128,18 +118,7 @@
                   </ListBox.ItemTemplate>
                 </ListBox>
               </Grid>
-              <WrapPanel Grid.Row="2" Margin="0,4" HorizontalAlignment="Center">
-                <Button Content="⏮ Premier" Command="{Binding MouvementPagination.FirstPageCommand}" IsEnabled="{Binding MouvementPagination.HasPrevious}" Margin="0,0,4,2" FontSize="11" Padding="4,2" />
-                <Button Content="◀ Précédent" Command="{Binding MouvementPagination.PreviousPageCommand}" IsEnabled="{Binding MouvementPagination.HasPrevious}" Margin="0,0,4,2" FontSize="11" Padding="4,2" />
-                <TextBlock VerticalAlignment="Center" Margin="4,0,4,2">
-                  <Run Text="{Binding MouvementPagination.CurrentPage}" />
-                  <Run Text="/" />
-                  <Run Text="{Binding MouvementPagination.TotalPages}" />
-                </TextBlock>
-                <Button Content="Suivant ▶" Command="{Binding MouvementPagination.NextPageCommand}" IsEnabled="{Binding MouvementPagination.HasNext}" Margin="0,0,4,2" FontSize="11" Padding="4,2" />
-                <Button Content="Dernier ⏭" Command="{Binding MouvementPagination.LastPageCommand}" IsEnabled="{Binding MouvementPagination.HasNext}" Margin="0,0,4,2" FontSize="11" Padding="4,2" />
-                <TextBlock Text="{Binding MouvementPagination.TotalCount, StringFormat='Total: {0}'}" VerticalAlignment="Center" FontSize="11" Foreground="{StaticResource CourseraSurfaceMutedBrush}" />
-              </WrapPanel>
+              <shared:ListPaginationBar Grid.Row="2" DataContext="{Binding MouvementPagination}"/>
             </Grid>
           </Grid>
         </ScrollViewer>
