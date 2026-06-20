@@ -3,9 +3,10 @@
              xmlns:vm="using:GestionCommerciale.Modules.Stock.ViewModels"
              xmlns:m="using:GestionCommerciale.Modules.Stock.Models"
              xmlns:conv="using:GestionCommerciale.Shared.Converters"
+             xmlns:shared="using:GestionCommerciale.Shared.Views"
              x:Class="GestionCommerciale.Modules.Stock.Views.ProduitsView"
              x:DataType="vm:ProduitsViewModel">
-  <Grid ColumnDefinitions="320,*">
+  <Grid ColumnDefinitions="440,*">
     <Border Padding="12" CornerRadius="8" BorderBrush="#28000000" BorderThickness="1"
             Background="#06000000">
       <Grid RowDefinitions="Auto,Auto,Auto,*">
@@ -20,7 +21,7 @@
                  Watermark="{Binding WmSearch}" Margin="0,0,0,8"/>
         <Grid Grid.Row="3" RowDefinitions="Auto,*,Auto">
           <Border Grid.Row="0" Background="#12000000" CornerRadius="4,4,0,0" Padding="10,8" BorderBrush="#20000000" BorderThickness="0,0,0,1">
-            <Grid ColumnDefinitions="72,*,56,56">
+            <Grid ColumnDefinitions="120,*,64,64">
               <TextBlock Text="{Binding ColRef}" FontWeight="SemiBold" FontSize="12"/>
               <TextBlock Grid.Column="1" Text="{Binding ColDesignation}" FontWeight="SemiBold" FontSize="12" Margin="8,0,0,0"/>
               <TextBlock Grid.Column="2" Text="{Binding ColStk}" FontWeight="SemiBold" FontSize="12" TextAlignment="Right"/>
@@ -36,7 +37,7 @@
             </ListBox.Styles>
             <ListBox.ItemTemplate>
               <DataTemplate DataType="m:Produit">
-                <Grid ColumnDefinitions="72,*,56,56">
+                <Grid ColumnDefinitions="120,*,64,64">
                   <TextBlock Text="{Binding Reference}" VerticalAlignment="Center" TextTrimming="CharacterEllipsis"/>
                   <TextBlock Grid.Column="1" Text="{Binding Designation}" TextTrimming="CharacterEllipsis"
                              VerticalAlignment="Center" Margin="8,0,0,0"/>
@@ -49,18 +50,7 @@
               </DataTemplate>
             </ListBox.ItemTemplate>
           </ListBox>
-          <WrapPanel Grid.Row="2" Margin="0,4" HorizontalAlignment="Center">
-            <Button Content="⏮ Premier" Command="{Binding Pagination.FirstPageCommand}" IsEnabled="{Binding Pagination.HasPrevious}" Margin="0,0,4,2" FontSize="11" Padding="4,2" />
-            <Button Content="◀ Précédent" Command="{Binding Pagination.PreviousPageCommand}" IsEnabled="{Binding Pagination.HasPrevious}" Margin="0,0,4,2" FontSize="11" Padding="4,2" />
-            <TextBlock VerticalAlignment="Center" Margin="4,0,4,2">
-              <Run Text="{Binding Pagination.CurrentPage}" />
-              <Run Text="/" />
-              <Run Text="{Binding Pagination.TotalPages}" />
-            </TextBlock>
-            <Button Content="Suivant ▶" Command="{Binding Pagination.NextPageCommand}" IsEnabled="{Binding Pagination.HasNext}" Margin="0,0,4,2" FontSize="11" Padding="4,2" />
-            <Button Content="Dernier ⏭" Command="{Binding Pagination.LastPageCommand}" IsEnabled="{Binding Pagination.HasNext}" Margin="0,0,4,2" FontSize="11" Padding="4,2" />
-            <TextBlock Text="{Binding Pagination.TotalCount, StringFormat='Total: {0}'}" VerticalAlignment="Center" FontSize="11" Foreground="{StaticResource CourseraSurfaceMutedBrush}" />
-          </WrapPanel>
+          <shared:ListPaginationBar Grid.Row="2" DataContext="{Binding Pagination}"/>
         </Grid>
       </Grid>
     </Border>

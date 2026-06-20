@@ -85,7 +85,7 @@ public partial class BRListViewModel : BaseViewModel
         ColHeaderHt = _locale.T("DevisList_ColHt");
         ColHeaderTtc = _locale.T("DevisList_ColTtc");
         ColHeaderNote = _locale.T("DevisList_ColNote");
-        ColHeaderInvoiced = _locale.T("BLList_ColInvoiced");
+        ColHeaderInvoiced = _locale.T("BL_ColInvoiced");
         SearchWatermark = _locale.T("DocList_SearchPlaceholderSupplier");
     }
 
