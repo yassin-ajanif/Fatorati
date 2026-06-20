@@ -11,7 +11,6 @@ public sealed class DevisListRow
     public string ClientNom { get; init; } = string.Empty;
     public string DateShort { get; init; } = string.Empty;
     public string ValidUntilShort { get; init; } = string.Empty;
-    public string HtLabel { get; init; } = string.Empty;
     public string TtcLabel { get; init; } = string.Empty;
     public bool IsExpired { get; init; }
     public string NotePreview { get; init; } = string.Empty;
@@ -19,7 +18,7 @@ public sealed class DevisListRow
     public static DevisListRow Create(DevisEntity devis, string clientNom, string devise, ILocaleService locale)
     {
         var lines = devis.Lignes ?? [];
-        var (ht, _, ttc) = DocumentTotalsHelper.DevisTotals(lines, devis.RemiseGlobale);
+        var (_, _, ttc) = DocumentTotalsHelper.DevisTotals(lines, devis.RemiseGlobale);
         var today = DateTime.Today;
         return new DevisListRow
         {
@@ -27,7 +26,6 @@ public sealed class DevisListRow
             ClientNom = clientNom,
             DateShort = devis.Date.ToString("d", CultureInfo.CurrentCulture),
             ValidUntilShort = devis.DateValidite.ToString("d", CultureInfo.CurrentCulture),
-            HtLabel = locale.Tf("Doc_FmtHt", ht, devise),
             TtcLabel = $"{ttc:N2} {devise}",
             IsExpired = devis.DateValidite.Date < today,
             NotePreview = DocumentListFormat.NotePreview(devis.Note),

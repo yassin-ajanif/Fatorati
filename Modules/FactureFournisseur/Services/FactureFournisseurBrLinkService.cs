@@ -23,7 +23,10 @@ public sealed class FactureFournisseurBrLinkService : IFactureFournisseurBrLinkS
         if (excludeFactureFournisseurId.HasValue)
             query = query.Where(b => b.FactureFournisseurId != excludeFactureFournisseurId.Value);
 
-        return await query.OrderBy(b => b.Date).ThenBy(b => b.Numero).ToListAsync(cancellationToken);
+        return await query
+            .Include(b => b.Lignes)
+            .OrderBy(b => b.Date).ThenBy(b => b.Numero)
+            .ToListAsync(cancellationToken);
     }
 
     public async Task<List<string>> ValidateBrsForFactureFournisseurAsync(int fournisseurId, IReadOnlyList<int> brIds, CancellationToken cancellationToken = default)

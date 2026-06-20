@@ -282,7 +282,7 @@ public sealed class DialogService : IDialogService
         return result;
     }
 
-    public async Task<List<int>?> ShowBlPickerAsync(string title, IReadOnlyList<(int Id, string Numero, DateTime Date)> availableBls, CancellationToken cancellationToken = default)
+    public async Task<List<int>?> ShowBlPickerAsync(string title, IReadOnlyList<(int Id, string Numero, DateTime Date, string MontantLabel)> availableBls, CancellationToken cancellationToken = default)
     {
         var owner = GetMainWindow();
         var w = new Window
@@ -290,8 +290,6 @@ public sealed class DialogService : IDialogService
             Title = title,
             MinWidth = 400,
             MaxWidth = 600,
-            MinHeight = 300,
-            MaxHeight = 500,
             SizeToContent = SizeToContent.WidthAndHeight,
             WindowStartupLocation = WindowStartupLocation.CenterOwner,
             CanResize = false
@@ -301,19 +299,22 @@ public sealed class DialogService : IDialogService
         var panel = new StackPanel { Margin = new Avalonia.Thickness(16), Spacing = 12 };
 
         var checkboxes = new List<CheckBox>();
-        var listPanel = new StackPanel { Spacing = 4, MaxHeight = 320, Margin = new Avalonia.Thickness(0, 0, 0, 8) };
+        var listPanel = new StackPanel { Spacing = 4, Margin = new Avalonia.Thickness(0, 0, 0, 8) };
         foreach (var bl in availableBls)
         {
             var cb = new CheckBox
             {
-                Content = $"{bl.Numero}  —  {bl.Date:d}",
+                Content = $"{bl.Numero}  —  {bl.Date:d}  —  {bl.MontantLabel}",
                 Tag = bl.Id
             };
             checkboxes.Add(cb);
             listPanel.Children.Add(cb);
         }
 
-        panel.Children.Add(listPanel);
+        var listHost = availableBls.Count > 8
+            ? (Control)new ScrollViewer { Content = listPanel, MaxHeight = 320 }
+            : listPanel;
+        panel.Children.Add(listHost);
 
         var actions = new StackPanel { Orientation = Orientation.Horizontal, HorizontalAlignment = HorizontalAlignment.Right, Spacing = 8 };
         var btnCancel = new Button { Content = "Annuler" };
@@ -338,7 +339,7 @@ public sealed class DialogService : IDialogService
         return result;
     }
 
-    public Task<List<int>?> ShowBrPickerAsync(string title, IReadOnlyList<(int Id, string Numero, DateTime Date)> availableBrs, CancellationToken cancellationToken = default) =>
+    public Task<List<int>?> ShowBrPickerAsync(string title, IReadOnlyList<(int Id, string Numero, DateTime Date, string MontantLabel)> availableBrs, CancellationToken cancellationToken = default) =>
         ShowBlPickerAsync(title, availableBrs, cancellationToken);
 
     public async Task<(DateTime from, DateTime to)?> PickDateRangeAsync(string title, CancellationToken cancellationToken = default)

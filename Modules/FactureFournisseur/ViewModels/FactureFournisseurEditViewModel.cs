@@ -527,7 +527,12 @@ public partial class FactureFournisseurEditViewModel : BaseViewModel
             return;
         }
 
-        var pickerItems = filtered.Select(b => (b.Id, b.Numero, b.Date)).ToList();
+        var pickerItems = filtered.Select(b =>
+        {
+            var (_, _, ttc) = DocumentTotalsHelper.BonReceptionTotals(b.Lignes ?? []);
+            var montantLabel = _locale.Tf("Doc_FmtTtc", ttc, Devise).TrimEnd();
+            return (b.Id, b.Numero, b.Date, montantLabel);
+        }).ToList();
         var selectedIds = await _dialog.ShowBrPickerAsync(_locale.T("Faf_AddBr"), pickerItems, cancellationToken);
         if (selectedIds == null || selectedIds.Count == 0) return;
 

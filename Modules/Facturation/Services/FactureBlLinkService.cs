@@ -23,7 +23,10 @@ public sealed class FactureBlLinkService : IFactureBlLinkService
         if (excludeFactureId.HasValue)
             query = query.Where(b => b.FactureId != excludeFactureId.Value);
 
-        return await query.OrderBy(b => b.Date).ThenBy(b => b.Numero).ToListAsync(cancellationToken);
+        return await query
+            .Include(b => b.Lignes)
+            .OrderBy(b => b.Date).ThenBy(b => b.Numero)
+            .ToListAsync(cancellationToken);
     }
 
     public async Task<List<string>> ValidateBlsForFactureAsync(int clientId, IReadOnlyList<int> blIds, CancellationToken cancellationToken = default)

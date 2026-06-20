@@ -534,7 +534,12 @@ public partial class FactureEditViewModel : BaseViewModel
             return;
         }
 
-        var pickerItems = filtered.Select(b => (b.Id, b.Numero, b.Date)).ToList();
+        var pickerItems = filtered.Select(b =>
+        {
+            var (_, _, ttc) = DocumentTotalsHelper.BonLivraisonTotals(b.Lignes ?? []);
+            var montantLabel = _locale.Tf("Doc_FmtTtc", ttc, Devise).TrimEnd();
+            return (b.Id, b.Numero, b.Date, montantLabel);
+        }).ToList();
         var selectedIds = await _dialog.ShowBlPickerAsync(_locale.T("Fact_AddBl"), pickerItems, cancellationToken);
         if (selectedIds == null || selectedIds.Count == 0) return;
 

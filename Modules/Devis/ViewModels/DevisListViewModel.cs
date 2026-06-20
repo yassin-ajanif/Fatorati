@@ -56,7 +56,6 @@ public partial class DevisListViewModel : BaseViewModel
     [ObservableProperty] private string _colHeaderClient = string.Empty;
     [ObservableProperty] private string _colHeaderDate = string.Empty;
     [ObservableProperty] private string _colHeaderValidite = string.Empty;
-    [ObservableProperty] private string _colHeaderHt = string.Empty;
     [ObservableProperty] private string _colHeaderTtc = string.Empty;
     [ObservableProperty] private string _colHeaderNote = string.Empty;
     [ObservableProperty] private string _searchWatermark = string.Empty;
@@ -74,7 +73,6 @@ public partial class DevisListViewModel : BaseViewModel
         ColHeaderClient = _locale.T("Lbl_Client");
         ColHeaderDate = _locale.T("DevisList_ColDate");
         ColHeaderValidite = _locale.T("DevisList_ColValidite");
-        ColHeaderHt = _locale.T("DevisList_ColHt");
         ColHeaderTtc = _locale.T("DevisList_ColTtc");
         ColHeaderNote = _locale.T("DevisList_ColNote");
         SearchWatermark = _locale.T("DocList_SearchPlaceholderClient");

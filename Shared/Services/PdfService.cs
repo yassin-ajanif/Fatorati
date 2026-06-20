@@ -223,7 +223,7 @@ public sealed class PdfService : IPdfService
             new("Date", bc.Date.ToString("dd/MM/yyyy"))
         };
 
-        var model = BaseModel(cfg, "BON DE COMMANDE CLIENT", docLines, PartyLines(party, "Client"), cols, rows, (ht, tva, ht + tva), bc.Note, vis.ShowMontantTtc);
+        var model = BaseModel(cfg, "BON DE COMMANDE", docLines, PartyLines(party, "Client"), cols, rows, (ht, tva, ht + tva), bc.Note, vis.ShowMontantTtc);
         return CommercialDocumentPdfRenderer.Render(model, TryLoadLogoBytes(cfg.SocieteLogoPath));
     }
 

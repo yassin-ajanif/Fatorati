@@ -63,7 +63,6 @@ public partial class BLListViewModel : BaseViewModel
     [ObservableProperty] private string _colHeaderRef = string.Empty;
     [ObservableProperty] private string _colHeaderParty = string.Empty;
     [ObservableProperty] private string _colHeaderDate = string.Empty;
-    [ObservableProperty] private string _colHeaderHt = string.Empty;
     [ObservableProperty] private string _colHeaderTtc = string.Empty;
     [ObservableProperty] private string _colHeaderNote = string.Empty;
     [ObservableProperty] private string _colHeaderInvoiced = string.Empty;
@@ -82,7 +81,6 @@ public partial class BLListViewModel : BaseViewModel
         ColHeaderRef = _locale.T("DevisList_ColRef");
         ColHeaderParty = _locale.T("Lbl_Client");
         ColHeaderDate = _locale.T("DevisList_ColDate");
-        ColHeaderHt = _locale.T("DevisList_ColHt");
         ColHeaderTtc = _locale.T("DevisList_ColTtc");
         ColHeaderNote = _locale.T("DevisList_ColNote");
         ColHeaderInvoiced = _locale.T("BL_ColInvoiced");

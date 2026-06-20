@@ -55,7 +55,6 @@ public partial class BCListViewModel : BaseViewModel
     [ObservableProperty] private string _colHeaderRef = string.Empty;
     [ObservableProperty] private string _colHeaderParty = string.Empty;
     [ObservableProperty] private string _colHeaderDate = string.Empty;
-    [ObservableProperty] private string _colHeaderHt = string.Empty;
     [ObservableProperty] private string _colHeaderTtc = string.Empty;
     [ObservableProperty] private string _colHeaderNote = string.Empty;
     [ObservableProperty] private string _searchWatermark = string.Empty;
@@ -71,7 +70,6 @@ public partial class BCListViewModel : BaseViewModel
         ColHeaderRef = _locale.T("DevisList_ColRef");
         ColHeaderParty = _locale.T("Lbl_Supplier");
         ColHeaderDate = _locale.T("DevisList_ColDate");
-        ColHeaderHt = _locale.T("DevisList_ColHt");
         ColHeaderTtc = _locale.T("DevisList_ColTtc");
         ColHeaderNote = _locale.T("DevisList_ColNote");
         SearchWatermark = _locale.T("DocList_SearchPlaceholderSupplier");
