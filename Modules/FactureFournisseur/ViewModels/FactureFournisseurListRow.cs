@@ -19,8 +19,6 @@ public sealed class FactureFournisseurListRow
     public static FactureFournisseurListRow Create(FactureFournisseurEntity f, string fournisseurNom, string devise, ILocaleService locale)
     {
         var (ht, _, ttc) = DocumentTotalsHelper.FactureFournisseurTotals(f.Lignes ?? [], f.RemiseGlobale);
-        if (f.TotalTtc > 0)
-            ttc = f.TotalTtc;
         return new FactureFournisseurListRow
         {
             FactureFournisseur = f,

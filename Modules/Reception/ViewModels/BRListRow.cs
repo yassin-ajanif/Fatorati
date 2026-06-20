@@ -23,8 +23,6 @@ public partial class BRListRow : ObservableObject
     public static BRListRow Create(BonReception br, string fournisseurNom, string devise, ILocaleService locale)
     {
         var (ht, _, ttc) = DocumentTotalsHelper.BonReceptionTotals(br.Lignes ?? []);
-        if (br.TotalTtc > 0)
-            ttc = br.TotalTtc;
         return new BRListRow
         {
             Br = br,
