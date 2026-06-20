@@ -171,7 +171,7 @@ public static class CommercialDocumentPdfRenderer
                 col.Item().PaddingTop(6).Text(amountText).FontSize(10).FontColor(TextPrimary).LineHeight(1.35f);
             });
 
-            t.Cell().ColumnSpan((uint)rightSpan).Element(c => TableFooterCell(c, PanelBg)).Column(col =>
+            t.Cell().ColumnSpan((uint)rightSpan).Element(c => TableFooterCell(c, PanelBg).ShowEntire()).Column(col =>
             {
                 col.Spacing(6);
                 col.Item().Row(r =>
@@ -247,7 +247,7 @@ public static class CommercialDocumentPdfRenderer
                         for (var i = 0; i < model.Columns.Count; i++)
                         {
                             var col = model.Columns[i];
-                            var cell = t.Cell().Element(c => TableBodyCell(c, bg));
+                            var cell = t.Cell().Element(c => TableBodyCell(c, bg).ShowEntire());
                             ApplyAlign(cell, col.Align).Text(row[i]).FontSize(9).FontColor(TextPrimary);
                         }
 
@@ -260,7 +260,7 @@ public static class CommercialDocumentPdfRenderer
                     if (model.SummaryRow != null)
                         bottom.Item().Element(c => DrawTableSummaryRow(c, model));
 
-                    bottom.Item().Element(c => DrawTableFooterRow(c, model));
+                    bottom.Item().ShowEntire().Element(c => DrawTableFooterRow(c, model));
                 });
             });
     }
