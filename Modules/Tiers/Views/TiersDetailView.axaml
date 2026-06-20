@@ -53,10 +53,19 @@
       <StackPanel DockPanel.Dock="Top" Spacing="8" Margin="0,0,0,8">
         <TextBlock Text="{Binding LblLedgerTitle}" FontWeight="SemiBold" FontSize="16"/>
         <Grid ColumnDefinitions="*,Auto">
-          <StackPanel Grid.Column="0" Orientation="Horizontal" Spacing="8" VerticalAlignment="Center">
-            <TextBlock Text="{Binding LblSoldeActuel}" FontWeight="SemiBold" VerticalAlignment="Center"/>
-            <TextBlock Text="{Binding SoldeActuelText}" FontWeight="Bold" FontSize="18" VerticalAlignment="Center"/>
-          </StackPanel>
+          <Border Grid.Column="0"
+                  Padding="8,5"
+                  Background="#DBEAFE"
+                  BorderBrush="#3B82F6"
+                  BorderThickness="1"
+                  CornerRadius="6"
+                  HorizontalAlignment="Left"
+                  VerticalAlignment="Center">
+            <StackPanel Orientation="Horizontal" Spacing="6">
+              <TextBlock Text="{Binding LblSoldeActuel}" FontWeight="SemiBold" FontSize="12" Foreground="#1E40AF" VerticalAlignment="Center"/>
+              <TextBlock Text="{Binding SoldeActuelText}" FontWeight="SemiBold" FontSize="13" Foreground="#1E40AF" VerticalAlignment="Center"/>
+            </StackPanel>
+          </Border>
           <Button Grid.Column="1" Content="{Binding BtnPdfLedger}" Command="{Binding ExportLedgerPdfCommand}"/>
         </Grid>
       </StackPanel>
