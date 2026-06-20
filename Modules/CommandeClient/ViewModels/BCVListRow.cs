@@ -16,7 +16,7 @@ public sealed class BCVListRow
 
     public static BCVListRow Create(BonCommandeClient bcc, string clientNom, string devise, ILocaleService locale)
     {
-        var (ht, _, ttc) = BonCommandeClientTotals(bcc.Lignes ?? []);
+        var (ht, _, ttc) = DocumentTotalsHelper.BonCommandeClientTotals(bcc.Lignes ?? []);
         return new BCVListRow
         {
             Bcc = bcc,
@@ -26,18 +26,5 @@ public sealed class BCVListRow
             TtcLabel = $"{ttc:N2} {devise}",
             NotePreview = DocumentListFormat.NotePreview(bcc.Note),
         };
-    }
-
-    private static (decimal ht, decimal tva, decimal ttc) BonCommandeClientTotals(IEnumerable<BonCommandeClientLigne> lignes)
-    {
-        decimal ht = 0, tva = 0;
-        foreach (var l in lignes)
-        {
-            var lht = l.QuantiteCommandee * l.PrixUnitaireHT;
-            ht += lht;
-            tva += lht * (l.TauxTVA / 100m);
-        }
-
-        return (ht, tva, ht + tva);
     }
 }

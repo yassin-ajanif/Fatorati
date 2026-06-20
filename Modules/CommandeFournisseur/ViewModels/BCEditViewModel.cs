@@ -87,7 +87,7 @@ public partial class BCEditViewModel : BaseViewModel
     [ObservableProperty] private string _lblDocColMontantHt = string.Empty;
     [ObservableProperty] private string _lblDocColMontantTtc = string.Empty;
 
-    public DocumentLineGridColumnState LineGridColumns { get; } = new(supportsLineRemise: false);
+    public DocumentLineGridColumnState LineGridColumns { get; } = new(supportsLineRemise: true);
 
     public AutoCompleteFilterPredicate<object?> ProduitAutocompleteFilter => ProductAutoComplete.ItemFilter;
     public AutoCompleteFilterPredicate<object?> PartyAutocompleteFilter => PartyAutoComplete.ItemFilter;
@@ -327,6 +327,7 @@ public partial class BCEditViewModel : BaseViewModel
                 Conditionnement = l.Conditionnement,
                 QuantiteCommandee = l.QuantiteCommandee,
                 PrixUnitaireHt = l.PrixUnitaireHT,
+                Remise = l.Remise,
                 TauxTva = l.TauxTVA
             });
         }
@@ -403,6 +404,7 @@ public partial class BCEditViewModel : BaseViewModel
                         Conditionnement = l.Conditionnement,
                         QuantiteCommandee = l.QuantiteCommandee,
                         PrixUnitaireHT = l.PrixUnitaireHt,
+                        Remise = l.Remise,
                         TauxTVA = l.TauxTva
                     });
                 }
@@ -427,6 +429,7 @@ public partial class BCEditViewModel : BaseViewModel
                         Conditionnement = l.Conditionnement,
                         QuantiteCommandee = l.QuantiteCommandee,
                         PrixUnitaireHT = l.PrixUnitaireHt,
+                        Remise = l.Remise,
                         TauxTVA = l.TauxTva
                     });
                 }

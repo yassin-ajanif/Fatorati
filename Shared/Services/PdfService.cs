@@ -162,7 +162,7 @@ public sealed class PdfService : IPdfService
         var lineData = new List<StandardPdfLine>();
         foreach (var l in bc.Lignes)
         {
-            var lht = l.QuantiteCommandee * l.PrixUnitaireHT;
+            var lht = DocumentTotalsHelper.LigneHT(l.QuantiteCommandee, l.PrixUnitaireHT, l.Remise);
             ht += lht;
             tva += lht * (l.TauxTVA / 100m);
             var ttc = lht * (1 + l.TauxTVA / 100m);
@@ -173,12 +173,12 @@ public sealed class PdfService : IPdfService
                 l.Conditionnement,
                 FmtUnitPrice(l.PrixUnitaireHT),
                 FmtTvaPct(l.TauxTVA),
-                "—",
+                FmtMoney(l.Remise),
                 FmtMoney(lht),
                 FmtMoney(ttc)));
         }
 
-        var (cols, rows) = BuildStandardPdfTable(vis, supportsLineRemise: false, "Qté cmd.", lineData);
+        var (cols, rows) = BuildStandardPdfTable(vis, supportsLineRemise: true, "Qté cmd.", lineData);
 
         var docLines = new List<PdfKeyValueLine>
         {
@@ -199,7 +199,7 @@ public sealed class PdfService : IPdfService
         var lineData = new List<StandardPdfLine>();
         foreach (var l in bc.Lignes)
         {
-            var lht = l.QuantiteCommandee * l.PrixUnitaireHT;
+            var lht = DocumentTotalsHelper.LigneHT(l.QuantiteCommandee, l.PrixUnitaireHT, l.Remise);
             ht += lht;
             tva += lht * (l.TauxTVA / 100m);
             var ttc = lht * (1 + l.TauxTVA / 100m);
@@ -210,12 +210,12 @@ public sealed class PdfService : IPdfService
                 l.Conditionnement,
                 FmtUnitPrice(l.PrixUnitaireHT),
                 FmtTvaPct(l.TauxTVA),
-                "—",
+                FmtMoney(l.Remise),
                 FmtMoney(lht),
                 FmtMoney(ttc)));
         }
 
-        var (cols, rows) = BuildStandardPdfTable(vis, supportsLineRemise: false, "Qté cmd.", lineData);
+        var (cols, rows) = BuildStandardPdfTable(vis, supportsLineRemise: true, "Qté cmd.", lineData);
 
         var docLines = new List<PdfKeyValueLine>
         {

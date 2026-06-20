@@ -19,41 +19,52 @@
             <MenuItem Header="{Binding MenuDeleteFacture}" Command="{Binding RemoveFactureCommand}"/>
           </ContextMenu>
         </Border.ContextMenu>
-        <TextBlock Text="{Binding Numero}" FontWeight="Bold"/>
+        <Grid ColumnDefinitions="Auto,*,Auto" VerticalAlignment="Center">
+          <TextBlock Grid.Column="0"
+                     Text="{Binding Numero}"
+                     FontWeight="Bold"
+                     FontSize="16"
+                     VerticalAlignment="Center"
+                     Margin="0,0,16,0"
+                     TextWrapping="NoWrap"
+                     TextTrimming="CharacterEllipsis"/>
+          <StackPanel Grid.Column="1"
+                      Orientation="Horizontal"
+                      Spacing="8"
+                      VerticalAlignment="Center">
+            <TextBlock Text="{Binding LblClient}" VerticalAlignment="Center" Opacity="0.7"/>
+            <AutoCompleteBox MinWidth="200"
+                             MaxWidth="420"
+                             VerticalAlignment="Center"
+                             MinimumPrefixLength="1"
+                             MaxDropDownHeight="320"
+                             Watermark="{Binding WmClientSearch}"
+                             ItemsSource="{Binding Clients}"
+                             ItemFilter="{Binding PartyAutocompleteFilter}"
+                             SelectedItem="{Binding SelectedClient, Mode=TwoWay}"
+                             IsEnabled="{Binding CanEditDraft}">
+              <AutoCompleteBox.ValueMemberBinding>
+                <Binding Path="Nom"/>
+              </AutoCompleteBox.ValueMemberBinding>
+              <AutoCompleteBox.ItemTemplate>
+                <DataTemplate DataType="m:Tiers">
+                  <TextBlock Text="{Binding Nom}" TextTrimming="CharacterEllipsis"/>
+                </DataTemplate>
+              </AutoCompleteBox.ItemTemplate>
+            </AutoCompleteBox>
+          </StackPanel>
+          <StackPanel Grid.Column="2"
+                      Orientation="Horizontal"
+                      Spacing="10"
+                      VerticalAlignment="Center"
+                      Margin="16,0,0,0">
+            <TextBlock Text="{Binding LblFactPayee}" VerticalAlignment="Center" Opacity="0.7"/>
+            <ToggleSwitch IsChecked="{Binding EstPayee, Mode=TwoWay}"
+                          OnContent="{Binding LblPaid}"
+                          OffContent="{Binding LblUnpaid}"/>
+          </StackPanel>
+        </Grid>
       </Border>
-      <Grid ColumnDefinitions="*,Auto" VerticalAlignment="Top">
-        <StackPanel Grid.Column="0" Spacing="4" HorizontalAlignment="Left">
-          <TextBlock Text="{Binding LblClient}" Opacity="0.7"/>
-          <AutoCompleteBox MinWidth="280"
-                           MaxWidth="420"
-                           HorizontalAlignment="Left"
-                           MinimumPrefixLength="1" MaxDropDownHeight="320"
-                           Watermark="{Binding WmClientSearch}"
-                           ItemsSource="{Binding Clients}"
-                           ItemFilter="{Binding PartyAutocompleteFilter}"
-                           SelectedItem="{Binding SelectedClient, Mode=TwoWay}"
-                           IsEnabled="{Binding CanEditDraft}">
-            <AutoCompleteBox.ValueMemberBinding>
-              <Binding Path="Nom"/>
-            </AutoCompleteBox.ValueMemberBinding>
-            <AutoCompleteBox.ItemTemplate>
-              <DataTemplate DataType="m:Tiers">
-                <TextBlock Text="{Binding Nom}"/>
-              </DataTemplate>
-            </AutoCompleteBox.ItemTemplate>
-          </AutoCompleteBox>
-        </StackPanel>
-        <StackPanel Grid.Column="1"
-                    Orientation="Horizontal"
-                    Spacing="10"
-                    VerticalAlignment="Bottom"
-                    Margin="16,0,0,0">
-          <TextBlock Text="{Binding LblFactPayee}" VerticalAlignment="Center" Opacity="0.7"/>
-          <ToggleSwitch IsChecked="{Binding EstPayee, Mode=TwoWay}"
-                        OnContent="{Binding LblPaid}"
-                        OffContent="{Binding LblUnpaid}"/>
-        </StackPanel>
-      </Grid>
       <StackPanel Orientation="Horizontal" Spacing="16">
         <StackPanel Orientation="Horizontal" Spacing="8">
           <TextBlock Text="{Binding LblDateFacture}" VerticalAlignment="Center" Opacity="0.7"/>
@@ -64,12 +75,12 @@
           <DatePicker SelectedDate="{Binding DateEcheance}"/>
         </StackPanel>
       </StackPanel>
-      <StackPanel>
-        <TextBlock Text="{Binding LblLinkedBls}" Opacity="0.7" Margin="0,0,0,4"/>
-        <StackPanel Orientation="Horizontal" Spacing="8">
+      <StackPanel Orientation="Horizontal" Spacing="8" VerticalAlignment="Center">
+        <TextBlock Text="{Binding LblLinkedBls}" Opacity="0.7" VerticalAlignment="Center"/>
+        
         <Button Content="{Binding BtnAddBl}" Command="{Binding ShowBlPickerCommand}" IsEnabled="{Binding CanEditDraft}"/>
-      </StackPanel>
-        <ItemsControl ItemsSource="{Binding LinkedBls}">
+        
+        <ItemsControl ItemsSource="{Binding LinkedBls}" VerticalAlignment="Center">
           <ItemsControl.ItemsPanel>
             <ItemsPanelTemplate>
               <StackPanel Orientation="Horizontal" Spacing="4"/>
@@ -77,9 +88,9 @@
           </ItemsControl.ItemsPanel>
           <ItemsControl.ItemTemplate>
             <DataTemplate DataType="vm:LinkedBlRow">
-              <Border Padding="6,4" Background="#EEF2FF" BorderBrush="#C7D2FE" BorderThickness="1" CornerRadius="4">
+              <Border Padding="6,4" Background="#DBEAFE" BorderBrush="#3B82F6" BorderThickness="1" CornerRadius="6">
                 <StackPanel Orientation="Horizontal" Spacing="4">
-                  <TextBlock Text="{Binding Numero}" VerticalAlignment="Center" FontWeight="SemiBold" FontSize="12"/>
+                  <TextBlock Text="{Binding Numero}" VerticalAlignment="Center" FontWeight="SemiBold" FontSize="12" Foreground="#1E40AF"/>
                   <Button Content="×" FontSize="12" Padding="2,0" MinWidth="0" MinHeight="0"
                           ToolTip.Tip="{Binding $parent[UserControl].((vm:FactureEditViewModel)DataContext).LblLinkedBls}"
                           Command="{Binding $parent[UserControl].((vm:FactureEditViewModel)DataContext).RemoveBlGroupCommand}"

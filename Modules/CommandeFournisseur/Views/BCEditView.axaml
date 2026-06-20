@@ -150,6 +150,8 @@
                              IsReadOnly="{Binding !$parent[UserControl].((vm:BCEditViewModel)DataContext).CanEdit}" IsVisible="{Binding $parent[UserControl].((vm:BCEditViewModel)DataContext).LineGridColumns.ShowConditionnement}"/>
                     <NumericUpDown Grid.Column="4" ShowButtonSpinner="False" Value="{Binding PrixUnitaireHt}" FormatString="0.##" Minimum="0" Increment="0.01"
                                    HorizontalAlignment="Stretch" Margin="0,0,8,0" IsEnabled="{Binding $parent[UserControl].((vm:BCEditViewModel)DataContext).CanEdit}" IsVisible="{Binding $parent[UserControl].((vm:BCEditViewModel)DataContext).LineGridColumns.ShowPuHt}"/>
+                    <NumericUpDown Grid.Column="5" ShowButtonSpinner="False" Value="{Binding Remise}" FormatString="N2" Minimum="0" Maximum="100" Increment="1"
+                                   HorizontalAlignment="Stretch" Margin="0,0,8,0" IsEnabled="{Binding $parent[UserControl].((vm:BCEditViewModel)DataContext).CanEdit}" IsVisible="{Binding $parent[UserControl].((vm:BCEditViewModel)DataContext).LineGridColumns.ShowRemise}"/>
                     <NumericUpDown Grid.Column="6" ShowButtonSpinner="False" Value="{Binding TauxTva}" FormatString="0.##" Minimum="0" Increment="1"
                                    HorizontalAlignment="Stretch" Margin="0,0,8,0" IsEnabled="{Binding $parent[UserControl].((vm:BCEditViewModel)DataContext).CanEdit}" IsVisible="{Binding $parent[UserControl].((vm:BCEditViewModel)DataContext).LineGridColumns.ShowTva}"/>
                     <TextBlock Grid.Column="7" Text="{Binding MontantHt, StringFormat=\{0:N2\}}" VerticalAlignment="Center"

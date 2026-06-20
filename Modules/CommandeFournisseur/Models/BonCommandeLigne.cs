@@ -10,6 +10,7 @@ public class BonCommandeLigne : BaseEntity
     public string Designation { get; set; } = string.Empty;
     public decimal QuantiteCommandee { get; set; }
     public decimal PrixUnitaireHT { get; set; }
+    public decimal Remise { get; set; }
     public decimal TauxTVA { get; set; }
     /// <summary>Unit / packaging label (e.g. carton, pièce).</summary>
     public string Conditionnement { get; set; } = string.Empty;
