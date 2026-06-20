@@ -315,8 +315,6 @@ public static class CommercialDocumentPdfRenderer
 
     private static IContainer TableBodyCell(IContainer c, string backgroundHex) =>
         c.Background(backgroundHex)
-            .Border(0.5f)
-            .BorderColor(TableBorder)
             .PaddingVertical(6)
             .PaddingHorizontal(6);
 
