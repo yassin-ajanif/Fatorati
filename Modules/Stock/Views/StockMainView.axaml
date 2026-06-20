@@ -6,12 +6,7 @@
              xmlns:shared="using:GestionCommerciale.Shared.Views"
              x:Class="GestionCommerciale.Modules.Stock.Views.StockMainView"
              x:DataType="vm:StockMainViewModel">
-  <Grid RowDefinitions="Auto,*">
-    <StackPanel Orientation="Horizontal" Spacing="10" Margin="0,0,0,12">
-      <Button Content="{Binding BtnRefreshList}" MinWidth="160" Padding="14,8"
-              Command="{Binding LoadProduitsCommand}"/>
-    </StackPanel>
-    <Grid Grid.Row="1" ColumnDefinitions="*,*">
+  <Grid ColumnDefinitions="*,*">
       <Border Padding="12" CornerRadius="8" BorderBrush="#28000000" BorderThickness="1"
               Background="#06000000">
         <Grid RowDefinitions="Auto,Auto,Auto,*">
@@ -123,6 +118,5 @@
           </Grid>
         </ScrollViewer>
       </Border>
-    </Grid>
   </Grid>
 </UserControl>

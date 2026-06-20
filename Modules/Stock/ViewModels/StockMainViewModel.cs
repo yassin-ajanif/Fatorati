@@ -44,7 +44,6 @@ public partial class StockMainViewModel : BaseViewModel
     public PaginationHelper Pagination { get; }
     public PaginationHelper MouvementPagination { get; }
 
-    [ObservableProperty] private string _btnRefreshList = string.Empty;
     [ObservableProperty] private string _lblCatalog = string.Empty;
     [ObservableProperty] private string _helpStock = string.Empty;
     [ObservableProperty] private string _wmSearch = string.Empty;
@@ -68,7 +67,6 @@ public partial class StockMainViewModel : BaseViewModel
     private void RefreshStockUi()
     {
         Title = _locale.T("Stock_Title");
-        BtnRefreshList = _locale.T("Btn_RefreshList");
         LblCatalog = _locale.T("Lbl_Catalog");
         HelpStock = _locale.T("Lbl_StockMainHelp");
         WmSearch = _locale.T("Wm_SearchProducts");

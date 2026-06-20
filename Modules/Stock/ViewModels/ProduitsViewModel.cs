@@ -47,7 +47,6 @@ public partial class ProduitsViewModel : BaseViewModel
     }
 
     [ObservableProperty] private string _btnNewProduct = string.Empty;
-    [ObservableProperty] private string _btnRefresh = string.Empty;
     [ObservableProperty] private string _btnExportCsv = string.Empty;
     [ObservableProperty] private string _btnImportCsv = string.Empty;
     [ObservableProperty] private string _helpList = string.Empty;
@@ -83,7 +82,6 @@ public partial class ProduitsViewModel : BaseViewModel
     {
         Title = _locale.T("Nav_Produits");
         BtnNewProduct = _locale.T("Btn_NewProduct");
-        BtnRefresh = _locale.T("Btn_Refresh");
         BtnExportCsv = _locale.T("Btn_ExportCsv");
         BtnImportCsv = _locale.T("Btn_ImportCsv");
         HelpList = _locale.T("Lbl_ProductListHelp");

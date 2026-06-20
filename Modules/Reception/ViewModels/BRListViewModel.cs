@@ -53,7 +53,6 @@ public partial class BRListViewModel : BaseViewModel
         Pagination = new PaginationHelper(() => _ = LoadPageAsync(CancellationToken.None));
     }
 
-    [ObservableProperty] private string _btnRefresh = string.Empty;
     [ObservableProperty] private string _btnNew = string.Empty;
     [ObservableProperty] private string _btnPdf = string.Empty;
     [ObservableProperty] private string _btnFilterDate = string.Empty;
@@ -74,7 +73,6 @@ public partial class BRListViewModel : BaseViewModel
 
     private void RefreshListToolbar()
     {
-        BtnRefresh = _locale.T("Btn_Refresh");
         BtnNew = _locale.T("Btn_New");
         BtnPdf = _locale.T("Btn_Pdf");
         BtnFilterDate = _locale.T("Btn_FilterDate");

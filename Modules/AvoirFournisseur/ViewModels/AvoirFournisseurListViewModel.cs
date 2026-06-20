@@ -42,7 +42,6 @@ public partial class AvoirFournisseurListViewModel : BaseViewModel
     }
 
     [ObservableProperty] private string _btnNew = string.Empty;
-    [ObservableProperty] private string _btnRefresh = string.Empty;
     [ObservableProperty] private string _btnPdf = string.Empty;
     [ObservableProperty] private string _btnFilterDate = string.Empty;
     [ObservableProperty] private string _colNumero = string.Empty;
@@ -63,7 +62,6 @@ public partial class AvoirFournisseurListViewModel : BaseViewModel
     private void RefreshUi()
     {
         BtnNew = _locale.T("Btn_New");
-        BtnRefresh = _locale.T("Btn_Refresh");
         BtnPdf = _locale.T("Btn_Pdf");
         BtnFilterDate = _locale.T("Btn_FilterDate");
         ColNumero = _locale.T("DevisList_ColRef");

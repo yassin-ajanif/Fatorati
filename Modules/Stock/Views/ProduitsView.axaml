@@ -11,7 +11,6 @@
       <Grid RowDefinitions="Auto,Auto,Auto,*">
         <WrapPanel Margin="0,0,0,12">
           <Button Content="{Binding BtnNewProduct}" MinWidth="110" Padding="6,4" Margin="0,0,6,4" Command="{Binding NewProduitCommand}"/>
-          <Button Content="{Binding BtnRefresh}" MinWidth="90" Padding="6,4" Margin="0,0,6,4" Command="{Binding LoadProduitsCommand}"/>
           <Button Content="{Binding BtnExportCsv}" MinWidth="90" Padding="6,4" Margin="0,0,6,4" Command="{Binding ExportCsvCommand}"/>
           <Button Content="{Binding BtnImportCsv}" MinWidth="90" Padding="6,4" Margin="0,0,6,4" Command="{Binding ImportCsvCommand}"/>
         </WrapPanel>

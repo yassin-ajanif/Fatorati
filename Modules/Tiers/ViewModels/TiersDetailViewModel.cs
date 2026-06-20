@@ -86,7 +86,6 @@ public partial class TiersDetailViewModel : BaseViewModel
     [ObservableProperty] private string _lblLedgerTitle = string.Empty;
     [ObservableProperty] private string _lblSoldeActuel = string.Empty;
     [ObservableProperty] private string _soldeActuelText = string.Empty;
-    [ObservableProperty] private string _btnRefreshLedger = string.Empty;
     [ObservableProperty] private string _btnPdfLedger = string.Empty;
     [ObservableProperty] private string _lblLedgerDate = string.Empty;
     [ObservableProperty] private string _lblLedgerDesignation = string.Empty;
@@ -130,7 +129,6 @@ public partial class TiersDetailViewModel : BaseViewModel
             ? _locale.T("SupplierLedger_Title")
             : _locale.T("ClientLedger_Title");
         LblSoldeActuel = _locale.T("ClientLedger_SoldeActuel");
-        BtnRefreshLedger = _locale.T("Btn_Refresh");
         BtnPdfLedger = _locale.T("Btn_Pdf");
         LblLedgerDate = _locale.T("ClientLedger_ColDate");
         LblLedgerDesignation = _locale.T("ClientLedger_ColDesignation");
@@ -273,21 +271,6 @@ public partial class TiersDetailViewModel : BaseViewModel
     }
 
     private string FormatAmount(decimal amount) => CurrencyHelper.Format(amount, _devise);
-
-    [RelayCommand]
-    private async Task RefreshLedgerAsync(CancellationToken cancellationToken)
-    {
-        if (TiersId is not { } id || !ShowLedger) return;
-        IsBusy = true;
-        try
-        {
-            await LoadLedgerAsync(id, cancellationToken);
-        }
-        finally
-        {
-            IsBusy = false;
-        }
-    }
 
     [RelayCommand]
     private async Task ExportLedgerPdfAsync(CancellationToken cancellationToken)
