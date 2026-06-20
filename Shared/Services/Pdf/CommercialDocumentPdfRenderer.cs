@@ -97,38 +97,39 @@ public static class CommercialDocumentPdfRenderer
 
     private static void DrawHeader(IContainer header, CommercialDocumentPdfModel model, byte[]? logoBytes)
     {
-        header.PaddingBottom(8).Column(c =>
+        header.PaddingBottom(8).Row(row =>
         {
-            c.Item().Row(row =>
+            row.RelativeItem().Height(HeaderLogoHeight).AlignMiddle().AlignLeft().Element(left =>
             {
                 if (logoBytes is { Length: > 0 })
                 {
-                    row.ConstantItem(HeaderLogoWidth).Height(HeaderLogoHeight).PaddingRight(16)
+                    left.Width(HeaderLogoWidth).Height(HeaderLogoHeight)
                         .AlignMiddle()
                         .CornerRadius(6)
-                        .Image(logoBytes).FitArea();
+                        .Image(logoBytes)
+                        .FitArea();
                 }
-
-                row.RelativeItem().AlignMiddle().Column(block =>
+                else if (!string.IsNullOrWhiteSpace(model.CompanyName))
                 {
-                    if (!string.IsNullOrWhiteSpace(model.CompanyName))
-                    {
-                        block.Item().Text(model.CompanyName.ToUpperInvariant())
-                            .Bold()
-                            .FontSize(HeaderCompanyFontSize)
-                            .FontColor(TextPrimary)
-                            .LetterSpacing(0.3f);
-                    }
+                    left.Text(model.CompanyName.ToUpperInvariant())
+                        .Bold()
+                        .FontSize(HeaderCompanyFontSize)
+                        .FontColor(TextPrimary)
+                        .LetterSpacing(0.3f);
+                }
+            });
 
-                    if (!string.IsNullOrWhiteSpace(model.DocumentKindLabel))
-                    {
-                        block.Item().PaddingTop(string.IsNullOrWhiteSpace(model.CompanyName) ? 0 : 4)
-                            .Text(model.DocumentKindLabel)
-                            .Bold()
-                            .FontSize(HeaderDocumentKindFontSize)
-                            .FontColor(TextPrimary);
-                    }
-                });
+            row.Spacing(14);
+
+            row.RelativeItem().Height(HeaderLogoHeight).AlignMiddle().AlignLeft().Element(right =>
+            {
+                if (!string.IsNullOrWhiteSpace(model.DocumentKindLabel))
+                {
+                    right.Text(model.DocumentKindLabel)
+                        .Bold()
+                        .FontSize(HeaderDocumentKindFontSize)
+                        .FontColor(TextPrimary);
+                }
             });
         });
     }
