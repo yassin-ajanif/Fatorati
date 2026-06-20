@@ -26,7 +26,6 @@ public static class CommercialDocumentPdfRenderer
     private const float HeaderLogoHeight = 78f;
     private const float HeaderCompanyFontSize = 16f;
     private const float HeaderDocumentKindFontSize = 17f;
-    private const float HeaderBlockHeight = 108f;
 
     public static byte[] Render(CommercialDocumentPdfModel model, byte[]? logoBytes)
     {
@@ -69,21 +68,18 @@ public static class CommercialDocumentPdfRenderer
                         row.RelativeItem().Element(c => DrawKeyValuePanel(c, model.PartyInfoLines));
                     });
 
-                    main.Item().Element(c => DrawTable(c, model));
+                    main.Item().ExtendVertical().AlignBottom().Column(block =>
+                    {
+                        block.Spacing(12);
+                        block.Item().Element(c => DrawTable(c, model));
 
-                    if (!string.IsNullOrWhiteSpace(model.Note))
-                        main.Item().PaddingTop(6).Text(model.Note!).FontSize(9).FontColor(TextSecondary).Italic();
-
-                    main.Item()
-                        .PaddingTop(4)
-                        .PreventPageBreak()
-                        .EnsureSpace(EstimateBottomBoxesHeight(model))
-                        .Row(bottom =>
+                        block.Item().ShowEntire().Row(bottom =>
                         {
                             bottom.RelativeItem(3).Element(c => DrawAmountWordsBox(c, model));
                             bottom.Spacing(14);
                             bottom.RelativeItem(2).Element(c => DrawTotalsBox(c, model));
                         });
+                    });
                 });
 
                 page.Footer().AlignCenter().Column(fc =>
@@ -213,118 +209,62 @@ public static class CommercialDocumentPdfRenderer
 
     private static void DrawTable(IContainer container, CommercialDocumentPdfModel model)
     {
-        var fillerCount = EstimateFillerRowCount(model);
-
         container
+            .ExtendVertical()
             .Border(1)
             .BorderColor(TableBorder)
             .CornerRadius(ComponentCornerRadius)
-            .Table(t =>
+            .Column(area =>
+            {
+                area.Item().Table(t =>
+                {
+                    DefineTableColumns(t, model);
+
+                    t.Header(h =>
+                    {
+                        for (var i = 0; i < model.Columns.Count; i++)
+                        {
+                            var col = model.Columns[i];
+                            var cell = h.Cell().Element(TableHeaderCell);
+                            ApplyAlign(cell, col.Align).Text(col.Header).SemiBold().FontSize(9).FontColor(TextPrimary);
+                        }
+                    });
+
+                    var rowIndex = 0;
+                    foreach (var row in model.Rows)
+                    {
+                        var bg = rowIndex % 2 == 0 ? TableRowEven : TableRowAlt;
+                        for (var i = 0; i < model.Columns.Count; i++)
+                        {
+                            var col = model.Columns[i];
+                            var cell = t.Cell().Element(c => TableBodyCell(c, bg));
+                            ApplyAlign(cell, col.Align).Text(row[i]).FontSize(9).FontColor(TextPrimary);
+                        }
+
+                        rowIndex++;
+                    }
+                });
+
+                area.Item().ExtendVertical().AlignBottom().Column(bottom =>
+                {
+                    if (model.SummaryRow != null)
+                        bottom.Item().Element(c => DrawTableSummaryRow(c, model));
+                });
+            });
+    }
+
+    private static void DrawTableSummaryRow(IContainer container, CommercialDocumentPdfModel model)
+    {
+        var sr = model.SummaryRow!;
+        container.Table(t =>
         {
             DefineTableColumns(t, model);
 
-            t.Header(h =>
-            {
-                for (var i = 0; i < model.Columns.Count; i++)
-                {
-                    var col = model.Columns[i];
-                    var cell = h.Cell().Element(TableHeaderCell);
-                    ApplyAlign(cell, col.Align).Text(col.Header).SemiBold().FontSize(9).FontColor(TextPrimary);
-                }
-            });
-
-            var rowIndex = 0;
-            foreach (var row in model.Rows)
-            {
-                var bg = rowIndex % 2 == 0 ? TableRowEven : TableRowAlt;
-                for (var i = 0; i < model.Columns.Count; i++)
-                {
-                    var col = model.Columns[i];
-                    var cell = t.Cell().Element(c => TableBodyCell(c, bg));
-                    ApplyAlign(cell, col.Align).Text(row[i]).FontSize(9).FontColor(TextPrimary);
-                }
-
-                rowIndex++;
-            }
-
-            for (var i = 0; i < fillerCount; i++)
-            {
-                for (var j = 0; j < model.Columns.Count; j++)
-                    t.Cell().Element(c => TableFillerCell(c, TableRowEven)).Text("").FontSize(9);
-            }
-
-            if (model.SummaryRow != null)
-            {
-                var sr = model.SummaryRow;
-                t.Cell().ColumnSpan((uint)sr.LeadingSpan).Element(TableSummaryCell).AlignLeft().Text(sr.Label)
-                    .SemiBold().FontSize(9).FontColor(TextPrimary);
-                foreach (var v in sr.Values)
-                    t.Cell().Element(TableSummaryCell).AlignRight().Text(v).SemiBold().FontSize(9).FontColor(TextPrimary);
-            }
+            t.Cell().ColumnSpan((uint)sr.LeadingSpan).Element(TableSummaryCell).AlignLeft().Text(sr.Label)
+                .SemiBold().FontSize(9).FontColor(TextPrimary);
+            foreach (var v in sr.Values)
+                t.Cell().Element(TableSummaryCell).AlignRight().Text(v).SemiBold().FontSize(9).FontColor(TextPrimary);
         });
-    }
-
-    private static float EstimateBottomBoxesHeight(CommercialDocumentPdfModel model) =>
-        model.ShowTaxAndTtcInTotalsBox ? 104f : 72f;
-
-    private static float EstimateNoteBlockHeight(string? note)
-    {
-        if (string.IsNullOrWhiteSpace(note))
-            return 0f;
-
-        const float charsPerLine = 95f;
-        const float lineHeight = 14f;
-        var lines = Math.Max(1, (int)Math.Ceiling(note.Length / charsPerLine));
-        return 6f + lines * lineHeight;
-    }
-
-    /// <summary>
-    /// Estimates empty rows so the table grows toward the totals boxes while keeping page 1 intact.
-    /// </summary>
-    private static int EstimateFillerRowCount(CommercialDocumentPdfModel model)
-    {
-        const float pageHeight = 842f;
-        const float topMargin = 28f;
-        const float bottomMargin = 32f;
-        const float headerHeight = HeaderBlockHeight;
-        const float footerHeight = 72f;
-        const float mainSpacing = 16f;
-        const float tableHeaderRow = 30f;
-        const float dataRowHeight = 32f;
-        const float fillerRowHeight = 25f;
-        const float boxesSpacing = 4f;
-        const float bottomRowPaddingTop = 4f;
-        const float layoutSlack = 24f;
-
-        var infoLines = Math.Max(
-            model.DocumentInfoLines.Count(l => !string.IsNullOrWhiteSpace(l.Value)),
-            model.PartyInfoLines.Count(l => !string.IsNullOrWhiteSpace(l.Value)));
-        var infoPanelHeight = 28f + Math.Max(1, infoLines) * 18f;
-
-        var hasNote = !string.IsNullOrWhiteSpace(model.Note);
-        var noteHeight = EstimateNoteBlockHeight(model.Note);
-        var boxesHeight = EstimateBottomBoxesHeight(model);
-        var summaryRow = model.SummaryRow != null ? 30f : 0f;
-
-        // main.Column spacing between info → table → [note] → bottom boxes
-        var mainItemCount = hasNote ? 4 : 3;
-        var columnSpacing = (mainItemCount - 1) * mainSpacing;
-
-        var content = pageHeight - topMargin - bottomMargin - headerHeight - footerHeight;
-        var reserved = infoPanelHeight
-                       + columnSpacing
-                       + tableHeaderRow + summaryRow
-                       + model.Rows.Count * dataRowHeight
-                       + noteHeight
-                       + boxesSpacing + boxesHeight
-                       + bottomRowPaddingTop
-                       + layoutSlack;
-
-        var available = content - reserved;
-        if (available <= 0)
-            return 0;
-
-        return Math.Max(0, (int)Math.Floor(available / fillerRowHeight));
     }
 
     private static void DefineTableColumns(TableDescriptor table, CommercialDocumentPdfModel model)
@@ -360,14 +300,6 @@ public static class CommercialDocumentPdfRenderer
     private static IContainer TableBodyCell(IContainer c, string backgroundHex) =>
         c.Background(backgroundHex)
             .Border(0.5f)
-            .BorderColor(TableBorder)
-            .PaddingVertical(6)
-            .PaddingHorizontal(6);
-
-    private static IContainer TableFillerCell(IContainer c, string backgroundHex) =>
-        c.Background(backgroundHex)
-            .BorderLeft(0.5f)
-            .BorderRight(0.5f)
             .BorderColor(TableBorder)
             .PaddingVertical(6)
             .PaddingHorizontal(6);
