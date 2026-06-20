@@ -17,6 +17,10 @@ public partial class BLListRow : ObservableObject
     [ObservableProperty] private bool _isSelected;
     [ObservableProperty] private string _invoicedLabel = string.Empty;
 
+    public bool HasInvoicedLabel => !string.IsNullOrEmpty(InvoicedLabel);
+
+    partial void OnInvoicedLabelChanged(string value) => OnPropertyChanged(nameof(HasInvoicedLabel));
+
     public bool CanInvoice => Bl.FactureId == null;
 
     public static BLListRow Create(BonLivraison bl, string clientNom, string devise, ILocaleService locale)

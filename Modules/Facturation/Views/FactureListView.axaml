@@ -5,6 +5,15 @@
              x:Class="GestionCommerciale.Modules.Facturation.Views.FactureListView"
              x:Name="FactureListRoot"
              x:DataType="vm:FactureListViewModel">
+  <UserControl.Styles>
+    <Style Selector="Border.facture-overdue">
+      <Setter Property="Background" Value="#FEE2E2"/>
+    </Style>
+    <Style Selector="Border.facture-overdue TextBlock.overdue-highlight">
+      <Setter Property="Foreground" Value="#DC2626"/>
+      <Setter Property="FontWeight" Value="SemiBold"/>
+    </Style>
+  </UserControl.Styles>
   <Grid RowDefinitions="Auto,*,Auto">
     <StackPanel Orientation="Horizontal" Spacing="8">
       <Button Content="{Binding BtnRefresh}" Command="{Binding LoadCommand}"/>
@@ -40,7 +49,7 @@
                beh:ListBoxOpenOnDoubleClick.OpenCommand="{Binding OpenSelectedCommand}">
         <ListBox.ItemTemplate>
           <DataTemplate DataType="vm:FactureListRow">
-            <Border Padding="10,8" Background="Transparent">
+            <Border Padding="10,8" Background="Transparent" Classes.facture-overdue="{Binding IsOverdue}">
               <Border.ContextMenu>
                 <ContextMenu Opening="OnRowContextMenuOpening">
                   <MenuItem Header="{Binding #FactureListRoot.((vm:FactureListViewModel)DataContext).MenuDeleteFacture}"
@@ -52,8 +61,8 @@
                 <TextBlock Grid.Column="0" Text="{Binding Facture.Numero}" VerticalAlignment="Center" TextTrimming="CharacterEllipsis" Margin="0,0,12,0"/>
                 <TextBlock Grid.Column="1" Text="{Binding ClientNom}" VerticalAlignment="Center" TextTrimming="CharacterEllipsis" Margin="0,0,12,0"/>
                 <TextBlock Grid.Column="2" Text="{Binding DateShort}" VerticalAlignment="Center" Margin="0,0,12,0"/>
-                <TextBlock Grid.Column="3" Text="{Binding EcheanceShort}" VerticalAlignment="Center" Margin="0,0,12,0"/>
-                <TextBlock Grid.Column="4" Text="{Binding StatutLabel}" VerticalAlignment="Center" TextTrimming="CharacterEllipsis" Margin="0,0,12,0"/>
+                <TextBlock Grid.Column="3" Classes="overdue-highlight" Text="{Binding EcheanceShort}" VerticalAlignment="Center" Margin="0,0,12,0"/>
+                <TextBlock Grid.Column="4" Classes="overdue-highlight" Text="{Binding StatutLabel}" VerticalAlignment="Center" TextTrimming="CharacterEllipsis" Margin="0,0,12,0"/>
                 <TextBlock Grid.Column="5" Text="{Binding TtcLabel}" VerticalAlignment="Center" FontWeight="SemiBold" TextAlignment="End" Margin="0,0,12,0"/>
                 <TextBlock Grid.Column="6" Text="{Binding NotePreview}" VerticalAlignment="Center" Opacity="0.85" TextTrimming="CharacterEllipsis"/>
               </Grid>

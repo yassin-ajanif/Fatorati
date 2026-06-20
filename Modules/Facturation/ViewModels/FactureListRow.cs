@@ -15,12 +15,14 @@ public sealed class FactureListRow
     public string HtLabel { get; init; } = string.Empty;
     public string TtcLabel { get; init; } = string.Empty;
     public string NotePreview { get; init; } = string.Empty;
+    public bool IsOverdue { get; init; }
 
     public static FactureListRow Create(FactureEntity f, string clientNom, string devise, ILocaleService locale)
     {
         var (ht, _, ttc) = DocumentTotalsHelper.FactureTotals(f.Lignes ?? [], f.RemiseGlobale);
         if (f.TotalTtc > 0)
             ttc = f.TotalTtc;
+        var isOverdue = !f.EstPayee && f.DateEcheance.Date < DateTime.Today;
         return new FactureListRow
         {
             Facture = f,
@@ -31,6 +33,7 @@ public sealed class FactureListRow
             HtLabel = locale.Tf("Doc_FmtHt", ht, devise),
             TtcLabel = $"{ttc:N2} {devise}",
             NotePreview = DocumentListFormat.NotePreview(f.Note),
+            IsOverdue = isOverdue,
         };
     }
 }
