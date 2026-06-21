@@ -7,6 +7,7 @@ using GestionCommerciale.Modules.AvoirFournisseur.Models;
 using GestionCommerciale.Modules.Auth.Services;
 using GestionCommerciale.Modules.Stock;
 using GestionCommerciale.Modules.Stock.Models;
+using GestionCommerciale.Modules.Stock.Services;
 using GestionCommerciale.Modules.Tiers.Models;
 using GestionCommerciale.Shared.Database;
 using GestionCommerciale.Shared.Helpers;
@@ -30,6 +31,7 @@ public partial class AvoirFournisseurEditViewModel : BaseViewModel
     private readonly IUiPreferencesService _uiPreferences;
     private readonly IPdfService _pdf;
     private readonly IAppSettingsService _settings;
+    private readonly IStockMovementService _stock;
 
     public AvoirFournisseurEditViewModel(
         IDbContextFactory<AppDbContext> dbFactory,
@@ -41,7 +43,8 @@ public partial class AvoirFournisseurEditViewModel : BaseViewModel
         ILocaleService locale,
         IUiPreferencesService uiPreferences,
         IPdfService pdf,
-        IAppSettingsService settings)
+        IAppSettingsService settings,
+        IStockMovementService stock)
     {
         _dbFactory = dbFactory;
         _numbers = numbers;
@@ -53,6 +56,7 @@ public partial class AvoirFournisseurEditViewModel : BaseViewModel
         _uiPreferences = uiPreferences;
         _pdf = pdf;
         _settings = settings;
+        _stock = stock;
         _locale.CultureApplied += (_, _) =>
         {
             RefreshUi();
@@ -383,6 +387,15 @@ public partial class AvoirFournisseurEditViewModel : BaseViewModel
 
             await using var db = await _dbFactory.CreateDbContextAsync(cancellationToken);
             db.Add(doc);
+            await db.SaveChangesAsync(cancellationToken);
+            await _stock.SyncAvoirFournisseurStockAsync(
+                db,
+                doc.Id,
+                doc.Numero,
+                doc.RetourMarchandise,
+                doc.Lignes.Select(l => (l.ProduitId, l.Quantite)),
+                _session.UserId,
+                cancellationToken);
             await db.SaveChangesAsync(cancellationToken);
             AvoirFournisseurId = doc.Id;
             Numero = doc.Numero;

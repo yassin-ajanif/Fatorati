@@ -523,24 +523,14 @@ public partial class AvoirEditViewModel : BaseViewModel
                 }
             }
 
-            await _stock.StripAvoirMovementsAsync(db, entity.Id, cancellationToken);
-            if (RetourMarchandise)
-            {
-                foreach (var l in Lignes)
-                {
-                    if (l.Quantite <= 0) continue;
-                    await _stock.ApplyMovementAsync(
-                        db,
-                        l.ProduitId,
-                        TypeMouvement.Entree,
-                        l.Quantite,
-                        "Avoir",
-                        entity.Id,
-                        $"Avoir {entity.Numero}",
-                        _session.UserId,
-                        cancellationToken);
-                }
-            }
+            await _stock.SyncAvoirStockAsync(
+                db,
+                entity.Id,
+                entity.Numero,
+                RetourMarchandise,
+                Lignes.Select(l => (l.ProduitId, l.Quantite)),
+                _session.UserId,
+                cancellationToken);
 
             await db.SaveChangesAsync(cancellationToken);
             CanEditDraft = false;
@@ -598,9 +588,9 @@ public partial class AvoirEditViewModel : BaseViewModel
         try
         {
             await using var db = await _dbFactory.CreateDbContextAsync(cancellationToken);
-            await _stock.StripAvoirMovementsAsync(db, id, cancellationToken);
-            var entity = await db.Avoirs.Include(a => a.Lignes).FirstAsync(a => a.Id == id, cancellationToken);
-            db.Avoirs.Remove(entity);
+            var tracked = await db.Avoirs.Include(a => a.Lignes).FirstAsync(a => a.Id == id, cancellationToken);
+            await _stock.SyncAvoirStockAsync(db, id, tracked.Numero, false, [], null, cancellationToken);
+            db.Avoirs.Remove(tracked);
             await db.SaveChangesAsync(cancellationToken);
             await _dialog.ShowInfoAsync(_locale.T("Avoir_Title"), _locale.T("Avoir_Deleted"), cancellationToken);
             Back();

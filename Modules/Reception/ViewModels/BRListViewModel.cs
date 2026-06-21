@@ -213,7 +213,7 @@ public partial class BRListViewModel : BaseViewModel
         {
             await using var db = await _dbFactory.CreateDbContextAsync(cancellationToken);
             var entity = await db.BonsReception.Include(b => b.Lignes).FirstAsync(b => b.Id == item.Id, cancellationToken);
-            await _stock.StripBonReceptionMovementsAsync(db, entity.Id, cancellationToken);
+            await _stock.SyncBonReceptionStockAsync(db, entity.Id, entity.Numero, [], null, cancellationToken);
             db.BonsReception.Remove(entity);
             await db.SaveChangesAsync(cancellationToken);
             if (Selected?.Br.Id == item.Id)

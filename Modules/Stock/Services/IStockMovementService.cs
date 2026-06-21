@@ -24,9 +24,29 @@ public interface IStockMovementService
         int? createdByUserId,
         CancellationToken cancellationToken = default);
 
-    /// <summary>Removes mouvements stock liés au BR et annule leur effet sur les quantités produit.</summary>
-    Task StripBonReceptionMovementsAsync(AppDbContext db, int bonReceptionId, CancellationToken cancellationToken = default);
+    Task SyncBonReceptionStockAsync(
+        AppDbContext db,
+        int bonReceptionId,
+        string noteDetail,
+        IEnumerable<(int ProduitId, decimal QuantiteRecue, decimal PrixUnitaireHT)> lines,
+        int? createdByUserId,
+        CancellationToken cancellationToken = default);
 
-    /// <summary>Removes mouvements stock liés à l'avoir et annule leur effet sur les quantités produit.</summary>
-    Task StripAvoirMovementsAsync(AppDbContext db, int avoirId, CancellationToken cancellationToken = default);
+    Task SyncAvoirStockAsync(
+        AppDbContext db,
+        int avoirId,
+        string noteDetail,
+        bool retourMarchandise,
+        IEnumerable<(int ProduitId, decimal Quantite)> lines,
+        int? createdByUserId,
+        CancellationToken cancellationToken = default);
+
+    Task SyncAvoirFournisseurStockAsync(
+        AppDbContext db,
+        int avoirFournisseurId,
+        string noteDetail,
+        bool retourMarchandise,
+        IEnumerable<(int ProduitId, decimal Quantite)> lines,
+        int? createdByUserId,
+        CancellationToken cancellationToken = default);
 }

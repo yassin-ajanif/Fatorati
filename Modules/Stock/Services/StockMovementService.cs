@@ -1,5 +1,6 @@
 using GestionCommerciale.Modules.Stock.Models;
 using GestionCommerciale.Shared.Database;
+using GestionCommerciale.Shared.Services;
 using Microsoft.EntityFrameworkCore;
 
 namespace GestionCommerciale.Modules.Stock.Services;
@@ -9,6 +10,15 @@ public sealed class StockMovementService : IStockMovementService
     public const string OrigineTypeBonLivraison = "BL";
     public const string OrigineTypeBonReception = "BR";
     public const string OrigineTypeAvoir = "Avoir";
+    public const string OrigineTypeAvoirFournisseur = "AvoirFournisseur";
+    public const string OrigineTypeImport = "Import";
+
+    private readonly ILocaleService _locale;
+
+    public StockMovementService(ILocaleService locale)
+    {
+        _locale = locale;
+    }
 
     public async Task ApplyMovementAsync(
         AppDbContext db,
@@ -46,7 +56,7 @@ public sealed class StockMovementService : IStockMovementService
         });
     }
 
-    public async Task ResyncBonLivraisonStockAsync(
+    public Task ResyncBonLivraisonStockAsync(
         AppDbContext db,
         int bonLivraisonId,
         string noteDetail,
@@ -54,100 +64,201 @@ public sealed class StockMovementService : IStockMovementService
         int? createdByUserId,
         CancellationToken cancellationToken = default)
     {
-        var old = await db.MouvementsStock
-            .Where(m => m.OrigineType == OrigineTypeBonLivraison && m.OrigineId == bonLivraisonId)
-            .ToListAsync(cancellationToken);
+        var desired = lines
+            .Where(l => l.ProduitId > 0 && l.QuantiteLivree > 0)
+            .GroupBy(l => l.ProduitId)
+            .ToDictionary(g => g.Key, g => -g.Sum(l => l.QuantiteLivree));
 
-        foreach (var m in old)
-        {
-            var produit = await db.Produits.FirstAsync(p => p.Id == m.ProduitId, cancellationToken);
-            switch (m.Type)
-            {
-                case TypeMouvement.Sortie:
-                    produit.StockActuel += m.Quantite;
-                    break;
-                case TypeMouvement.Entree:
-                    produit.StockActuel -= m.Quantite;
-                    break;
-                case TypeMouvement.Ajustement:
-                    produit.StockActuel -= m.Quantite;
-                    break;
-                default:
-                    throw new ArgumentOutOfRangeException(nameof(m.Type), m.Type, null);
-            }
-
-            db.MouvementsStock.Remove(m);
-        }
-
-        foreach (var (produitId, qte) in lines)
-        {
-            if (produitId <= 0 || qte <= 0) continue;
-            await ApplyMovementAsync(
-                db,
-                produitId,
-                TypeMouvement.Sortie,
-                qte,
-                OrigineTypeBonLivraison,
-                bonLivraisonId,
-                noteDetail,
-                createdByUserId,
-                cancellationToken);
-        }
+        return SyncDocumentStockAsync(
+            db,
+            OrigineTypeBonLivraison,
+            bonLivraisonId,
+            noteDetail,
+            desired,
+            createdByUserId,
+            useModificationNoteOnEdit: true,
+            onPositiveEntreeDelta: null,
+            cancellationToken);
     }
 
-    public async Task StripBonReceptionMovementsAsync(AppDbContext db, int bonReceptionId, CancellationToken cancellationToken = default)
+    public Task SyncBonReceptionStockAsync(
+        AppDbContext db,
+        int bonReceptionId,
+        string noteDetail,
+        IEnumerable<(int ProduitId, decimal QuantiteRecue, decimal PrixUnitaireHT)> lines,
+        int? createdByUserId,
+        CancellationToken cancellationToken = default)
     {
-        var old = await db.MouvementsStock
-            .Where(m => m.OrigineType == OrigineTypeBonReception && m.OrigineId == bonReceptionId)
-            .ToListAsync(cancellationToken);
+        var lineList = lines.Where(l => l.ProduitId > 0 && l.QuantiteRecue > 0).ToList();
+        var desired = lineList
+            .GroupBy(l => l.ProduitId)
+            .ToDictionary(g => g.Key, g => g.Sum(l => l.QuantiteRecue));
 
-        foreach (var m in old)
-        {
-            var produit = await db.Produits.FirstAsync(p => p.Id == m.ProduitId, cancellationToken);
-            switch (m.Type)
+        var prixByProduit = lineList
+            .GroupBy(l => l.ProduitId)
+            .ToDictionary(
+                g => g.Key,
+                g =>
+                {
+                    var totalQty = g.Sum(l => l.QuantiteRecue);
+                    var weighted = g.Sum(l => l.QuantiteRecue * l.PrixUnitaireHT);
+                    return totalQty > 0 ? weighted / totalQty : 0m;
+                });
+
+        return SyncDocumentStockAsync(
+            db,
+            OrigineTypeBonReception,
+            bonReceptionId,
+            noteDetail,
+            desired,
+            createdByUserId,
+            useModificationNoteOnEdit: true,
+            onPositiveEntreeDelta: async (produitId, entreeDelta, ct) =>
             {
-                case TypeMouvement.Entree:
-                    produit.StockActuel -= m.Quantite;
-                    break;
-                case TypeMouvement.Sortie:
-                    produit.StockActuel += m.Quantite;
-                    break;
-                case TypeMouvement.Ajustement:
-                    produit.StockActuel -= m.Quantite;
-                    break;
-                default:
-                    throw new ArgumentOutOfRangeException(nameof(m.Type), m.Type, null);
-            }
-
-            db.MouvementsStock.Remove(m);
-        }
+                if (!prixByProduit.TryGetValue(produitId, out var newPrice)) return;
+                var produit = await db.Produits.FirstAsync(p => p.Id == produitId, ct);
+                var oldQty = produit.StockActuel - entreeDelta;
+                var oldPrice = produit.PrixAchatHT;
+                var totalQty = oldQty + entreeDelta;
+                if (totalQty > 0)
+                    produit.PrixAchatHT = (oldQty * oldPrice + entreeDelta * newPrice) / totalQty;
+            },
+            cancellationToken);
     }
 
-    public async Task StripAvoirMovementsAsync(AppDbContext db, int avoirId, CancellationToken cancellationToken = default)
+    public Task SyncAvoirStockAsync(
+        AppDbContext db,
+        int avoirId,
+        string noteDetail,
+        bool retourMarchandise,
+        IEnumerable<(int ProduitId, decimal Quantite)> lines,
+        int? createdByUserId,
+        CancellationToken cancellationToken = default)
     {
-        var old = await db.MouvementsStock
-            .Where(m => m.OrigineType == OrigineTypeAvoir && m.OrigineId == avoirId)
+        var desired = retourMarchandise
+            ? lines
+                .Where(l => l.ProduitId > 0 && l.Quantite > 0)
+                .GroupBy(l => l.ProduitId)
+                .ToDictionary(g => g.Key, g => g.Sum(l => l.Quantite))
+            : [];
+
+        return SyncDocumentStockAsync(
+            db,
+            OrigineTypeAvoir,
+            avoirId,
+            noteDetail,
+            desired,
+            createdByUserId,
+            useModificationNoteOnEdit: true,
+            onPositiveEntreeDelta: null,
+            cancellationToken);
+    }
+
+    public Task SyncAvoirFournisseurStockAsync(
+        AppDbContext db,
+        int avoirFournisseurId,
+        string noteDetail,
+        bool retourMarchandise,
+        IEnumerable<(int ProduitId, decimal Quantite)> lines,
+        int? createdByUserId,
+        CancellationToken cancellationToken = default)
+    {
+        var desired = retourMarchandise
+            ? lines
+                .Where(l => l.ProduitId > 0 && l.Quantite > 0)
+                .GroupBy(l => l.ProduitId)
+                .ToDictionary(g => g.Key, g => -g.Sum(l => l.Quantite))
+            : [];
+
+        return SyncDocumentStockAsync(
+            db,
+            OrigineTypeAvoirFournisseur,
+            avoirFournisseurId,
+            noteDetail,
+            desired,
+            createdByUserId,
+            useModificationNoteOnEdit: true,
+            onPositiveEntreeDelta: null,
+            cancellationToken);
+    }
+
+    private async Task SyncDocumentStockAsync(
+        AppDbContext db,
+        string origineType,
+        int origineId,
+        string noteDetail,
+        IReadOnlyDictionary<int, decimal> desiredSignedByProduit,
+        int? createdByUserId,
+        bool useModificationNoteOnEdit,
+        Func<int, decimal, CancellationToken, Task>? onPositiveEntreeDelta,
+        CancellationToken cancellationToken)
+    {
+        var movements = await db.MouvementsStock
+            .Where(m => m.OrigineType == origineType && m.OrigineId == origineId)
             .ToListAsync(cancellationToken);
 
-        foreach (var m in old)
-        {
-            var produit = await db.Produits.FirstAsync(p => p.Id == m.ProduitId, cancellationToken);
-            switch (m.Type)
-            {
-                case TypeMouvement.Entree:
-                    produit.StockActuel -= m.Quantite;
-                    break;
-                case TypeMouvement.Sortie:
-                    produit.StockActuel += m.Quantite;
-                    break;
-                case TypeMouvement.Ajustement:
-                    produit.StockActuel -= m.Quantite;
-                    break;
-                default:
-                    throw new ArgumentOutOfRangeException(nameof(m.Type), m.Type, null);
-            }
+        var documentHasPriorMovements = movements.Count > 0;
 
-            db.MouvementsStock.Remove(m);
+        var currentSignedByProduit = movements
+            .GroupBy(m => m.ProduitId)
+            .ToDictionary(g => g.Key, g => g.Sum(SignedQuantite));
+
+        var produitIds = currentSignedByProduit.Keys
+            .Union(desiredSignedByProduit.Keys)
+            .ToList();
+
+        foreach (var produitId in produitIds)
+        {
+            currentSignedByProduit.TryGetValue(produitId, out var current);
+            desiredSignedByProduit.TryGetValue(produitId, out var desired);
+            var delta = desired - current;
+            if (delta == 0) continue;
+
+            var isAnnulation = desired == 0 && current != 0;
+            var isModification = useModificationNoteOnEdit && !isAnnulation && documentHasPriorMovements;
+            var note = isAnnulation
+                ? _locale.Tf("Stock_AnnulationNote", noteDetail)
+                : isModification
+                    ? _locale.Tf("Stock_ModificationNote", noteDetail)
+                    : noteDetail;
+
+            if (delta > 0)
+            {
+                await ApplyMovementAsync(
+                    db,
+                    produitId,
+                    TypeMouvement.Entree,
+                    delta,
+                    origineType,
+                    origineId,
+                    note,
+                    createdByUserId,
+                    cancellationToken);
+
+                if (onPositiveEntreeDelta != null)
+                    await onPositiveEntreeDelta(produitId, delta, cancellationToken);
+            }
+            else
+            {
+                await ApplyMovementAsync(
+                    db,
+                    produitId,
+                    TypeMouvement.Sortie,
+                    -delta,
+                    origineType,
+                    origineId,
+                    note,
+                    createdByUserId,
+                    cancellationToken);
+            }
         }
     }
+
+    private static decimal SignedQuantite(MouvementStock m) => m.Type switch
+    {
+        TypeMouvement.Sortie => -Math.Abs(m.Quantite),
+        TypeMouvement.Entree => Math.Abs(m.Quantite),
+        TypeMouvement.Ajustement => m.Quantite,
+        _ => m.Quantite
+    };
 }

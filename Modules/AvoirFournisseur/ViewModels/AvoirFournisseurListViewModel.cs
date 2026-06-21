@@ -2,6 +2,7 @@ using System.Collections.ObjectModel;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using GestionCommerciale.Modules.AvoirFournisseur.Models;
+using GestionCommerciale.Modules.Stock.Services;
 using GestionCommerciale.Modules.Auth.Services;
 using GestionCommerciale.Shared.Database;
 using GestionCommerciale.Shared.Helpers;
@@ -20,6 +21,7 @@ public partial class AvoirFournisseurListViewModel : BaseViewModel
     private readonly IServiceProvider _sp;
     private readonly IAppSettingsService _settings;
     private readonly ILocaleService _locale;
+    private readonly IStockMovementService _stock;
 
     public AvoirFournisseurListViewModel(
         IDbContextFactory<AppDbContext> dbFactory,
@@ -27,7 +29,8 @@ public partial class AvoirFournisseurListViewModel : BaseViewModel
         WorkspaceNavigator workspaceNavigator,
         IServiceProvider sp,
         IAppSettingsService settings,
-        ILocaleService locale)
+        ILocaleService locale,
+        IStockMovementService stock)
     {
         _dbFactory = dbFactory;
         _dialog = dialog;
@@ -35,6 +38,7 @@ public partial class AvoirFournisseurListViewModel : BaseViewModel
         _sp = sp;
         _settings = settings;
         _locale = locale;
+        _stock = stock;
         Title = _locale.T("Avf_Title");
         RefreshUi();
         _locale.CultureApplied += (_, _) => RefreshUi();
@@ -153,6 +157,7 @@ public partial class AvoirFournisseurListViewModel : BaseViewModel
             var entity = await db.Set<Models.AvoirFournisseur>()
                 .Include(d => d.Lignes)
                 .FirstAsync(d => d.Id == Selected.Doc.Id, cancellationToken);
+            await _stock.SyncAvoirFournisseurStockAsync(db, entity.Id, entity.Numero, false, [], null, cancellationToken);
             db.Remove(entity);
             await db.SaveChangesAsync(cancellationToken);
             await LoadAsync(cancellationToken);

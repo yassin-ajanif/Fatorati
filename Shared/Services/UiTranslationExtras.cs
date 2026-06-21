@@ -344,6 +344,9 @@ internal static class UiTranslationExtras
         ["Settings_BackupDone"] = ("Sauvegarde effectuée avec succès.", "تم النسخ الاحتياطي بنجاح."),
 
         ["Stock_DefaultMotif"] = ("Inventaire", "جرد"),
+        ["Stock_ImportNote"] = ("Import CSV", "استيراد CSV"),
+        ["Stock_AnnulationNote"] = ("Annulation {0}", "إلغاء {0}"),
+        ["Stock_ModificationNote"] = ("Modif {0}", "تعديل {0}"),
         ["ModePaiement_TPE"] = ("TPE", "محطة دفع"),
     };
 

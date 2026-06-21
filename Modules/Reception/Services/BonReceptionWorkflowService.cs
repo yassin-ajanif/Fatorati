@@ -1,6 +1,4 @@
-using GestionCommerciale.Modules.Facturation.Models;
 using GestionCommerciale.Modules.Reception.Models;
-using GestionCommerciale.Modules.Stock.Models;
 using GestionCommerciale.Modules.Stock.Services;
 using GestionCommerciale.Shared.Database;
 using Microsoft.EntityFrameworkCore;
@@ -48,38 +46,20 @@ public sealed class BonReceptionWorkflowService : IBonReceptionWorkflowService
         await trx.CommitAsync(cancellationToken);
     }
 
-    private async Task ReplayBonReceptionLinesIntoStockAsync(
+    private Task ReplayBonReceptionLinesIntoStockAsync(
         AppDbContext db,
         BonReception br,
         int? userId,
         CancellationToken cancellationToken)
     {
-        await _stock.StripBonReceptionMovementsAsync(db, br.Id, cancellationToken);
-
-        foreach (var ligne in br.Lignes.OrderBy(l => l.Id))
-        {
-            if (ligne.QuantiteRecue <= 0) continue;
-
-            var produit = await db.Produits.FirstAsync(p => p.Id == ligne.ProduitId, cancellationToken);
-            var oldQty = produit.StockActuel;
-            var oldPrice = produit.PrixAchatHT;
-            var newQty = ligne.QuantiteRecue;
-            var newPrice = ligne.PrixUnitaireHT;
-
-            var totalQty = oldQty + newQty;
-            if (totalQty > 0)
-                produit.PrixAchatHT = (oldQty * oldPrice + newQty * newPrice) / totalQty;
-
-            await _stock.ApplyMovementAsync(
-                db,
-                ligne.ProduitId,
-                TypeMouvement.Entree,
-                ligne.QuantiteRecue,
-                StockMovementService.OrigineTypeBonReception,
-                br.Id,
-                br.Numero,
-                userId,
-                cancellationToken);
-        }
+        return _stock.SyncBonReceptionStockAsync(
+            db,
+            br.Id,
+            br.Numero,
+            br.Lignes
+                .Where(l => l.QuantiteRecue > 0)
+                .Select(l => (l.ProduitId, l.QuantiteRecue, l.PrixUnitaireHT)),
+            userId,
+            cancellationToken);
     }
 }

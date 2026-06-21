@@ -241,7 +241,7 @@ public partial class BREditViewModel : BaseViewModel
         {
             await using var db = await _dbFactory.CreateDbContextAsync(cancellationToken);
             var entity = await db.BonsReception.Include(b => b.Lignes).FirstAsync(b => b.Id == id, cancellationToken);
-            await _stock.StripBonReceptionMovementsAsync(db, entity.Id, cancellationToken);
+            await _stock.SyncBonReceptionStockAsync(db, entity.Id, entity.Numero, [], null, cancellationToken);
             db.BonsReception.Remove(entity);
             await db.SaveChangesAsync(cancellationToken);
             await _dialog.ShowInfoAsync(_locale.T("BR_DlgShort"), _locale.T("BR_Deleted"), cancellationToken);

@@ -358,20 +358,18 @@ public partial class PosViewModel : BaseViewModel
                     PrixUnitaireHT = l.PrixUnitaireHt,
                     TauxTVA = l.TauxTva
                 });
-
-                await _stock.ApplyMovementAsync(
-                    db,
-                    l.ProduitId,
-                    TypeMouvement.Entree,
-                    l.Quantite,
-                    "Avoir",
-                    null,
-                    $"Avoir {num}",
-                    null,
-                    cancellationToken);
             }
 
             db.Avoirs.Add(avoir);
+            await db.SaveChangesAsync(cancellationToken);
+            await _stock.SyncAvoirStockAsync(
+                db,
+                avoir.Id,
+                avoir.Numero,
+                true,
+                avoir.Lignes.Select(l => (l.ProduitId, l.Quantite)),
+                null,
+                cancellationToken);
             await db.SaveChangesAsync(cancellationToken);
             await trx.CommitAsync(cancellationToken);
 

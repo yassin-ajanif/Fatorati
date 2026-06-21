@@ -1,5 +1,4 @@
 using GestionCommerciale.Modules.Facturation.Models;
-using GestionCommerciale.Modules.Stock.Models;
 using GestionCommerciale.Modules.Stock.Services;
 using GestionCommerciale.Shared.Database;
 using GestionCommerciale.Shared.Helpers;
@@ -48,23 +47,14 @@ public sealed class AvoirWorkflowService : IAvoirWorkflowService
                 throw new InvalidOperationException("Montant avoir supérieur au reste disponible sur la facture.");
         }
 
-        if (avoir.RetourMarchandise)
-        {
-            foreach (var ligne in avoir.Lignes)
-            {
-                if (ligne.Quantite <= 0) continue;
-                await _stock.ApplyMovementAsync(
-                    db,
-                    ligne.ProduitId,
-                    TypeMouvement.Entree,
-                    ligne.Quantite,
-                    "Avoir",
-                    avoir.Id,
-                    $"Avoir {avoir.Numero}",
-                    userId,
-                    cancellationToken);
-            }
-        }
+        await _stock.SyncAvoirStockAsync(
+            db,
+            avoir.Id,
+            avoir.Numero,
+            avoir.RetourMarchandise,
+            avoir.Lignes.Select(l => (l.ProduitId, l.Quantite)),
+            userId,
+            cancellationToken);
 
         await db.SaveChangesAsync(cancellationToken);
         await trx.CommitAsync(cancellationToken);

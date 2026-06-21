@@ -254,8 +254,8 @@ public partial class AvoirListViewModel : BaseViewModel
         try
         {
             await using var db = await _dbFactory.CreateDbContextAsync(cancellationToken);
-            await _stock.StripAvoirMovementsAsync(db, item.Id, cancellationToken);
             var entity = await db.Avoirs.Include(a => a.Lignes).FirstAsync(a => a.Id == item.Id, cancellationToken);
+            await _stock.SyncAvoirStockAsync(db, item.Id, entity.Numero, false, [], null, cancellationToken);
             db.Avoirs.Remove(entity);
             await db.SaveChangesAsync(cancellationToken);
 

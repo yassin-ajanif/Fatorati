@@ -182,6 +182,11 @@ public partial class StockMainViewModel : BaseViewModel
             .Select(m => m.OrigineId!.Value)
             .Distinct()
             .ToList();
+        var avoirFournisseurIds = movements
+            .Where(m => m.OrigineType == StockMovementService.OrigineTypeAvoirFournisseur && m.OrigineId.HasValue)
+            .Select(m => m.OrigineId!.Value)
+            .Distinct()
+            .ToList();
 
         var blParties = blIds.Count == 0
             ? []
@@ -204,9 +209,17 @@ public partial class StockMainViewModel : BaseViewModel
                 .Select(a => new { a.Id, a.ClientId })
                 .ToListAsync(cancellationToken);
 
+        var avoirFournisseurParties = avoirFournisseurIds.Count == 0
+            ? []
+            : await db.AvoirsFournisseurs.AsNoTracking()
+                .Where(a => avoirFournisseurIds.Contains(a.Id))
+                .Select(a => new { a.Id, a.FournisseurId })
+                .ToListAsync(cancellationToken);
+
         var tierIds = blParties.Select(x => x.ClientId)
             .Concat(brParties.Select(x => x.FournisseurId))
             .Concat(avoirParties.Select(x => x.ClientId))
+            .Concat(avoirFournisseurParties.Select(x => x.FournisseurId))
             .Distinct()
             .ToList();
 
@@ -219,17 +232,20 @@ public partial class StockMainViewModel : BaseViewModel
         var blMap = blParties.ToDictionary(x => x.Id, x => tierNames.GetValueOrDefault(x.ClientId, string.Empty));
         var brMap = brParties.ToDictionary(x => x.Id, x => tierNames.GetValueOrDefault(x.FournisseurId, string.Empty));
         var avoirMap = avoirParties.ToDictionary(x => x.Id, x => tierNames.GetValueOrDefault(x.ClientId, string.Empty));
+        var avoirFournisseurMap = avoirFournisseurParties.ToDictionary(x => x.Id, x => tierNames.GetValueOrDefault(x.FournisseurId, string.Empty));
 
         foreach (var m in movements)
         {
             m.PartyName = m.OrigineType switch
             {
-                StockMovementService.OrigineTypeBonLivraison when m.OrigineId is int blId => blMap.GetValueOrDefault(blId),
-                StockMovementService.OrigineTypeBonReception when m.OrigineId is int brId => brMap.GetValueOrDefault(brId),
-                StockMovementService.OrigineTypeAvoir when m.OrigineId is int avoirId => avoirMap.GetValueOrDefault(avoirId),
+                StockMovementService.OrigineTypeBonLivraison when m.OrigineId is int blId => blMap.GetValueOrDefault(blId, string.Empty),
+                StockMovementService.OrigineTypeBonReception when m.OrigineId is int brId => brMap.GetValueOrDefault(brId, string.Empty),
+                StockMovementService.OrigineTypeAvoir when m.OrigineId is int avoirId => avoirMap.GetValueOrDefault(avoirId, string.Empty),
+                StockMovementService.OrigineTypeAvoirFournisseur when m.OrigineId is int avfId => avoirFournisseurMap.GetValueOrDefault(avfId, string.Empty),
                 _ => string.Empty
             };
-            m.PartyIsSupplier = m.OrigineType == StockMovementService.OrigineTypeBonReception;
+            m.PartyIsSupplier = m.OrigineType is StockMovementService.OrigineTypeBonReception
+                or StockMovementService.OrigineTypeAvoirFournisseur;
         }
     }
 

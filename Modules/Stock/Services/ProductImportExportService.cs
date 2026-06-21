@@ -10,10 +10,17 @@ namespace GestionCommerciale.Modules.Stock.Services;
 public sealed class ProductImportExportService : IProductImportExportService
 {
     private readonly IDbContextFactory<AppDbContext> _dbFactory;
+    private readonly IStockMovementService _stock;
+    private readonly ILocaleService _locale;
 
-    public ProductImportExportService(IDbContextFactory<AppDbContext> dbFactory)
+    public ProductImportExportService(
+        IDbContextFactory<AppDbContext> dbFactory,
+        IStockMovementService stock,
+        ILocaleService locale)
     {
         _dbFactory = dbFactory;
+        _stock = stock;
+        _locale = locale;
     }
 
     public async Task<byte[]> ExportCsvAsync(CancellationToken cancellationToken = default)
@@ -53,10 +60,11 @@ public sealed class ProductImportExportService : IProductImportExportService
         var imported = 0;
         var updated = 0;
         var errors = 0;
+        var importNote = _locale.T("Stock_ImportNote");
 
         await using var db = await _dbFactory.CreateDbContextAsync(cancellationToken);
-        var existingRefs = await db.Produits.Select(p => p.Reference).ToHashSetAsync(cancellationToken);
         var categoryCache = await db.Categories.ToDictionaryAsync(c => c.Nom, c => c.Id, cancellationToken);
+        var newProductOpeningStock = new Dictionary<string, decimal>(StringComparer.OrdinalIgnoreCase);
 
         for (var i = 1; i < lines.Length; i++)
         {
@@ -102,10 +110,25 @@ public sealed class ProductImportExportService : IProductImportExportService
                     existing.PrixAchatHT = prixAchatHt;
                     existing.PrixVenteHT = prixVenteHt;
                     existing.TauxTVA = tauxTva;
-                    existing.StockActuel = stockActuel;
                     existing.StockMinimum = stockMin;
                     existing.CategorieId = categorieId;
                     existing.Actif = actif;
+
+                    if (existing.StockActuel != stockActuel)
+                    {
+                        var delta = stockActuel - existing.StockActuel;
+                        await _stock.ApplyMovementAsync(
+                            db,
+                            existing.Id,
+                            TypeMouvement.Ajustement,
+                            delta,
+                            StockMovementService.OrigineTypeImport,
+                            null,
+                            importNote,
+                            null,
+                            cancellationToken);
+                    }
+
                     updated++;
                 }
                 else
@@ -119,11 +142,13 @@ public sealed class ProductImportExportService : IProductImportExportService
                         PrixAchatHT = prixAchatHt,
                         PrixVenteHT = prixVenteHt,
                         TauxTVA = tauxTva,
-                        StockActuel = stockActuel,
+                        StockActuel = 0,
                         StockMinimum = stockMin,
                         CategorieId = categorieId,
                         Actif = actif
                     });
+                    if (stockActuel != 0)
+                        newProductOpeningStock[reference] = stockActuel;
                     imported++;
                 }
             }
@@ -134,6 +159,25 @@ public sealed class ProductImportExportService : IProductImportExportService
         }
 
         await db.SaveChangesAsync(cancellationToken);
+
+        foreach (var (reference, openingStock) in newProductOpeningStock)
+        {
+            var produit = await db.Produits.FirstAsync(p => p.Reference == reference, cancellationToken);
+            await _stock.ApplyMovementAsync(
+                db,
+                produit.Id,
+                TypeMouvement.Ajustement,
+                openingStock,
+                StockMovementService.OrigineTypeImport,
+                null,
+                importNote,
+                null,
+                cancellationToken);
+        }
+
+        if (newProductOpeningStock.Count > 0)
+            await db.SaveChangesAsync(cancellationToken);
+
         return (imported, updated, errors);
     }
 
