@@ -378,6 +378,12 @@ public partial class BCVEditViewModel : BaseViewModel
             return;
         }
 
+        if (DocumentTotalsHelper.IsEffectivelyZeroTotal(TotalTtc))
+        {
+            await _dialog.ShowErrorAsync(_locale.T("BCC_Title"), _locale.T("Doc_ErrZeroTtc"), cancellationToken);
+            return;
+        }
+
         IsBusy = true;
         try
         {

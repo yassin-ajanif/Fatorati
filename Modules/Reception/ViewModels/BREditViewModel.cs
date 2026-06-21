@@ -459,6 +459,12 @@ public partial class BREditViewModel : BaseViewModel
             return;
         }
 
+        if (DocumentTotalsHelper.IsEffectivelyZeroTotal(TotalTtc))
+        {
+            await _dialog.ShowErrorAsync(_locale.T("BR_DlgShort"), _locale.T("Doc_ErrZeroTtc"), cancellationToken);
+            return;
+        }
+
         IsBusy = true;
         try
         {

@@ -694,6 +694,12 @@ public partial class FactureEditViewModel : BaseViewModel
             return;
         }
 
+        if (DocumentTotalsHelper.IsEffectivelyZeroTotal(TotalTtc))
+        {
+            await _dialog.ShowErrorAsync(_locale.T("Fact_Title"), _locale.T("Doc_ErrZeroTtc"), cancellationToken);
+            return;
+        }
+
         IsBusy = true;
         try
         {

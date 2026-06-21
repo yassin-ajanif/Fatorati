@@ -291,6 +291,7 @@ internal static class UiTranslationExtras
         ["Doc_FmtHt"] = ("HT {0:N2} {1}", "بدون ضريبة {0:N2} {1}"),
         ["Doc_FmtTva"] = ("TVA {0:N2} {1}", "ضريبة {0:N2} {1}"),
         ["Doc_FmtTtc"] = ("TTC {0:N2} {1}", "إجمالي {0:N2} {1}"),
+        ["Doc_ErrZeroTtc"] = ("Le total TTC doit être supérieur à zéro.", "يجب أن يكون الإجمالي أكبر من صفر."),
         ["Doc_FmtPaye"] = ("Payé {0:N2}", "مدفوع {0:N2}"),
         ["Devis_LineFmt"] = ("{0} × {1} HT rem {2}% TVA {3}%", "{0} × {1} خصم {2}% ضريبة {3}%"),
         ["Devis_ProduitNum"] = ("Produit #{0}", "منتج #{0}"),

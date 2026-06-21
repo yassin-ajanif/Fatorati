@@ -11,6 +11,11 @@ namespace GestionCommerciale.Shared.Helpers;
 
 public static class DocumentTotalsHelper
 {
+    public const decimal ZeroTotalTolerance = 0.005m;
+
+    public static bool IsEffectivelyZeroTotal(decimal amount) =>
+        Math.Abs(amount) <= ZeroTotalTolerance;
+
     public static decimal LigneHT(decimal qte, decimal puHt, decimal remisePct) =>
         qte * puHt * (1 - remisePct / 100m);
 

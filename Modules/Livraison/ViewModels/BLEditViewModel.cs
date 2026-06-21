@@ -525,6 +525,12 @@ public partial class BLEditViewModel : BaseViewModel
             return;
         }
 
+        if (DocumentTotalsHelper.IsEffectivelyZeroTotal(TotalTtc))
+        {
+            await _dialog.ShowErrorAsync(_locale.T("BL_DlgShort"), _locale.T("Doc_ErrZeroTtc"), cancellationToken);
+            return;
+        }
+
         IsBusy = true;
         try
         {

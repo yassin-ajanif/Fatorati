@@ -358,6 +358,12 @@ public partial class AvoirFournisseurEditViewModel : BaseViewModel
             return;
         }
 
+        if (DocumentTotalsHelper.IsEffectivelyZeroTotal(TotalTtc))
+        {
+            await _dialog.ShowErrorAsync(_locale.T("Avf_Title"), _locale.T("Doc_ErrZeroTtc"), cancellationToken);
+            return;
+        }
+
         IsBusy = true;
         try
         {
