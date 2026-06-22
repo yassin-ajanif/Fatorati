@@ -263,9 +263,9 @@ public sealed class PdfService : IPdfService
         if (blNums.Count > 0)
             docLines.Add(new("BL", string.Join(", ", blNums)));
 
-        var pay = SummarizePaiements(facture.Paiements);
-        if (!string.IsNullOrWhiteSpace(pay))
-            docLines.Add(new("Payé par", pay!));
+        // var pay = SummarizePaiements(facture.Paiements);
+        // if (!string.IsNullOrWhiteSpace(pay))
+        //     docLines.Add(new("Payé par", pay!));
         if (facture.RemiseGlobale > 0)
             docLines.Add(new("Remise globale", $"{facture.RemiseGlobale:N2} %"));
 
@@ -309,9 +309,9 @@ public sealed class PdfService : IPdfService
         if (brNums.Count > 0)
             docLines.Add(new("BR", string.Join(", ", brNums)));
 
-        var pay = SummarizePaiementsFournisseur(factureFournisseur.Paiements);
-        if (!string.IsNullOrWhiteSpace(pay))
-            docLines.Add(new("Payé par", pay!));
+        // var pay = SummarizePaiementsFournisseur(factureFournisseur.Paiements);
+        // if (!string.IsNullOrWhiteSpace(pay))
+        //     docLines.Add(new("Payé par", pay!));
         if (factureFournisseur.RemiseGlobale > 0)
             docLines.Add(new("Remise globale", $"{factureFournisseur.RemiseGlobale:N2} %"));
 
