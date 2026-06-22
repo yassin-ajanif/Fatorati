@@ -579,23 +579,23 @@ public sealed class PdfService : IPdfService
     {
         var columns = new List<PdfTableColumn>();
         if (v.ShowReference)
-            columns.Add(new PdfTableColumn("Réf.", 0.9f));
+            columns.Add(new PdfTableColumn("Réf.", 0.7f, PdfTextAlignment.Start));
         if (v.ShowDesignation)
-            columns.Add(new PdfTableColumn("Désignation", 2.2f));
+            columns.Add(new PdfTableColumn("Désignation", 2.5f, PdfTextAlignment.Start));
         if (v.ShowQuantite)
-            columns.Add(new PdfTableColumn(qtyHeader, 0.75f, PdfTextAlignment.End));
+            columns.Add(new PdfTableColumn(qtyHeader, 0.25f, PdfTextAlignment.Center));
         if (v.ShowConditionnement)
-            columns.Add(new PdfTableColumn("Unité", 0.65f));
+            columns.Add(new PdfTableColumn("Ute", 0.30f, PdfTextAlignment.Center));
         if (v.ShowPuHt)
-            columns.Add(new PdfTableColumn("PU HT", 0.85f, PdfTextAlignment.End));
+            columns.Add(new PdfTableColumn("PU HT", 0.55f, PdfTextAlignment.Center));
         if (v.ShowTva)
-            columns.Add(new PdfTableColumn("TVA %", 0.55f, PdfTextAlignment.End));
+            columns.Add(new PdfTableColumn("Tva", 0.25f, PdfTextAlignment.Center));
         if (v.ShowRemise)
-            columns.Add(new PdfTableColumn("Rem. %", 0.55f, PdfTextAlignment.End));
+            columns.Add(new PdfTableColumn("Rem. %", 0.35f, PdfTextAlignment.Center));
         if (v.ShowMontantHt)
-            columns.Add(new PdfTableColumn("Mnt HT", 0.85f, PdfTextAlignment.End));
+            columns.Add(new PdfTableColumn("Mnt HT", 0.55f, PdfTextAlignment.Center));
         if (v.ShowMontantTtc)
-            columns.Add(new PdfTableColumn("Mnt TTC", 0.9f, PdfTextAlignment.End));
+            columns.Add(new PdfTableColumn("Mnt TTC", 0.55f, PdfTextAlignment.Center));
         return columns;
     }
 
@@ -668,18 +668,18 @@ public sealed class PdfService : IPdfService
         if (v.ShowDesignation)
             columns.Add(new PdfTableColumn("Désignation", 2f));
         if (v.ShowQuantite)
-            columns.Add(new PdfTableColumn("Qté", 0.75f, PdfTextAlignment.End));
+            columns.Add(new PdfTableColumn("Qté", 0.45f, PdfTextAlignment.End));
 
         if (v.ShowPuHt)
-            columns.Add(new PdfTableColumn("PU HT", 0.85f, PdfTextAlignment.End));
+            columns.Add(new PdfTableColumn("PU HT", 0.55f, PdfTextAlignment.End));
         if (v.ShowRemise)
-            columns.Add(new PdfTableColumn("Rem. %", 0.55f, PdfTextAlignment.End));
+            columns.Add(new PdfTableColumn("Rem. %", 0.45f, PdfTextAlignment.End));
         if (v.ShowTva)
-            columns.Add(new PdfTableColumn("TVA %", 0.55f, PdfTextAlignment.End));
+            columns.Add(new PdfTableColumn("TVA %", 0.35f, PdfTextAlignment.End));
         if (v.ShowMontantHt)
-            columns.Add(new PdfTableColumn("Mnt HT", 0.85f, PdfTextAlignment.End));
+            columns.Add(new PdfTableColumn("Mnt HT", 0.55f, PdfTextAlignment.End));
         if (v.ShowMontantTtc)
-            columns.Add(new PdfTableColumn("Mnt TTC", 0.9f, PdfTextAlignment.End));
+            columns.Add(new PdfTableColumn("Mnt TTC", 0.6f, PdfTextAlignment.End));
         return columns;
     }
 
@@ -710,11 +710,11 @@ public sealed class PdfService : IPdfService
     [
         new("Réf.", 0.9f),
         new("Désignation", 2.2f),
-        new("Qté", 0.75f, PdfTextAlignment.End),
-        new("PU HT", 0.85f, PdfTextAlignment.End),
-        new("TVA %", 0.55f, PdfTextAlignment.End),
-        new("Mnt HT", 0.85f, PdfTextAlignment.End),
-        new("Mnt TTC", 0.9f, PdfTextAlignment.End)
+        new("Qté", 0.45f, PdfTextAlignment.End),
+        new("PU HT", 0.55f, PdfTextAlignment.End),
+        new("TVA %", 0.35f, PdfTextAlignment.End),
+        new("Mnt HT", 0.55f, PdfTextAlignment.End),
+        new("Mnt TTC", 0.6f, PdfTextAlignment.End)
     ];
 
     private static List<PdfKeyValueLine> PartyLines(DocumentPartyPdfInfo p, string roleLabel)

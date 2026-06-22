@@ -25,6 +25,8 @@ public static class CommercialDocumentPdfRenderer
     private const float HeaderLogoHeight = 78f;
     private const float HeaderCompanyFontSize = 16f;
     private const float HeaderDocumentKindFontSize = 17f;
+    private const float TableFontSize = 9f;
+    private const float TableCellPaddingHorizontal = 2f;
 
     public static byte[] Render(CommercialDocumentPdfModel model, byte[]? logoBytes)
     {
@@ -236,7 +238,8 @@ public static class CommercialDocumentPdfRenderer
                         {
                             var col = model.Columns[i];
                             var cell = h.Cell().Element(TableHeaderCell);
-                            ApplyAlign(cell, col.Align).Text(col.Header).SemiBold().FontSize(9).FontColor(TextPrimary);
+                            ApplyAlign(cell, col.Align)
+                                .Text(col.Header).SemiBold().FontSize(TableFontSize).FontColor(TextPrimary);
                         }
                     });
 
@@ -248,7 +251,8 @@ public static class CommercialDocumentPdfRenderer
                         {
                             var col = model.Columns[i];
                             var cell = t.Cell().Element(c => TableBodyCell(c, bg).ShowEntire());
-                            ApplyAlign(cell, col.Align).Text(row[i]).FontSize(9).FontColor(TextPrimary);
+                            ApplyAlign(cell, col.Align)
+                                .Text(row[i]).FontSize(TableFontSize).FontColor(TextPrimary);
                         }
 
                         rowIndex++;
@@ -272,10 +276,14 @@ public static class CommercialDocumentPdfRenderer
         {
             DefineTableColumns(t, model);
 
-            t.Cell().ColumnSpan((uint)sr.LeadingSpan).Element(TableSummaryCell).AlignLeft().Text(sr.Label)
-                .SemiBold().FontSize(9).FontColor(TextPrimary);
-            foreach (var v in sr.Values)
-                t.Cell().Element(TableSummaryCell).AlignRight().Text(v).SemiBold().FontSize(9).FontColor(TextPrimary);
+            t.Cell().ColumnSpan((uint)sr.LeadingSpan).Element(TableSummaryCell).AlignLeft()
+                .Text(sr.Label).SemiBold().FontSize(9).FontColor(TextPrimary);
+            for (var i = 0; i < sr.Values.Count; i++)
+            {
+                var col = model.Columns[sr.LeadingSpan + i];
+                var cell = t.Cell().Element(TableSummaryCell);
+                ApplyAlign(cell, col.Align).Text(sr.Values[i]).SemiBold().FontSize(9).FontColor(TextPrimary).ClampLines(1);
+            }
         });
     }
 
@@ -311,17 +319,17 @@ public static class CommercialDocumentPdfRenderer
             .Border(0.5f)
             .BorderColor(TableBorder)
             .PaddingVertical(8)
-            .PaddingHorizontal(6);
+            .PaddingHorizontal(TableCellPaddingHorizontal);
 
     private static IContainer TableBodyCell(IContainer c, string backgroundHex) =>
         c.Background(backgroundHex)
             .PaddingVertical(6)
-            .PaddingHorizontal(6);
+            .PaddingHorizontal(TableCellPaddingHorizontal);
 
     private static IContainer TableSummaryCell(IContainer c) =>
         c.Background(SummaryRowBg)
             .Border(0.5f)
             .BorderColor(TableBorder)
             .PaddingVertical(8)
-            .PaddingHorizontal(6);
+            .PaddingHorizontal(TableCellPaddingHorizontal);
 }
