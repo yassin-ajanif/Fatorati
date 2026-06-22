@@ -6,8 +6,8 @@
              x:Class="GestionCommerciale.Modules.Auth.Views.AppShellView"
              x:DataType="vm:AppShellViewModel">
   <Grid>
-    <Grid ColumnDefinitions="240,*" Margin="12">
-      <Border Grid.Column="0" Padding="12" Background="{DynamicResource CourseraSurfaceBrush}" CornerRadius="12" BorderThickness="1">
+    <Grid ColumnDefinitions="200,*" Margin="12">
+      <Border Grid.Column="0" Padding="10" Background="{DynamicResource CourseraSurfaceBrush}" CornerRadius="12" BorderThickness="1">
       <ScrollViewer>
         <StackPanel Spacing="8">
           <TextBlock Text="{Binding UserLabel}" FontWeight="SemiBold" TextWrapping="Wrap" Margin="0,0,0,4"/>
@@ -123,7 +123,7 @@
        
       </ScrollViewer>
     </Border>
-    <ContentControl Grid.Column="1" Content="{Binding WorkspaceCurrentPage}" Margin="14,0,0,0"/>
+    <ContentControl Grid.Column="1" Content="{Binding WorkspaceCurrentPage}" Margin="12,0,0,0"/>
     </Grid>
 
     <!-- Global virtual keyboard overlay -->
