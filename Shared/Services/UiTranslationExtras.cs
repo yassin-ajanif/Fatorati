@@ -12,6 +12,7 @@ internal static class UiTranslationExtras
         ["Btn_Save"] = ("Enregistrer", "حفظ"),
         ["Btn_New"] = ("Nouveau", "جديد"),
         ["Btn_Pdf"] = ("PDF", "PDF"),
+        ["Btn_Print"] = ("Imprimer", "طباعة"),
         ["Btn_Apply"] = ("Appliquer", "تطبيق"),
         ["Btn_Connect"] = ("Se connecter", "دخول"),
         ["Btn_NewProduct"] = ("Nouveau produit", "منتج جديد"),

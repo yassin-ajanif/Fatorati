@@ -34,6 +34,7 @@ public partial class FactureEditViewModel : BaseViewModel
     private readonly ILocaleService _locale;
     private readonly IUiPreferencesService _uiPreferences;
     private readonly IPdfService _pdf;
+    private readonly IPdfPrintService _pdfPrint;
     private readonly IFactureBlLinkService _blLinkService;
     private readonly IFactureBccLinkService _bccLinkService;
 
@@ -50,7 +51,8 @@ public partial class FactureEditViewModel : BaseViewModel
         ICurrentUserSession session,
         ILocaleService locale,
         IUiPreferencesService uiPreferences,
-        IPdfService pdf)
+        IPdfService pdf,
+        IPdfPrintService pdfPrint)
     {
         _dbFactory = dbFactory;
         _numbers = numbers;
@@ -63,6 +65,7 @@ public partial class FactureEditViewModel : BaseViewModel
         _locale = locale;
         _uiPreferences = uiPreferences;
         _pdf = pdf;
+        _pdfPrint = pdfPrint;
         _blLinkService = blLinkService;
         _bccLinkService = bccLinkService;
         _locale.CultureApplied += (_, _) =>
@@ -108,6 +111,7 @@ public partial class FactureEditViewModel : BaseViewModel
     [ObservableProperty] private object? _addLineCatalogPick;
 
     [ObservableProperty] private string _btnPdf = string.Empty;
+    [ObservableProperty] private string _btnPrint = string.Empty;
     [ObservableProperty] private string _btnBack = string.Empty;
     [ObservableProperty] private string _btnSave = string.Empty;
     [ObservableProperty] private string _menuDeleteFacture = string.Empty;
@@ -179,6 +183,7 @@ public partial class FactureEditViewModel : BaseViewModel
     private void RefreshFactureUi()
     {
         BtnPdf = _locale.T("Btn_Pdf");
+        BtnPrint = _locale.T("Btn_Print");
         BtnBack = _locale.T("Btn_Back");
         BtnSave = _locale.T("Btn_Save");
         MenuDeleteFacture = _locale.T("Fact_MenuDelete");
@@ -938,16 +943,13 @@ public partial class FactureEditViewModel : BaseViewModel
     [RelayCommand]
     private async Task ExportPdfAsync(CancellationToken cancellationToken)
     {
-        if (FactureId is not { } id) return;
+        if (FactureId is not { }) return;
         try
         {
             IsBusy = true;
-            await using var db = await _dbFactory.CreateDbContextAsync(cancellationToken);
-            var f = await db.Factures.Include(x => x.Lignes).Include(x => x.Paiements).FirstAsync(x => x.Id == id, cancellationToken);
-            f.BonCommandeReference = BonCommandeReference.Trim();
-            var client = await db.Tiers.AsNoTracking().FirstAsync(t => t.Id == f.ClientId, cancellationToken);
-            var bytes = await _pdf.BuildFacturePdfAsync(f, DocumentPartyPdfInfo.FromTiers(client), cancellationToken);
-            var ok = await _dialog.SavePickedFileBytesAsync(_locale.T("Export_PdfPicker"), $"{f.Numero}.pdf", new[] { "*.pdf" }, bytes, cancellationToken);
+            var bytes = await BuildFacturePdfBytesAsync(cancellationToken);
+            if (bytes == null) return;
+            var ok = await _dialog.SavePickedFileBytesAsync(_locale.T("Export_PdfPicker"), $"{Numero}.pdf", new[] { "*.pdf" }, bytes, cancellationToken);
             if (ok)
                 await _dialog.ShowInfoAsync(_locale.T("Export_Pdf"), _locale.T("Export_Done"), cancellationToken);
         }
@@ -959,5 +961,36 @@ public partial class FactureEditViewModel : BaseViewModel
         {
             IsBusy = false;
         }
+    }
+
+    [RelayCommand]
+    private async Task PrintAsync(CancellationToken cancellationToken)
+    {
+        if (FactureId is not { }) return;
+        try
+        {
+            IsBusy = true;
+            var bytes = await BuildFacturePdfBytesAsync(cancellationToken);
+            if (bytes == null) return;
+            await _pdfPrint.PrintPdfAsync(bytes, Numero, cancellationToken);
+        }
+        catch (Exception ex)
+        {
+            await _dialog.ShowErrorAsync(_locale.T("Btn_Print"), ex.Message, cancellationToken);
+        }
+        finally
+        {
+            IsBusy = false;
+        }
+    }
+
+    private async Task<byte[]?> BuildFacturePdfBytesAsync(CancellationToken cancellationToken)
+    {
+        if (FactureId is not { } id) return null;
+        await using var db = await _dbFactory.CreateDbContextAsync(cancellationToken);
+        var f = await db.Factures.Include(x => x.Lignes).Include(x => x.Paiements).FirstAsync(x => x.Id == id, cancellationToken);
+        f.BonCommandeReference = BonCommandeReference.Trim();
+        var client = await db.Tiers.AsNoTracking().FirstAsync(t => t.Id == f.ClientId, cancellationToken);
+        return await _pdf.BuildFacturePdfAsync(f, DocumentPartyPdfInfo.FromTiers(client), cancellationToken);
     }
 }
