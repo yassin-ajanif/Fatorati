@@ -13,6 +13,8 @@ public class Facture : BaseEntity
     public decimal RemiseGlobale { get; set; }
     public decimal TotalTtc { get; set; }
     public string Note { get; set; } = string.Empty;
+    /// <summary>Editable bon de commande reference shown on the invoice (free text).</summary>
+    public string BonCommandeReference { get; set; } = string.Empty;
     public List<FactureLigne> Lignes { get; set; } = [];
     public List<Paiement> Paiements { get; set; } = [];
 }

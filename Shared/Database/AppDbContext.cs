@@ -83,6 +83,10 @@ public class AppDbContext : DbContext
         modelBuilder.Entity<BonCommandeClient>(e =>
         {
             e.HasMany(b => b.Lignes).WithOne(l => l.BonCommandeClient).HasForeignKey(l => l.BonCommandeClientId).OnDelete(DeleteBehavior.Cascade);
+            e.HasOne(b => b.Facture).WithMany()
+                .HasForeignKey(b => b.FactureId)
+                .OnDelete(DeleteBehavior.SetNull);
+            e.HasIndex(b => b.FactureId);
         });
 
         modelBuilder.Entity<BonCommande>(e =>

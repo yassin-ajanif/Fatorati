@@ -263,6 +263,10 @@ public sealed class PdfService : IPdfService
         if (blNums.Count > 0)
             docLines.Add(new("BL", string.Join(", ", blNums)));
 
+        var bccRef = await ResolveBonCommandeReferenceForPdfAsync(facture, cancellationToken);
+        if (!string.IsNullOrWhiteSpace(bccRef))
+            docLines.Add(new("BC", bccRef));
+
         // var pay = SummarizePaiements(facture.Paiements);
         // if (!string.IsNullOrWhiteSpace(pay))
         //     docLines.Add(new("Payé par", pay!));
@@ -344,6 +348,21 @@ public sealed class PdfService : IPdfService
             .OrderBy(b => b.Date).ThenBy(b => b.Numero)
             .Select(b => b.Numero)
             .ToListAsync(cancellationToken);
+    }
+
+    private async Task<string?> ResolveBonCommandeReferenceForPdfAsync(Facture facture, CancellationToken cancellationToken)
+    {
+        if (!string.IsNullOrWhiteSpace(facture.BonCommandeReference))
+            return facture.BonCommandeReference.Trim();
+
+        await using var db = await _dbFactory.CreateDbContextAsync(cancellationToken);
+        var linkedNums = await db.BonsCommandeClient.AsNoTracking()
+            .Where(b => b.FactureId == facture.Id)
+            .OrderBy(b => b.Date).ThenBy(b => b.Numero)
+            .Select(b => b.Numero)
+            .ToListAsync(cancellationToken);
+
+        return linkedNums.Count == 0 ? null : string.Join(", ", linkedNums);
     }
 
     public async Task<byte[]> BuildAvoirPdfAsync(Avoir avoir, DocumentPartyPdfInfo party, CancellationToken cancellationToken = default)
