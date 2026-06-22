@@ -2,13 +2,17 @@ namespace GestionCommerciale.Shared.Services;
 
 public sealed class PdfPrintService : IPdfPrintService
 {
+    private readonly ILocaleService _locale;
+
+    public PdfPrintService(ILocaleService locale) => _locale = locale;
+
     public async Task PrintPdfAsync(byte[] pdfBytes, string documentTitle, CancellationToken cancellationToken = default)
     {
         if (pdfBytes.Length == 0)
             throw new ArgumentException("Le contenu PDF est vide.", nameof(pdfBytes));
 
         var path = await WriteTempPdfAsync(pdfBytes, documentTitle, cancellationToken);
-        await WindowsPdfPrintHost.PrintAsync(path, documentTitle, cancellationToken);
+        await PdfPrintPreviewHost.ShowAsync(path, documentTitle, _locale, cancellationToken);
     }
 
     private static async Task<string> WriteTempPdfAsync(byte[] pdfBytes, string documentTitle, CancellationToken cancellationToken)

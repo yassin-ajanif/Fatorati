@@ -13,6 +13,7 @@
         <Button Content="{Binding BtnBack}" Command="{Binding BackCommand}"/>
         <Button Content="{Binding BtnSave}" Command="{Binding SaveCommand}" IsEnabled="{Binding CanEdit}"/>
         <Button Content="{Binding BtnPdf}" Command="{Binding ExportPdfCommand}"/>
+        <Button Content="{Binding BtnPrint}" Command="{Binding PrintCommand}"/>
         <Button Content="{Binding BtnToBl}" Command="{Binding ToBlCommand}"/>
       </StackPanel>
       <Border Background="{DynamicResource CourseraSurfaceBrush}" CornerRadius="8,8,0,0" Padding="10,8">

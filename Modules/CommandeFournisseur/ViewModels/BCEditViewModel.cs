@@ -30,6 +30,7 @@ public partial class BCEditViewModel : BaseViewModel
     private readonly ILocaleService _locale;
     private readonly IUiPreferencesService _uiPreferences;
     private readonly IPdfService _pdf;
+    private readonly IPdfPrintService _pdfPrint;
     private readonly IAppSettingsService _settings;
 
     public BCEditViewModel(
@@ -42,6 +43,7 @@ public partial class BCEditViewModel : BaseViewModel
         ILocaleService locale,
         IUiPreferencesService uiPreferences,
         IPdfService pdf,
+        IPdfPrintService pdfPrint,
         IAppSettingsService settings)
     {
         _dbFactory = dbFactory;
@@ -53,6 +55,7 @@ public partial class BCEditViewModel : BaseViewModel
         _locale = locale;
         _uiPreferences = uiPreferences;
         _pdf = pdf;
+        _pdfPrint = pdfPrint;
         _settings = settings;
         _locale.CultureApplied += (_, _) => RefreshBcUi();
         LineGridColumns.PropertyChanged += OnLineGridColumnsPropertyChanged;
@@ -63,6 +66,7 @@ public partial class BCEditViewModel : BaseViewModel
     }
 
     [ObservableProperty] private string _btnPdf = string.Empty;
+    [ObservableProperty] private string _btnPrint = string.Empty;
     [ObservableProperty] private string _btnBack = string.Empty;
     [ObservableProperty] private string _btnSave = string.Empty;
     [ObservableProperty] private string _btnToBr = string.Empty;
@@ -127,6 +131,7 @@ public partial class BCEditViewModel : BaseViewModel
     private void RefreshBcUi()
     {
         BtnPdf = _locale.T("Btn_Pdf");
+        BtnPrint = _locale.T("Btn_Print");
         BtnBack = _locale.T("Btn_Back");
         BtnSave = _locale.T("Btn_Save");
         BtnToBr = _locale.T("Btn_ToBR");
@@ -478,15 +483,13 @@ public partial class BCEditViewModel : BaseViewModel
     [RelayCommand]
     private async Task ExportPdfAsync(CancellationToken cancellationToken)
     {
-        if (BcId is not { } id) return;
+        if (BcId is not { }) return;
         try
         {
             IsBusy = true;
-            await using var db = await _dbFactory.CreateDbContextAsync(cancellationToken);
-            var b = await db.BonsCommande.Include(x => x.Lignes).FirstAsync(x => x.Id == id, cancellationToken);
-            var fournisseur = await db.Tiers.AsNoTracking().FirstAsync(t => t.Id == b.FournisseurId, cancellationToken);
-            var bytes = await _pdf.BuildBonCommandePdfAsync(b, DocumentPartyPdfInfo.FromTiers(fournisseur), cancellationToken);
-            var ok = await _dialog.SavePickedFileBytesAsync(_locale.T("Export_PdfPicker"), $"{b.Numero}.pdf", new[] { "*.pdf" }, bytes, cancellationToken);
+            var bytes = await BuildBcPdfBytesAsync(cancellationToken);
+            if (bytes == null) return;
+            var ok = await _dialog.SavePickedFileBytesAsync(_locale.T("Export_PdfPicker"), $"{Numero}.pdf", new[] { "*.pdf" }, bytes, cancellationToken);
             if (ok)
                 await _dialog.ShowInfoAsync(_locale.T("Export_Pdf"), _locale.T("Export_Done"), cancellationToken);
         }
@@ -498,5 +501,35 @@ public partial class BCEditViewModel : BaseViewModel
         {
             IsBusy = false;
         }
+    }
+
+    [RelayCommand]
+    private async Task PrintAsync(CancellationToken cancellationToken)
+    {
+        if (BcId is not { }) return;
+        try
+        {
+            IsBusy = true;
+            var bytes = await BuildBcPdfBytesAsync(cancellationToken);
+            if (bytes == null) return;
+            await _pdfPrint.PrintPdfAsync(bytes, Numero, cancellationToken);
+        }
+        catch (Exception ex)
+        {
+            await _dialog.ShowErrorAsync(_locale.T("Btn_Print"), ex.Message, cancellationToken);
+        }
+        finally
+        {
+            IsBusy = false;
+        }
+    }
+
+    private async Task<byte[]?> BuildBcPdfBytesAsync(CancellationToken cancellationToken)
+    {
+        if (BcId is not { } id) return null;
+        await using var db = await _dbFactory.CreateDbContextAsync(cancellationToken);
+        var b = await db.BonsCommande.Include(x => x.Lignes).FirstAsync(x => x.Id == id, cancellationToken);
+        var fournisseur = await db.Tiers.AsNoTracking().FirstAsync(t => t.Id == b.FournisseurId, cancellationToken);
+        return await _pdf.BuildBonCommandePdfAsync(b, DocumentPartyPdfInfo.FromTiers(fournisseur), cancellationToken);
     }
 }

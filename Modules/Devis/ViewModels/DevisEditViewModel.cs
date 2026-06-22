@@ -33,6 +33,7 @@ public partial class DevisEditViewModel : BaseViewModel
     private readonly ILocaleService _locale;
     private readonly IUiPreferencesService _uiPreferences;
     private readonly IPdfService _pdf;
+    private readonly IPdfPrintService _pdfPrint;
 
     public DevisEditViewModel(
         IDbContextFactory<AppDbContext> dbFactory,
@@ -44,7 +45,8 @@ public partial class DevisEditViewModel : BaseViewModel
         ICurrentUserSession session,
         ILocaleService locale,
         IUiPreferencesService uiPreferences,
-        IPdfService pdf)
+        IPdfService pdf,
+        IPdfPrintService pdfPrint)
     {
         _dbFactory = dbFactory;
         _numbers = numbers;
@@ -56,6 +58,7 @@ public partial class DevisEditViewModel : BaseViewModel
         _locale = locale;
         _uiPreferences = uiPreferences;
         _pdf = pdf;
+        _pdfPrint = pdfPrint;
         _locale.CultureApplied += (_, _) =>
         {
             RefreshDevisUi();
@@ -69,6 +72,7 @@ public partial class DevisEditViewModel : BaseViewModel
     }
 
     [ObservableProperty] private string _btnPdf = string.Empty;
+    [ObservableProperty] private string _btnPrint = string.Empty;
     [ObservableProperty] private string _btnBack = string.Empty;
     [ObservableProperty] private string _btnSave = string.Empty;
     [ObservableProperty] private string _btnToBl = string.Empty;
@@ -104,6 +108,7 @@ public partial class DevisEditViewModel : BaseViewModel
     private void RefreshDevisUi()
     {
         BtnPdf = _locale.T("Btn_Pdf");
+        BtnPrint = _locale.T("Btn_Print");
         BtnBack = _locale.T("Btn_Back");
         BtnSave = _locale.T("Btn_Save");
         BtnToBl = _locale.T("Btn_ToBL");
@@ -558,15 +563,13 @@ public partial class DevisEditViewModel : BaseViewModel
     [RelayCommand]
     private async Task ExportPdfAsync(CancellationToken cancellationToken)
     {
-        if (DevisId is not { } id) return;
+        if (DevisId is not { }) return;
         try
         {
             IsBusy = true;
-            await using var db = await _dbFactory.CreateDbContextAsync(cancellationToken);
-            var d = await db.Devis.Include(x => x.Lignes).FirstAsync(x => x.Id == id, cancellationToken);
-            var client = await db.Tiers.AsNoTracking().FirstAsync(t => t.Id == d.ClientId, cancellationToken);
-            var bytes = await _pdf.BuildDevisPdfAsync(d, DocumentPartyPdfInfo.FromTiers(client), cancellationToken);
-            var ok = await _dialog.SavePickedFileBytesAsync(_locale.T("Export_PdfPicker"), $"{d.Numero}.pdf", new[] { "*.pdf" }, bytes, cancellationToken);
+            var bytes = await BuildDevisPdfBytesAsync(cancellationToken);
+            if (bytes == null) return;
+            var ok = await _dialog.SavePickedFileBytesAsync(_locale.T("Export_PdfPicker"), $"{Numero}.pdf", new[] { "*.pdf" }, bytes, cancellationToken);
             if (ok)
                 await _dialog.ShowInfoAsync(_locale.T("Export_Pdf"), _locale.T("Export_Done"), cancellationToken);
         }
@@ -578,5 +581,35 @@ public partial class DevisEditViewModel : BaseViewModel
         {
             IsBusy = false;
         }
+    }
+
+    [RelayCommand]
+    private async Task PrintAsync(CancellationToken cancellationToken)
+    {
+        if (DevisId is not { }) return;
+        try
+        {
+            IsBusy = true;
+            var bytes = await BuildDevisPdfBytesAsync(cancellationToken);
+            if (bytes == null) return;
+            await _pdfPrint.PrintPdfAsync(bytes, Numero, cancellationToken);
+        }
+        catch (Exception ex)
+        {
+            await _dialog.ShowErrorAsync(_locale.T("Btn_Print"), ex.Message, cancellationToken);
+        }
+        finally
+        {
+            IsBusy = false;
+        }
+    }
+
+    private async Task<byte[]?> BuildDevisPdfBytesAsync(CancellationToken cancellationToken)
+    {
+        if (DevisId is not { } id) return null;
+        await using var db = await _dbFactory.CreateDbContextAsync(cancellationToken);
+        var d = await db.Devis.Include(x => x.Lignes).FirstAsync(x => x.Id == id, cancellationToken);
+        var client = await db.Tiers.AsNoTracking().FirstAsync(t => t.Id == d.ClientId, cancellationToken);
+        return await _pdf.BuildDevisPdfAsync(d, DocumentPartyPdfInfo.FromTiers(client), cancellationToken);
     }
 }

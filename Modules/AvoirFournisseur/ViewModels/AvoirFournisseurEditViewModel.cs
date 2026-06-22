@@ -30,6 +30,7 @@ public partial class AvoirFournisseurEditViewModel : BaseViewModel
     private readonly ILocaleService _locale;
     private readonly IUiPreferencesService _uiPreferences;
     private readonly IPdfService _pdf;
+    private readonly IPdfPrintService _pdfPrint;
     private readonly IAppSettingsService _settings;
     private readonly IStockMovementService _stock;
 
@@ -43,6 +44,7 @@ public partial class AvoirFournisseurEditViewModel : BaseViewModel
         ILocaleService locale,
         IUiPreferencesService uiPreferences,
         IPdfService pdf,
+        IPdfPrintService pdfPrint,
         IAppSettingsService settings,
         IStockMovementService stock)
     {
@@ -55,6 +57,7 @@ public partial class AvoirFournisseurEditViewModel : BaseViewModel
         _locale = locale;
         _uiPreferences = uiPreferences;
         _pdf = pdf;
+        _pdfPrint = pdfPrint;
         _settings = settings;
         _stock = stock;
         _locale.CultureApplied += (_, _) =>
@@ -91,6 +94,7 @@ public partial class AvoirFournisseurEditViewModel : BaseViewModel
     [ObservableProperty] private string _btnBack = string.Empty;
     [ObservableProperty] private string _btnSave = string.Empty;
     [ObservableProperty] private string _btnPdf = string.Empty;
+    [ObservableProperty] private string _btnPrint = string.Empty;
     [ObservableProperty] private string _lblFournisseur = string.Empty;
     [ObservableProperty] private string _wmFournisseurSearch = string.Empty;
     [ObservableProperty] private string _lblDate = string.Empty;
@@ -142,6 +146,7 @@ public partial class AvoirFournisseurEditViewModel : BaseViewModel
         BtnBack = _locale.T("Btn_Back");
         BtnSave = _locale.T("Btn_Save");
         BtnPdf = _locale.T("Btn_Pdf");
+        BtnPrint = _locale.T("Btn_Print");
         LblFournisseur = _locale.T("Avf_LblFournisseur");
         WmFournisseurSearch = _locale.T("Wm_SearchClient");
         LblDate = _locale.T("Avf_LblDate");
@@ -416,15 +421,13 @@ public partial class AvoirFournisseurEditViewModel : BaseViewModel
     [RelayCommand]
     private async Task ExportPdfAsync(CancellationToken cancellationToken)
     {
-        if (AvoirFournisseurId is not { } id) return;
+        if (AvoirFournisseurId is not { }) return;
         try
         {
             IsBusy = true;
-            await using var db = await _dbFactory.CreateDbContextAsync(cancellationToken);
-            var a = await db.AvoirsFournisseurs.Include(x => x.Lignes).FirstAsync(x => x.Id == id, cancellationToken);
-            var fournisseur = await db.Tiers.AsNoTracking().FirstAsync(t => t.Id == a.FournisseurId, cancellationToken);
-            var bytes = await _pdf.BuildAvoirFournisseurPdfAsync(a, DocumentPartyPdfInfo.FromTiers(fournisseur), cancellationToken);
-            var ok = await _dialog.SavePickedFileBytesAsync(_locale.T("Export_PdfPicker"), $"{a.Numero}.pdf", new[] { "*.pdf" }, bytes, cancellationToken);
+            var bytes = await BuildAvoirFournisseurPdfBytesAsync(cancellationToken);
+            if (bytes == null) return;
+            var ok = await _dialog.SavePickedFileBytesAsync(_locale.T("Export_PdfPicker"), $"{Numero}.pdf", new[] { "*.pdf" }, bytes, cancellationToken);
             if (ok)
                 await _dialog.ShowInfoAsync(_locale.T("Export_Pdf"), _locale.T("Export_Done"), cancellationToken);
         }
@@ -436,6 +439,36 @@ public partial class AvoirFournisseurEditViewModel : BaseViewModel
         {
             IsBusy = false;
         }
+    }
+
+    [RelayCommand]
+    private async Task PrintAsync(CancellationToken cancellationToken)
+    {
+        if (AvoirFournisseurId is not { }) return;
+        try
+        {
+            IsBusy = true;
+            var bytes = await BuildAvoirFournisseurPdfBytesAsync(cancellationToken);
+            if (bytes == null) return;
+            await _pdfPrint.PrintPdfAsync(bytes, Numero, cancellationToken);
+        }
+        catch (Exception ex)
+        {
+            await _dialog.ShowErrorAsync(_locale.T("Btn_Print"), ex.Message, cancellationToken);
+        }
+        finally
+        {
+            IsBusy = false;
+        }
+    }
+
+    private async Task<byte[]?> BuildAvoirFournisseurPdfBytesAsync(CancellationToken cancellationToken)
+    {
+        if (AvoirFournisseurId is not { } id) return null;
+        await using var db = await _dbFactory.CreateDbContextAsync(cancellationToken);
+        var a = await db.AvoirsFournisseurs.Include(x => x.Lignes).FirstAsync(x => x.Id == id, cancellationToken);
+        var fournisseur = await db.Tiers.AsNoTracking().FirstAsync(t => t.Id == a.FournisseurId, cancellationToken);
+        return await _pdf.BuildAvoirFournisseurPdfAsync(a, DocumentPartyPdfInfo.FromTiers(fournisseur), cancellationToken);
     }
 
     [RelayCommand]

@@ -69,6 +69,7 @@ public partial class AvoirEditViewModel : BaseViewModel
     private readonly ILocaleService _locale;
     private readonly IUiPreferencesService _uiPreferences;
     private readonly IPdfService _pdf;
+    private readonly IPdfPrintService _pdfPrint;
     private readonly IStockMovementService _stock;
     private readonly IAppSettingsService _settings;
 
@@ -83,6 +84,7 @@ public partial class AvoirEditViewModel : BaseViewModel
         ILocaleService locale,
         IUiPreferencesService uiPreferences,
         IPdfService pdf,
+        IPdfPrintService pdfPrint,
         IStockMovementService stock,
         IAppSettingsService settings)
     {
@@ -96,6 +98,7 @@ public partial class AvoirEditViewModel : BaseViewModel
         _locale = locale;
         _uiPreferences = uiPreferences;
         _pdf = pdf;
+        _pdfPrint = pdfPrint;
         _stock = stock;
         _settings = settings;
         _locale.CultureApplied += (_, _) =>
@@ -134,6 +137,7 @@ public partial class AvoirEditViewModel : BaseViewModel
     [ObservableProperty] private string _btnBack = string.Empty;
     [ObservableProperty] private string _btnSave = string.Empty;
     [ObservableProperty] private string _btnPdf = string.Empty;
+    [ObservableProperty] private string _btnPrint = string.Empty;
     [ObservableProperty] private string _menuDeleteAvoir = string.Empty;
     [ObservableProperty] private string _lblClient = string.Empty;
     [ObservableProperty] private string _wmClientSearch = string.Empty;
@@ -186,6 +190,7 @@ public partial class AvoirEditViewModel : BaseViewModel
         BtnBack = _locale.T("Btn_Back");
         BtnSave = _locale.T("Btn_Save");
         BtnPdf = _locale.T("Btn_Pdf");
+        BtnPrint = _locale.T("Btn_Print");
         MenuDeleteAvoir = _locale.T("Avoir_MenuDelete");
         LblClient = _locale.T("Lbl_Client");
         WmClientSearch = _locale.T("Wm_SearchClient");
@@ -551,15 +556,13 @@ public partial class AvoirEditViewModel : BaseViewModel
     [RelayCommand]
     private async Task ExportPdfAsync(CancellationToken cancellationToken)
     {
-        if (AvoirId is not { } id) return;
+        if (AvoirId is not { }) return;
         try
         {
             IsBusy = true;
-            await using var db = await _dbFactory.CreateDbContextAsync(cancellationToken);
-            var a = await db.Avoirs.Include(x => x.Lignes).FirstAsync(x => x.Id == id, cancellationToken);
-            var client = await db.Tiers.AsNoTracking().FirstAsync(t => t.Id == a.ClientId, cancellationToken);
-            var bytes = await _pdf.BuildAvoirPdfAsync(a, DocumentPartyPdfInfo.FromTiers(client), cancellationToken);
-            var ok = await _dialog.SavePickedFileBytesAsync(_locale.T("Export_PdfPicker"), $"{a.Numero}.pdf", new[] { "*.pdf" }, bytes, cancellationToken);
+            var bytes = await BuildAvoirPdfBytesAsync(cancellationToken);
+            if (bytes == null) return;
+            var ok = await _dialog.SavePickedFileBytesAsync(_locale.T("Export_PdfPicker"), $"{Numero}.pdf", new[] { "*.pdf" }, bytes, cancellationToken);
             if (ok)
                 await _dialog.ShowInfoAsync(_locale.T("Export_Pdf"), _locale.T("Export_Done"), cancellationToken);
         }
@@ -571,6 +574,36 @@ public partial class AvoirEditViewModel : BaseViewModel
         {
             IsBusy = false;
         }
+    }
+
+    [RelayCommand]
+    private async Task PrintAsync(CancellationToken cancellationToken)
+    {
+        if (AvoirId is not { }) return;
+        try
+        {
+            IsBusy = true;
+            var bytes = await BuildAvoirPdfBytesAsync(cancellationToken);
+            if (bytes == null) return;
+            await _pdfPrint.PrintPdfAsync(bytes, Numero, cancellationToken);
+        }
+        catch (Exception ex)
+        {
+            await _dialog.ShowErrorAsync(_locale.T("Btn_Print"), ex.Message, cancellationToken);
+        }
+        finally
+        {
+            IsBusy = false;
+        }
+    }
+
+    private async Task<byte[]?> BuildAvoirPdfBytesAsync(CancellationToken cancellationToken)
+    {
+        if (AvoirId is not { } id) return null;
+        await using var db = await _dbFactory.CreateDbContextAsync(cancellationToken);
+        var a = await db.Avoirs.Include(x => x.Lignes).FirstAsync(x => x.Id == id, cancellationToken);
+        var client = await db.Tiers.AsNoTracking().FirstAsync(t => t.Id == a.ClientId, cancellationToken);
+        return await _pdf.BuildAvoirPdfAsync(a, DocumentPartyPdfInfo.FromTiers(client), cancellationToken);
     }
 
     [RelayCommand]

@@ -15,46 +15,23 @@ public static class WindowsNativePdfPrinter
     public static Task<PrintResult> PrintAsync(
         string pdfPath,
         string documentTitle,
-        CancellationToken cancellationToken = default)
+        CancellationToken cancellationToken = default) =>
+        RunOnStaAsync(() => PrintWithSystemDialog(pdfPath, documentTitle), cancellationToken);
+
+    public static Task<PrintResult> PrintWithSettingsAsync(
+        string pdfPath,
+        string documentTitle,
+        DocumentPrintOptions settings,
+        CancellationToken cancellationToken = default) =>
+        RunOnStaAsync(() => PrintWithSettings(pdfPath, documentTitle, settings), cancellationToken);
+
+    private static PrintResult PrintWithSystemDialog(string pdfPath, string documentTitle)
     {
-        ArgumentException.ThrowIfNullOrWhiteSpace(pdfPath);
-
-        var tcs = new TaskCompletionSource<PrintResult>(TaskCreationOptions.RunContinuationsAsynchronously);
-        cancellationToken.Register(() => tcs.TrySetCanceled(cancellationToken));
-
-        var thread = new Thread(() =>
-        {
-            try
-            {
-                tcs.TrySetResult(PrintCore(pdfPath, documentTitle));
-            }
-            catch (Exception ex)
-            {
-                tcs.TrySetException(ex);
-            }
-        })
-        {
-            IsBackground = true,
-            Name = "PdfPrintDialog"
-        };
-        thread.SetApartmentState(ApartmentState.STA);
-        thread.Start();
-
-        return tcs.Task;
-    }
-
-    private static PrintResult PrintCore(string pdfPath, string documentTitle)
-    {
-        var fullPath = Path.GetFullPath(pdfPath);
-        if (!File.Exists(fullPath))
-            return Fail($"Le fichier PDF est introuvable : {fullPath}");
-
-        if (!fullPath.EndsWith(".pdf", StringComparison.OrdinalIgnoreCase))
-            return Fail("Seuls les fichiers PDF peuvent être imprimés.");
+        var fullPath = ValidatePdfPath(pdfPath);
 
         using var document = PdfDocument.Load(fullPath);
         using var printDocument = document.CreatePrintDocument(PdfPrintMode.ShrinkToMargin);
-        printDocument.DocumentName = string.IsNullOrWhiteSpace(documentTitle) ? "Document" : documentTitle;
+        printDocument.DocumentName = NormalizeTitle(documentTitle);
 
         using var dialog = new WinFormsPrintDialog
         {
@@ -71,6 +48,95 @@ public static class WindowsNativePdfPrinter
         return new PrintResult(Success: true, CancelledByUser: false, ErrorMessage: null);
     }
 
+    private static PrintResult PrintWithSettings(string pdfPath, string documentTitle, DocumentPrintOptions settings)
+    {
+        var fullPath = ValidatePdfPath(pdfPath);
+
+        using var document = PdfDocument.Load(fullPath);
+        using var printDocument = document.CreatePrintDocument(PdfPrintMode.ShrinkToMargin);
+        printDocument.DocumentName = NormalizeTitle(documentTitle);
+
+        var printer = new PrinterSettings
+        {
+            PrinterName = settings.PrinterName,
+            FromPage = Math.Max(1, settings.FromPage),
+            ToPage = Math.Max(settings.FromPage, settings.ToPage),
+            PrintRange = PrintRange.SomePages
+        };
+
+        if (settings.FromPage <= 1 && settings.ToPage >= document.PageCount)
+        {
+            printer.PrintRange = PrintRange.AllPages;
+        }
+        else
+        {
+            printer.PrintRange = PrintRange.SomePages;
+            printer.FromPage = Math.Max(1, settings.FromPage);
+            printer.ToPage = Math.Min(document.PageCount, settings.ToPage);
+        }
+
+        printer.DefaultPageSettings.Color = settings.Color;
+
+        if (!string.IsNullOrWhiteSpace(settings.PaperName))
+        {
+            foreach (PaperSize paper in printer.PaperSizes)
+            {
+                if (paper.PaperName.Equals(settings.PaperName, StringComparison.OrdinalIgnoreCase))
+                {
+                    printer.DefaultPageSettings.PaperSize = paper;
+                    break;
+                }
+            }
+        }
+
+        printDocument.PrinterSettings = printer;
+        printDocument.DefaultPageSettings = printer.DefaultPageSettings;
+        printDocument.Print();
+
+        return new PrintResult(Success: true, CancelledByUser: false, ErrorMessage: null);
+    }
+
+    private static string ValidatePdfPath(string pdfPath)
+    {
+        var fullPath = Path.GetFullPath(pdfPath);
+        if (!File.Exists(fullPath))
+            throw new FileNotFoundException($"Le fichier PDF est introuvable : {fullPath}", fullPath);
+
+        if (!fullPath.EndsWith(".pdf", StringComparison.OrdinalIgnoreCase))
+            throw new InvalidOperationException("Seuls les fichiers PDF peuvent être imprimés.");
+
+        return fullPath;
+    }
+
+    private static string NormalizeTitle(string documentTitle) =>
+        string.IsNullOrWhiteSpace(documentTitle) ? "Document" : documentTitle;
+
     private static PrintResult Fail(string message) =>
         new(Success: false, CancelledByUser: false, ErrorMessage: message);
+
+    private static Task<PrintResult> RunOnStaAsync(Func<PrintResult> action, CancellationToken cancellationToken)
+    {
+        var tcs = new TaskCompletionSource<PrintResult>(TaskCreationOptions.RunContinuationsAsynchronously);
+        cancellationToken.Register(() => tcs.TrySetCanceled(cancellationToken));
+
+        var thread = new Thread(() =>
+        {
+            try
+            {
+                tcs.TrySetResult(action());
+            }
+            catch (Exception ex)
+            {
+                tcs.TrySetException(ex);
+            }
+        })
+        {
+            IsBackground = true,
+            Name = "PdfPrintDialog"
+        };
+        thread.SetApartmentState(ApartmentState.STA);
+        thread.Start();
+
+        return tcs.Task;
+    }
 }
