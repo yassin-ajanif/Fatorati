@@ -130,7 +130,7 @@
                     </Grid.ColumnDefinitions>
                     <TextBox Grid.Column="0"
                              Text="{Binding Reference}"
-                             Watermark="Réf."
+                             Watermark="Référence."
                              Padding="6,4"
                              Margin="0,0,8,0"
                              IsReadOnly="{Binding !$parent[UserControl].((vm:AvoirFournisseurEditViewModel)DataContext).CanEditDraft}"

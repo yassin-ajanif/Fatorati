@@ -598,7 +598,7 @@ public sealed class PdfService : IPdfService
     {
         var columns = new List<PdfTableColumn>();
         if (v.ShowReference)
-            columns.Add(new PdfTableColumn("Réf.", 0.7f, PdfTextAlignment.Start));
+            columns.Add(new PdfTableColumn("Référence", 0.7f, PdfTextAlignment.Start));
         if (v.ShowDesignation)
             columns.Add(new PdfTableColumn("Désignation", 2.5f, PdfTextAlignment.Start));
         if (v.ShowQuantite)
@@ -683,7 +683,7 @@ public sealed class PdfService : IPdfService
     {
         var columns = new List<PdfTableColumn>();
         if (v.ShowReference)
-            columns.Add(new PdfTableColumn("Réf.", 0.9f));
+            columns.Add(new PdfTableColumn("Référence", 0.9f));
         if (v.ShowDesignation)
             columns.Add(new PdfTableColumn("Désignation", 2f));
         if (v.ShowQuantite)
@@ -727,7 +727,7 @@ public sealed class PdfService : IPdfService
 
     private static IReadOnlyList<PdfTableColumn> BrColumns() =>
     [
-        new("Réf.", 0.9f),
+        new("Référence", 0.9f),
         new("Désignation", 2.2f),
         new("Qté", 0.45f, PdfTextAlignment.End),
         new("PU HT", 0.55f, PdfTextAlignment.End),
@@ -736,13 +736,17 @@ public sealed class PdfService : IPdfService
         new("Mnt TTC", 0.6f, PdfTextAlignment.End)
     ];
 
+    private const string EmptyPartyFieldPlaceholder = "—";
+
     private static List<PdfKeyValueLine> PartyLines(DocumentPartyPdfInfo p, string roleLabel)
     {
-        var list = new List<PdfKeyValueLine> { new(roleLabel, p.Nom) };
+        var list = new List<PdfKeyValueLine> { new(roleLabel, p.Nom, EmphasizeValue: true) };
         if (!string.IsNullOrWhiteSpace(p.Ice))
             list.Add(new("ICE", p.Ice));
         if (!string.IsNullOrWhiteSpace(p.Adresse))
             list.Add(new("Adresse", p.Adresse));
+        list.Add(new("Téléphone", string.IsNullOrWhiteSpace(p.Telephone) ? EmptyPartyFieldPlaceholder : p.Telephone));
+        list.Add(new("Email", string.IsNullOrWhiteSpace(p.Email) ? EmptyPartyFieldPlaceholder : p.Email));
         return list;
     }
 

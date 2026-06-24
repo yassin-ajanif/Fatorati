@@ -21,15 +21,18 @@ public static class CommercialDocumentPdfRenderer
     private const string TableRowEven = "#FFFFFF";
     /// <summary>Rounded corners for panels, table frame, and bottom boxes (QuestPDF points).</summary>
     private const float ComponentCornerRadius = 8f;
-    private const float HeaderLogoWidth = 128f;
-    private const float HeaderLogoHeight = 78f;
+    private const float HeaderLogoHeight = 75f;
+    private const float HeaderLogoPaddingHorizontal = 24f;
+    private const float HeaderRowSpacing = 14f;
+    private const float HeaderSectionSpacing = 10f;
     private const float HeaderCompanyFontSize = 16f;
     private const float HeaderDocumentKindFontSize = 17f;
     private const float TableFontSize = 9f;
     private const float TableCellPaddingHorizontal = 2f;
 
-    public static byte[] Render(CommercialDocumentPdfModel model, byte[]? logoBytes)
+    public static byte[] Render(CommercialDocumentPdfModel model, byte[]? logoBytes, PdfLogoLayoutOptions? logoLayout = null)
     {
+        var layout = logoLayout ?? PdfLogoLayoutOptions.Default;
         if (model.Columns.Count == 0)
             throw new ArgumentException("PDF model must define at least one column.", nameof(model));
 
@@ -57,16 +60,30 @@ public static class CommercialDocumentPdfRenderer
                 page.MarginBottom(32);
                 page.DefaultTextStyle(x => x.FontSize(9.5f).FontColor(TextPrimary));
 
-                page.Header().Element(h => DrawHeader(h, model, logoBytes));
-
                 page.Content().Column(main =>
                 {
                     main.Spacing(16);
-                    main.Item().Row(row =>
+                    main.Item().Column(header =>
                     {
-                        row.RelativeItem().Element(c => DrawKeyValuePanel(c, model.DocumentInfoLines));
-                        row.Spacing(14);
-                        row.RelativeItem().Element(c => DrawKeyValuePanel(c, model.PartyInfoLines));
+                        header.Spacing(HeaderSectionSpacing);
+
+                        header.Item().Row(topRow =>
+                        {
+                            topRow.RelativeItem().Height(HeaderLogoHeight).AlignMiddle()
+                                .Element(c => DrawLogoOrCompanyName(c, model, logoBytes, layout));
+                            topRow.Spacing(HeaderRowSpacing);
+                            topRow.RelativeItem().Height(HeaderLogoHeight).AlignMiddle().AlignLeft()
+                                .Element(c => DrawDocumentKind(c, model));
+                        });
+
+                        header.Item().Row(bottomRow =>
+                        {
+                            bottomRow.RelativeItem()
+                                .Element(c => DrawKeyValuePanel(c, model.DocumentInfoLines));
+                            bottomRow.Spacing(HeaderRowSpacing);
+                            bottomRow.RelativeItem()
+                                .Element(c => DrawKeyValuePanel(c, model.PartyInfoLines));
+                        });
                     });
 
                     main.Item().ExtendVertical().Element(c => DrawTable(c, model));
@@ -97,43 +114,42 @@ public static class CommercialDocumentPdfRenderer
         return doc.GeneratePdf();
     }
 
-    private static void DrawHeader(IContainer header, CommercialDocumentPdfModel model, byte[]? logoBytes)
+    private static void DrawLogoOrCompanyName(
+        IContainer container,
+        CommercialDocumentPdfModel model,
+        byte[]? logoBytes,
+        PdfLogoLayoutOptions layout)
     {
-        header.PaddingBottom(8).Row(row =>
+        if (logoBytes is { Length: > 0 })
         {
-            row.RelativeItem().Height(HeaderLogoHeight).AlignMiddle().AlignLeft().Element(left =>
-            {
-                if (logoBytes is { Length: > 0 })
-                {
-                    left.Width(HeaderLogoWidth).Height(HeaderLogoHeight)
-                        .AlignMiddle()
-                        .CornerRadius(6)
-                        .Image(logoBytes)
-                        .FitArea();
-                }
-                else if (!string.IsNullOrWhiteSpace(model.CompanyName))
-                {
-                    left.Text(model.CompanyName.ToUpperInvariant())
-                        .Bold()
-                        .FontSize(HeaderCompanyFontSize)
-                        .FontColor(TextPrimary)
-                        .LetterSpacing(0.3f);
-                }
-            });
+            container.PaddingHorizontal(HeaderLogoPaddingHorizontal)
+                .Height(HeaderLogoHeight)
+                .Image(logoBytes)
+                .FitUnproportionally();
+            return;
+        }
 
-            row.Spacing(14);
+        if (!string.IsNullOrWhiteSpace(model.CompanyName))
+        {
+            container.PaddingHorizontal(HeaderLogoPaddingHorizontal)
+                .Height(HeaderLogoHeight).AlignMiddle().AlignLeft()
+                .Text(model.CompanyName.ToUpperInvariant())
+                .Bold()
+                .FontSize(HeaderCompanyFontSize)
+                .FontColor(TextPrimary)
+                .LetterSpacing(0.3f);
+        }
+    }
 
-            row.RelativeItem().Height(HeaderLogoHeight).AlignMiddle().AlignLeft().Element(right =>
-            {
-                if (!string.IsNullOrWhiteSpace(model.DocumentKindLabel))
-                {
-                    right.Text(model.DocumentKindLabel)
-                        .Bold()
-                        .FontSize(HeaderDocumentKindFontSize)
-                        .FontColor(TextPrimary);
-                }
-            });
-        });
+    private static void DrawDocumentKind(IContainer container, CommercialDocumentPdfModel model)
+    {
+        if (!string.IsNullOrWhiteSpace(model.DocumentKindLabel))
+        {
+            container.Text(model.DocumentKindLabel)
+                .Bold()
+                .FontSize(HeaderDocumentKindFontSize)
+                .FontColor(TextPrimary);
+        }
     }
 
     private static void DrawKeyValuePanel(IContainer container, IReadOnlyList<PdfKeyValueLine> lines)
