@@ -39,7 +39,7 @@ public sealed class PdfService : IPdfService
 
     private static string FmtQty(decimal value) => value.ToString("#,##0.##", PdfCulture);
 
-    private static string FmtUnitPrice(decimal value) => value.ToString("#,##0.##", PdfCulture);
+    private static string FmtUnitPrice(decimal value) => value.ToString("N2", PdfCulture);
 
     private static string FmtTvaPct(decimal value) => value.ToString("#,##0.##", PdfCulture);
 

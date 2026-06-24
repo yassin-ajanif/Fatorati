@@ -15,7 +15,7 @@ public static class CommercialDocumentPdfRenderer
     private const string TextPrimary = "#111827";
     private const string TextSecondary = "#4B5563";
     private const string TextMuted = "#6B7280";
-    private const string AmountBoxBg = "#FFFBEB";
+    private const string AmountBoxBg = PanelBg;
     private const string TtcBlue = "#3730A3";
     private const string SummaryRowBg = "#E5E7EB";
     private const string TableRowEven = "#FFFFFF";
@@ -72,7 +72,7 @@ public static class CommercialDocumentPdfRenderer
                             topRow.RelativeItem().Height(HeaderLogoHeight).AlignMiddle()
                                 .Element(c => DrawLogoOrCompanyName(c, model, logoBytes, layout));
                             topRow.Spacing(HeaderRowSpacing);
-                            topRow.RelativeItem().Height(HeaderLogoHeight).AlignMiddle().AlignLeft()
+                            topRow.RelativeItem().Height(HeaderLogoHeight).AlignMiddle().AlignCenter()
                                 .Element(c => DrawDocumentKind(c, model));
                         });
 
@@ -162,9 +162,15 @@ public static class CommercialDocumentPdfRenderer
             {
                 col.Item().Row(r =>
                 {
-                    r.AutoItem().Text(line.Key + " :").SemiBold().FontSize(9).FontColor(TextMuted);
+                    r.AutoItem().AlignBottom()
+                        .Text(line.Key + " :").SemiBold().FontSize(9).FontColor(TextMuted);
                     r.Spacing(8);
-                    r.RelativeItem().Text(line.Value).FontSize(9).FontColor(TextPrimary);
+                    var valueCell = r.RelativeItem().AlignBottom();
+                    var value = valueCell.Text(line.Value).FontColor(TextPrimary);
+                    if (line.EmphasizeValue)
+                        value.Bold().FontSize(11);
+                    else
+                        value.FontSize(9);
                 });
             }
         });
@@ -201,7 +207,7 @@ public static class CommercialDocumentPdfRenderer
                 {
                     col.Item().Row(r =>
                     {
-                        r.RelativeItem().Text("Taxe :").FontColor(TextSecondary);
+                        r.RelativeItem().Text("TVA (20%) :").FontColor(TextSecondary);
                         r.AutoItem().Text($"{model.TotalTva:N2} {model.Devise}").SemiBold();
                     });
                     col.Item().PaddingTop(4).LineHorizontal(0.5f).LineColor(TableBorder);
@@ -254,7 +260,7 @@ public static class CommercialDocumentPdfRenderer
                         {
                             var col = model.Columns[i];
                             var cell = h.Cell().Element(TableHeaderCell);
-                            ApplyAlign(cell, col.Align)
+                            ApplyHeaderAlign(cell, col)
                                 .Text(col.Header).SemiBold().FontSize(TableFontSize).FontColor(TextPrimary);
                         }
                     });
@@ -311,6 +317,15 @@ public static class CommercialDocumentPdfRenderer
                 cols.RelativeColumn(c.RelativeWidth);
         });
     }
+
+    private static bool UsesCenteredHeader(string header) =>
+        header.StartsWith("Réf", StringComparison.OrdinalIgnoreCase)
+        || header.Equals("Désignation", StringComparison.OrdinalIgnoreCase);
+
+    private static IContainer ApplyHeaderAlign(IContainer cell, PdfTableColumn col) =>
+        UsesCenteredHeader(col.Header)
+            ? cell.AlignMiddle().AlignCenter()
+            : ApplyAlign(cell, col.Align);
 
     private static IContainer ApplyAlign(IContainer cell, PdfTextAlignment align) =>
         align switch
