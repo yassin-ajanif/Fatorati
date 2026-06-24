@@ -48,7 +48,7 @@ public sealed class PdfService : IPdfService
     public async Task<byte[]> BuildDevisPdfAsync(Devis devis, DocumentPartyPdfInfo party, CancellationToken cancellationToken = default)
     {
         var cfg = await _settings.GetAsync(cancellationToken);
-        var refs = await LoadProductRefsAsync(devis.Lignes.Select(l => l.ProduitId), cancellationToken);
+        var meta = await LoadProductMetaAsync(devis.Lignes.Select(l => l.ProduitId), cancellationToken);
         var totals = DocumentTotalsHelper.DevisTotals(devis.Lignes, devis.RemiseGlobale);
         var vis = _uiPreferences.GetDocumentLineColumnVisibility("devis");
         var lineData = new List<StandardPdfLine>();
@@ -57,7 +57,7 @@ public sealed class PdfService : IPdfService
             var ht = DocumentTotalsHelper.LigneHT(l.Quantite, l.PrixUnitaireHT, l.Remise);
             var ttc = ht * (1 + l.TauxTVA / 100m);
             lineData.Add(new StandardPdfLine(
-                RefCell(refs, l.ProduitId),
+                RefCell(meta, l.ProduitId),
                 l.Designation,
                 FmtQty(l.Quantite),
                 l.Conditionnement,
@@ -86,20 +86,19 @@ public sealed class PdfService : IPdfService
     public async Task<byte[]> BuildBonLivraisonPdfAsync(BonLivraison bl, DocumentPartyPdfInfo party, CancellationToken cancellationToken = default)
     {
         var cfg = await _settings.GetAsync(cancellationToken);
-        var refs = await LoadProductRefsAsync(bl.Lignes.Select(l => l.ProduitId), cancellationToken);
+        var meta = await LoadProductMetaAsync(bl.Lignes.Select(l => l.ProduitId), cancellationToken);
         var blVis = _uiPreferences.GetDocumentLineColumnVisibility("bon_livraison");
-        decimal ht = 0, tva = 0;
-        var lineData = new List<BlPdfLine>();
+        var totals = DocumentTotalsHelper.BonLivraisonTotals(bl.Lignes);
+        var lineData = new List<StandardPdfLine>();
         foreach (var l in bl.Lignes)
         {
             var lht = DocumentTotalsHelper.LigneHT(l.QuantiteLivree, l.PrixUnitaireHT, l.Remise);
-            ht += lht;
-            tva += lht * (l.TauxTVA / 100m);
             var ttc = lht * (1 + l.TauxTVA / 100m);
-            lineData.Add(new BlPdfLine(
-                RefCell(refs, l.ProduitId),
+            lineData.Add(new StandardPdfLine(
+                RefCell(meta, l.ProduitId),
                 l.Designation,
                 FmtQty(l.QuantiteLivree),
+                UniteCell(meta, l.ProduitId),
                 FmtUnitPrice(l.PrixUnitaireHT),
                 FmtTvaPct(l.TauxTVA),
                 FmtMoney(l.Remise),
@@ -107,7 +106,7 @@ public sealed class PdfService : IPdfService
                 FmtMoney(ttc)));
         }
 
-        var (cols, rows) = BuildBlPdfTable(blVis, lineData);
+        var (cols, rows) = BuildStandardPdfTable(blVis, supportsLineRemise: true, "Qté", lineData);
 
         var docLines = new List<PdfKeyValueLine>
         {
@@ -115,33 +114,34 @@ public sealed class PdfService : IPdfService
             new("Date", bl.Date.ToString("dd/MM/yyyy"))
         };
 
-        var model = BaseModel(cfg, "BON DE LIVRAISON", docLines, PartyLines(party, "Client"), cols, rows, (ht, tva, ht + tva), bl.Note, blVis.ShowMontantTtc);
+        var model = BaseModel(cfg, "BON DE LIVRAISON", docLines, PartyLines(party, "Client"), cols, rows, totals, bl.Note, blVis.ShowMontantTtc);
         return CommercialDocumentPdfRenderer.Render(model, TryLoadLogoBytes(cfg.SocieteLogoPath));
     }
 
     public async Task<byte[]> BuildBonReceptionPdfAsync(BonReception br, DocumentPartyPdfInfo party, CancellationToken cancellationToken = default)
     {
         var cfg = await _settings.GetAsync(cancellationToken);
-        var refs = await LoadProductRefsAsync(br.Lignes.Select(l => l.ProduitId), cancellationToken);
-        decimal ht = 0, tva = 0;
-        var cols = BrColumns();
-        var rows = new List<IReadOnlyList<string>>();
+        var meta = await LoadProductMetaAsync(br.Lignes.Select(l => l.ProduitId), cancellationToken);
+        var vis = _uiPreferences.GetDocumentLineColumnVisibility("bon_reception");
+        var totals = DocumentTotalsHelper.BonReceptionTotals(br.Lignes);
+        var lineData = new List<StandardPdfLine>();
         foreach (var l in br.Lignes)
         {
             var lht = l.QuantiteRecue * l.PrixUnitaireHT;
-            ht += lht;
-            tva += lht * (l.TauxTVA / 100m);
             var ttc = lht * (1 + l.TauxTVA / 100m);
-            rows.Add([
-                RefCell(refs, l.ProduitId),
+            lineData.Add(new StandardPdfLine(
+                RefCell(meta, l.ProduitId),
                 l.Designation,
                 FmtQty(l.QuantiteRecue),
+                UniteCell(meta, l.ProduitId),
                 FmtUnitPrice(l.PrixUnitaireHT),
                 FmtTvaPct(l.TauxTVA),
+                FmtMoney(0),
                 FmtMoney(lht),
-                FmtMoney(ttc)
-            ]);
+                FmtMoney(ttc)));
         }
+
+        var (cols, rows) = BuildStandardPdfTable(vis, supportsLineRemise: false, "Qté", lineData);
 
         var docLines = new List<PdfKeyValueLine>
         {
@@ -149,14 +149,14 @@ public sealed class PdfService : IPdfService
             new("Date", br.Date.ToString("dd/MM/yyyy"))
         };
 
-        var model = BaseModel(cfg, "BON DE RÉCEPTION", docLines, PartyLines(party, "Fournisseur"), cols, rows, (ht, tva, ht + tva), br.Note);
+        var model = BaseModel(cfg, "BON DE RÉCEPTION", docLines, PartyLines(party, "Fournisseur"), cols, rows, totals, br.Note, vis.ShowMontantTtc);
         return CommercialDocumentPdfRenderer.Render(model, TryLoadLogoBytes(cfg.SocieteLogoPath));
     }
 
     public async Task<byte[]> BuildBonCommandePdfAsync(BonCommande bc, DocumentPartyPdfInfo party, CancellationToken cancellationToken = default)
     {
         var cfg = await _settings.GetAsync(cancellationToken);
-        var refs = await LoadProductRefsAsync(bc.Lignes.Select(l => l.ProduitId), cancellationToken);
+        var meta = await LoadProductMetaAsync(bc.Lignes.Select(l => l.ProduitId), cancellationToken);
         decimal ht = 0, tva = 0;
         var vis = _uiPreferences.GetDocumentLineColumnVisibility("bon_commande");
         var lineData = new List<StandardPdfLine>();
@@ -167,7 +167,7 @@ public sealed class PdfService : IPdfService
             tva += lht * (l.TauxTVA / 100m);
             var ttc = lht * (1 + l.TauxTVA / 100m);
             lineData.Add(new StandardPdfLine(
-                RefCell(refs, l.ProduitId),
+                RefCell(meta, l.ProduitId),
                 l.Designation,
                 FmtQty(l.QuantiteCommandee),
                 l.Conditionnement,
@@ -193,7 +193,7 @@ public sealed class PdfService : IPdfService
     public async Task<byte[]> BuildBonCommandeClientPdfAsync(BonCommandeClient bc, DocumentPartyPdfInfo party, CancellationToken cancellationToken = default)
     {
         var cfg = await _settings.GetAsync(cancellationToken);
-        var refs = await LoadProductRefsAsync(bc.Lignes.Select(l => l.ProduitId), cancellationToken);
+        var meta = await LoadProductMetaAsync(bc.Lignes.Select(l => l.ProduitId), cancellationToken);
         decimal ht = 0, tva = 0;
         var vis = _uiPreferences.GetDocumentLineColumnVisibility("bon_commande_client");
         var lineData = new List<StandardPdfLine>();
@@ -204,7 +204,7 @@ public sealed class PdfService : IPdfService
             tva += lht * (l.TauxTVA / 100m);
             var ttc = lht * (1 + l.TauxTVA / 100m);
             lineData.Add(new StandardPdfLine(
-                RefCell(refs, l.ProduitId),
+                RefCell(meta, l.ProduitId),
                 l.Designation,
                 FmtQty(l.QuantiteCommandee),
                 l.Conditionnement,
@@ -230,7 +230,7 @@ public sealed class PdfService : IPdfService
     public async Task<byte[]> BuildFacturePdfAsync(Facture facture, DocumentPartyPdfInfo party, CancellationToken cancellationToken = default)
     {
         var cfg = await _settings.GetAsync(cancellationToken);
-        var refs = await LoadProductRefsAsync(facture.Lignes.Select(l => l.ProduitId), cancellationToken);
+        var meta = await LoadProductMetaAsync(facture.Lignes.Select(l => l.ProduitId), cancellationToken);
         var totals = DocumentTotalsHelper.FactureTotals(facture.Lignes, facture.RemiseGlobale);
         var vis = _uiPreferences.GetDocumentLineColumnVisibility("facture");
         var lineData = new List<StandardPdfLine>();
@@ -239,7 +239,7 @@ public sealed class PdfService : IPdfService
             var lht = DocumentTotalsHelper.LigneHT(l.Quantite, l.PrixUnitaireHT, l.Remise);
             var ttc = lht * (1 + l.TauxTVA / 100m);
             lineData.Add(new StandardPdfLine(
-                RefCell(refs, l.ProduitId),
+                RefCell(meta, l.ProduitId),
                 l.Designation,
                 FmtQty(l.Quantite),
                 l.Conditionnement,
@@ -280,7 +280,7 @@ public sealed class PdfService : IPdfService
     public async Task<byte[]> BuildFactureFournisseurPdfAsync(FactureFournisseur factureFournisseur, DocumentPartyPdfInfo party, CancellationToken cancellationToken = default)
     {
         var cfg = await _settings.GetAsync(cancellationToken);
-        var refs = await LoadProductRefsAsync(factureFournisseur.Lignes.Select(l => l.ProduitId), cancellationToken);
+        var meta = await LoadProductMetaAsync(factureFournisseur.Lignes.Select(l => l.ProduitId), cancellationToken);
         var totals = DocumentTotalsHelper.FactureFournisseurTotals(factureFournisseur.Lignes, factureFournisseur.RemiseGlobale);
         var vis = _uiPreferences.GetDocumentLineColumnVisibility("facture_fournisseur");
         var lineData = new List<StandardPdfLine>();
@@ -289,7 +289,7 @@ public sealed class PdfService : IPdfService
             var lht = DocumentTotalsHelper.LigneHT(l.Quantite, l.PrixUnitaireHT, l.Remise);
             var ttc = lht * (1 + l.TauxTVA / 100m);
             lineData.Add(new StandardPdfLine(
-                RefCell(refs, l.ProduitId),
+                RefCell(meta, l.ProduitId),
                 l.Designation,
                 FmtQty(l.Quantite),
                 l.Conditionnement,
@@ -368,24 +368,27 @@ public sealed class PdfService : IPdfService
     public async Task<byte[]> BuildAvoirPdfAsync(Avoir avoir, DocumentPartyPdfInfo party, CancellationToken cancellationToken = default)
     {
         var cfg = await _settings.GetAsync(cancellationToken);
-        var refs = await LoadProductRefsAsync(avoir.Lignes.Select(l => l.ProduitId), cancellationToken);
+        var meta = await LoadProductMetaAsync(avoir.Lignes.Select(l => l.ProduitId), cancellationToken);
         var totals = DocumentTotalsHelper.AvoirTotals(avoir.Lignes);
-        var cols = BrColumns();
-        var rows = new List<IReadOnlyList<string>>();
+        var vis = _uiPreferences.GetDocumentLineColumnVisibility("avoir");
+        var lineData = new List<StandardPdfLine>();
         foreach (var l in avoir.Lignes)
         {
-            var lht = l.Quantite * l.PrixUnitaireHT;
+            var lht = DocumentTotalsHelper.LigneHT(l.Quantite, l.PrixUnitaireHT, l.Remise);
             var ttc = lht * (1 + l.TauxTVA / 100m);
-            rows.Add([
-                RefCell(refs, l.ProduitId),
+            lineData.Add(new StandardPdfLine(
+                RefCell(meta, l.ProduitId),
                 l.Designation,
                 FmtQty(l.Quantite),
+                string.IsNullOrWhiteSpace(l.Conditionnement) ? UniteCell(meta, l.ProduitId) : l.Conditionnement,
                 FmtUnitPrice(l.PrixUnitaireHT),
                 FmtTvaPct(l.TauxTVA),
+                FmtMoney(l.Remise),
                 FmtMoney(lht),
-                FmtMoney(ttc)
-            ]);
+                FmtMoney(ttc)));
         }
+
+        var (cols, rows) = BuildStandardPdfTable(vis, supportsLineRemise: true, "Qté", lineData);
 
         var note = $"{avoir.Motif}\nRetour marchandise : {(avoir.RetourMarchandise ? "Oui" : "Non")}";
         var docLines = new List<PdfKeyValueLine>
@@ -394,31 +397,34 @@ public sealed class PdfService : IPdfService
             new("Date", avoir.Date.ToString("dd/MM/yyyy"))
         };
 
-        var model = BaseModel(cfg, "AVOIR", docLines, PartyLines(party, "Client"), cols, rows, totals, note);
+        var model = BaseModel(cfg, "AVOIR", docLines, PartyLines(party, "Client"), cols, rows, totals, note, vis.ShowMontantTtc);
         return CommercialDocumentPdfRenderer.Render(model, TryLoadLogoBytes(cfg.SocieteLogoPath));
     }
 
     public async Task<byte[]> BuildAvoirFournisseurPdfAsync(AvoirFournisseur doc, DocumentPartyPdfInfo party, CancellationToken cancellationToken = default)
     {
         var cfg = await _settings.GetAsync(cancellationToken);
-        var refs = await LoadProductRefsAsync(doc.Lignes.Select(l => l.ProduitId), cancellationToken);
+        var meta = await LoadProductMetaAsync(doc.Lignes.Select(l => l.ProduitId), cancellationToken);
         var totals = DocumentTotalsHelper.AvoirFournisseurTotals(doc.Lignes);
-        var cols = BrColumns();
-        var rows = new List<IReadOnlyList<string>>();
+        var vis = _uiPreferences.GetDocumentLineColumnVisibility("avoirFournisseur");
+        var lineData = new List<StandardPdfLine>();
         foreach (var l in doc.Lignes)
         {
-            var lht = l.Quantite * l.PrixUnitaireHT;
+            var lht = DocumentTotalsHelper.LigneHT(l.Quantite, l.PrixUnitaireHT, l.Remise);
             var ttc = lht * (1 + l.TauxTVA / 100m);
-            rows.Add([
-                RefCell(refs, l.ProduitId),
+            lineData.Add(new StandardPdfLine(
+                RefCell(meta, l.ProduitId),
                 l.Designation,
                 FmtQty(l.Quantite),
+                string.IsNullOrWhiteSpace(l.Conditionnement) ? UniteCell(meta, l.ProduitId) : l.Conditionnement,
                 FmtUnitPrice(l.PrixUnitaireHT),
                 FmtTvaPct(l.TauxTVA),
+                FmtMoney(l.Remise),
                 FmtMoney(lht),
-                FmtMoney(ttc)
-            ]);
+                FmtMoney(ttc)));
         }
+
+        var (cols, rows) = BuildStandardPdfTable(vis, supportsLineRemise: true, "Qté", lineData);
 
         var note = $"{doc.Motif}\nRetour marchandise : {(doc.RetourMarchandise ? "Oui" : "Non")}";
         var docLines = new List<PdfKeyValueLine>
@@ -427,7 +433,7 @@ public sealed class PdfService : IPdfService
             new("Date", doc.Date.ToString("dd/MM/yyyy"))
         };
 
-        var model = BaseModel(cfg, "AVOIR FOURNISSEUR", docLines, PartyLines(party, "Fournisseur"), cols, rows, totals, note);
+        var model = BaseModel(cfg, "AVOIR FOURNISSEUR", docLines, PartyLines(party, "Fournisseur"), cols, rows, totals, note, vis.ShowMontantTtc);
         return CommercialDocumentPdfRenderer.Render(model, TryLoadLogoBytes(cfg.SocieteLogoPath));
     }
 
@@ -653,89 +659,6 @@ public sealed class PdfService : IPdfService
         string MntHt,
         string MntTtc);
 
-    /// <summary>Bon de livraison line cells (no Unité on entity; column visibility follows bon_livraison prefs).</summary>
-    private readonly record struct BlPdfLine(
-        string Ref,
-        string Designation,
-        string Qte,
-        string PuHt,
-        string Tva,
-        string Remise,
-        string MntHt,
-        string MntTtc);
-
-    private (List<PdfTableColumn> Columns, List<IReadOnlyList<string>> Rows) BuildBlPdfTable(
-        DocumentLineColumnVisibility visibility,
-        IReadOnlyList<BlPdfLine> lines)
-    {
-        var columns = BuildBlColumnList(visibility);
-        if (columns.Count == 0)
-            return BuildBlPdfTable(DocumentLineColumnVisibility.AllVisible, lines);
-
-        var rows = new List<IReadOnlyList<string>>(lines.Count);
-        foreach (var line in lines)
-            rows.Add(BuildBlDataRow(visibility, line));
-
-        return (columns, rows);
-    }
-
-    private static List<PdfTableColumn> BuildBlColumnList(DocumentLineColumnVisibility v)
-    {
-        var columns = new List<PdfTableColumn>();
-        if (v.ShowReference)
-            columns.Add(new PdfTableColumn("Référence", 0.9f));
-        if (v.ShowDesignation)
-            columns.Add(new PdfTableColumn("Désignation", 2f));
-        if (v.ShowQuantite)
-            columns.Add(new PdfTableColumn("Qté", 0.45f, PdfTextAlignment.End));
-
-        if (v.ShowPuHt)
-            columns.Add(new PdfTableColumn("PU HT", 0.55f, PdfTextAlignment.End));
-        if (v.ShowRemise)
-            columns.Add(new PdfTableColumn("Rem. %", 0.45f, PdfTextAlignment.End));
-        if (v.ShowTva)
-            columns.Add(new PdfTableColumn("TVA %", 0.35f, PdfTextAlignment.End));
-        if (v.ShowMontantHt)
-            columns.Add(new PdfTableColumn("Mnt HT", 0.55f, PdfTextAlignment.End));
-        if (v.ShowMontantTtc)
-            columns.Add(new PdfTableColumn("Mnt TTC", 0.6f, PdfTextAlignment.End));
-        return columns;
-    }
-
-    private static List<string> BuildBlDataRow(DocumentLineColumnVisibility v, BlPdfLine line)
-    {
-        var cells = new List<string>();
-        if (v.ShowReference)
-            cells.Add(line.Ref);
-        if (v.ShowDesignation)
-            cells.Add(line.Designation);
-        if (v.ShowQuantite)
-            cells.Add(line.Qte);
-
-        if (v.ShowPuHt)
-            cells.Add(line.PuHt);
-        if (v.ShowRemise)
-            cells.Add(line.Remise);
-        if (v.ShowTva)
-            cells.Add(line.Tva);
-        if (v.ShowMontantHt)
-            cells.Add(line.MntHt);
-        if (v.ShowMontantTtc)
-            cells.Add(line.MntTtc);
-        return cells;
-    }
-
-    private static IReadOnlyList<PdfTableColumn> BrColumns() =>
-    [
-        new("Référence", 0.9f),
-        new("Désignation", 2.2f),
-        new("Qté", 0.45f, PdfTextAlignment.End),
-        new("PU HT", 0.55f, PdfTextAlignment.End),
-        new("TVA %", 0.35f, PdfTextAlignment.End),
-        new("Mnt HT", 0.55f, PdfTextAlignment.End),
-        new("Mnt TTC", 0.6f, PdfTextAlignment.End)
-    ];
-
     private const string EmptyPartyFieldPlaceholder = "—";
 
     private static List<PdfKeyValueLine> PartyLines(DocumentPartyPdfInfo p, string roleLabel)
@@ -750,8 +673,16 @@ public sealed class PdfService : IPdfService
         return list;
     }
 
-    private static string RefCell(Dictionary<int, string> refs, int produitId) =>
-        produitId > 0 && refs.TryGetValue(produitId, out var r) && !string.IsNullOrWhiteSpace(r) ? r : "—";
+    private sealed record ProductPdfMeta(string Ref, string Unite);
+
+    private static string RefCell(Dictionary<int, ProductPdfMeta> meta, int produitId) =>
+        produitId > 0 && meta.TryGetValue(produitId, out var m) && !string.IsNullOrWhiteSpace(m.Ref) ? m.Ref : "—";
+
+    private static string UniteCell(Dictionary<int, ProductPdfMeta> meta, int produitId) =>
+        produitId > 0 && meta.TryGetValue(produitId, out var m) ? m.Unite : string.Empty;
+
+    private static string ConditionnementCell(string? conditionnement, Dictionary<int, ProductPdfMeta> meta, int produitId) =>
+        string.IsNullOrWhiteSpace(conditionnement) ? UniteCell(meta, produitId) : conditionnement.Trim();
 
     private static string? SummarizePaiements(IReadOnlyList<Paiement>? paiements)
     {
@@ -772,14 +703,14 @@ public sealed class PdfService : IPdfService
         _ => m.ToString()
     };
 
-    private async Task<Dictionary<int, string>> LoadProductRefsAsync(IEnumerable<int> productIds, CancellationToken cancellationToken)
+    private async Task<Dictionary<int, ProductPdfMeta>> LoadProductMetaAsync(IEnumerable<int> productIds, CancellationToken cancellationToken)
     {
         var ids = productIds.Where(x => x > 0).Distinct().ToList();
-        if (ids.Count == 0) return new Dictionary<int, string>();
+        if (ids.Count == 0) return new Dictionary<int, ProductPdfMeta>();
         await using var db = await _dbFactory.CreateDbContextAsync(cancellationToken);
         return await db.Produits.AsNoTracking()
             .Where(p => ids.Contains(p.Id))
-            .ToDictionaryAsync(p => p.Id, p => p.Reference ?? "", cancellationToken);
+            .ToDictionaryAsync(p => p.Id, p => new ProductPdfMeta(p.Reference ?? "", p.Unite ?? ""), cancellationToken);
     }
 
     private static IReadOnlyList<string> BuildFooterLines(AppSettingsRow cfg)
