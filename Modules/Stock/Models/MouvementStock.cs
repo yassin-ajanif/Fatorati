@@ -62,4 +62,10 @@ public class MouvementStock : BaseEntity
 
     [NotMapped]
     public string TraceDetail => DocumentRef;
+
+    [NotMapped]
+    public string UnitPriceDetail { get; set; } = string.Empty;
+
+    [NotMapped]
+    public bool HasUnitPriceDetail => !string.IsNullOrEmpty(UnitPriceDetail);
 }

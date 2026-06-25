@@ -99,6 +99,8 @@
                       <TextBlock Text="{Binding PartyName}" FontSize="10" FontWeight="SemiBold"
                                  Foreground="{Binding PartyColorSignal, Converter={x:Static conv:PositiveNegativeForegroundConverter.Instance}}"
                                  IsVisible="{Binding HasPartyName}"/>
+                      <TextBlock Text="{Binding UnitPriceDetail}" FontSize="10" Opacity="0.75"
+                                 IsVisible="{Binding HasUnitPriceDetail}"/>
                     </StackPanel>
                     <TextBlock Grid.Column="2" Text="{Binding StockAvant, StringFormat={}{0:N2}}" TextAlignment="Right" VerticalAlignment="Center"/>
                     <TextBlock Grid.Column="3" Text="{Binding QuantiteSignedLabel}" TextAlignment="Right" VerticalAlignment="Center"

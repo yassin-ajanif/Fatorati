@@ -154,15 +154,16 @@ public partial class StockMainViewModel : BaseViewModel
             .OrderByDescending(m => m.CreatedAt)
             .Skip(MouvementPagination.Skip).Take(MouvementPagination.PageSize)
             .ToListAsync(cancellationToken);
-        await EnrichMovementPartyNamesAsync(db, list, cancellationToken);
+        await EnrichMovementDetailsAsync(db, list, _locale.T("Lbl_PrixHt"), cancellationToken);
         Mouvements.Clear();
         foreach (var m in list) Mouvements.Add(m);
         MouvementPagination.TotalCount = total;
     }
 
-    private static async Task EnrichMovementPartyNamesAsync(
+    private static async Task EnrichMovementDetailsAsync(
         AppDbContext db,
         IReadOnlyList<MouvementStock> movements,
+        string prixHtLabel,
         CancellationToken cancellationToken)
     {
         if (movements.Count == 0) return;
@@ -234,6 +235,42 @@ public partial class StockMainViewModel : BaseViewModel
         var avoirMap = avoirParties.ToDictionary(x => x.Id, x => tierNames.GetValueOrDefault(x.ClientId, string.Empty));
         var avoirFournisseurMap = avoirFournisseurParties.ToDictionary(x => x.Id, x => tierNames.GetValueOrDefault(x.FournisseurId, string.Empty));
 
+        var blPriceMap = blIds.Count == 0
+            ? new Dictionary<(int, int), decimal>()
+            : (await db.BonLivraisonLignes.AsNoTracking()
+                .Where(l => blIds.Contains(l.BLId))
+                .Select(l => new { l.BLId, l.ProduitId, l.PrixUnitaireHT })
+                .ToListAsync(cancellationToken))
+                .GroupBy(l => (l.BLId, l.ProduitId))
+                .ToDictionary(g => g.Key, g => g.Last().PrixUnitaireHT);
+
+        var brPriceMap = brIds.Count == 0
+            ? new Dictionary<(int, int), decimal>()
+            : (await db.BonReceptionLignes.AsNoTracking()
+                .Where(l => brIds.Contains(l.BRId))
+                .Select(l => new { l.BRId, l.ProduitId, l.PrixUnitaireHT })
+                .ToListAsync(cancellationToken))
+                .GroupBy(l => (l.BRId, l.ProduitId))
+                .ToDictionary(g => g.Key, g => g.Last().PrixUnitaireHT);
+
+        var avoirPriceMap = avoirIds.Count == 0
+            ? new Dictionary<(int, int), decimal>()
+            : (await db.AvoirLignes.AsNoTracking()
+                .Where(l => avoirIds.Contains(l.AvoirId))
+                .Select(l => new { l.AvoirId, l.ProduitId, l.PrixUnitaireHT })
+                .ToListAsync(cancellationToken))
+                .GroupBy(l => (l.AvoirId, l.ProduitId))
+                .ToDictionary(g => g.Key, g => g.Last().PrixUnitaireHT);
+
+        var avoirFournisseurPriceMap = avoirFournisseurIds.Count == 0
+            ? new Dictionary<(int, int), decimal>()
+            : (await db.AvoirFournisseurLignes.AsNoTracking()
+                .Where(l => avoirFournisseurIds.Contains(l.AvoirFournisseurId))
+                .Select(l => new { l.AvoirFournisseurId, l.ProduitId, l.PrixUnitaireHT })
+                .ToListAsync(cancellationToken))
+                .GroupBy(l => (l.AvoirFournisseurId, l.ProduitId))
+                .ToDictionary(g => g.Key, g => g.Last().PrixUnitaireHT);
+
         foreach (var m in movements)
         {
             m.PartyName = m.OrigineType switch
@@ -246,6 +283,22 @@ public partial class StockMainViewModel : BaseViewModel
             };
             m.PartyIsSupplier = m.OrigineType is StockMovementService.OrigineTypeBonReception
                 or StockMovementService.OrigineTypeAvoirFournisseur;
+
+            decimal? price = null;
+            if (m.OrigineId is int docId)
+            {
+                price = m.OrigineType switch
+                {
+                    StockMovementService.OrigineTypeBonLivraison when blPriceMap.TryGetValue((docId, m.ProduitId), out var blP) => blP,
+                    StockMovementService.OrigineTypeBonReception when brPriceMap.TryGetValue((docId, m.ProduitId), out var brP) => brP,
+                    StockMovementService.OrigineTypeAvoir when avoirPriceMap.TryGetValue((docId, m.ProduitId), out var avP) => avP,
+                    StockMovementService.OrigineTypeAvoirFournisseur when avoirFournisseurPriceMap.TryGetValue((docId, m.ProduitId), out var avfP) => avfP,
+                    _ => null
+                };
+            }
+            m.UnitPriceDetail = price is decimal p
+                ? $"{prixHtLabel} : {p.ToString("N2", System.Globalization.CultureInfo.CurrentCulture)}"
+                : string.Empty;
         }
     }
 
