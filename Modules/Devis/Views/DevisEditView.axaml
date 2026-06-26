@@ -12,7 +12,6 @@
         <Button Content="{Binding BtnBack}" Command="{Binding BackCommand}"/>
         <Button Content="{Binding BtnSave}" Command="{Binding SaveCommand}" IsEnabled="{Binding !IsReadOnly}"/>
         <Button Content="{Binding BtnToBl}" Command="{Binding ToBLCommand}"/>
-        <Button Content="{Binding BtnToFacture}" Command="{Binding ToFactureCommand}"/>
         <Button Content="{Binding BtnPdf}" Command="{Binding ExportPdfCommand}"/>
         <Button Content="{Binding BtnPrint}" Command="{Binding PrintCommand}"/>
       </StackPanel>

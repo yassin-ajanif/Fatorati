@@ -2,6 +2,7 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:vm="using:GestionCommerciale.Modules.Livraison.ViewModels"
              xmlns:beh="using:GestionCommerciale.Shared.Behaviors"
+             xmlns:shared="using:GestionCommerciale.Shared.Views"
              x:Class="GestionCommerciale.Modules.Livraison.Views.BLListView"
              x:Name="BLListRoot"
              x:DataType="vm:BLListViewModel">
@@ -62,24 +63,6 @@
         </ListBox.ItemTemplate>
       </ListBox>
     </Grid>
-    <Border Grid.Row="2" Padding="8,6" Margin="0,6,0,0"
-            Background="{DynamicResource CourseraSurfaceBrush}"
-            BorderBrush="{DynamicResource CourseraBorderBrush}" BorderThickness="1" CornerRadius="8">
-      <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" Spacing="10">
-        <Button Content="⏮ First" Command="{Binding Pagination.FirstPageCommand}"
-                IsEnabled="{Binding Pagination.HasPrevious}" FontSize="13"/>
-        <Button Content="‹ Prev" Command="{Binding Pagination.PreviousPageCommand}"
-                IsEnabled="{Binding Pagination.HasPrevious}" FontSize="13"/>
-        <TextBlock Text="{Binding Pagination.CurrentPage}" VerticalAlignment="Center" FontSize="13"/>
-        <TextBlock Text="/" VerticalAlignment="Center" FontSize="13"/>
-        <TextBlock Text="{Binding Pagination.TotalPages}" VerticalAlignment="Center" FontSize="13"/>
-        <TextBlock Text="{Binding Pagination.TotalCount, StringFormat='({0} total)'}" VerticalAlignment="Center"
-                   FontSize="12" Opacity="0.6"/>
-        <Button Content="Next ›" Command="{Binding Pagination.NextPageCommand}"
-                IsEnabled="{Binding Pagination.HasNext}" FontSize="13"/>
-        <Button Content="Last ⏭" Command="{Binding Pagination.LastPageCommand}"
-                IsEnabled="{Binding Pagination.HasNext}" FontSize="13"/>
-      </StackPanel>
-    </Border>
+    <shared:ListPaginationBar Grid.Row="2" DataContext="{Binding Pagination}"/>
   </Grid>
 </UserControl>

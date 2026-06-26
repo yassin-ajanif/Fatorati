@@ -1,5 +1,4 @@
 using System.Collections.ObjectModel;
-using System.Linq;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using GestionCommerciale.Modules.Auth.Services;
@@ -47,10 +46,11 @@ public partial class AvoirListViewModel : BaseViewModel
         _locale.CultureApplied += (_, _) =>
         {
             RefreshListToolbar();
-            LoadCommand.Execute(null);
+            _ = LoadPageAsync(CancellationToken.None, true);
         };
         RefreshListToolbar();
         Title = _locale.T("AvoirList_Title");
+        Pagination = new PaginationHelper(() => _ = LoadPageAsync(CancellationToken.None));
     }
 
     [ObservableProperty] private string _btnNew = string.Empty;
@@ -69,6 +69,8 @@ public partial class AvoirListViewModel : BaseViewModel
     [ObservableProperty] private string _colTtc = string.Empty;
     [ObservableProperty] private string _menuDeleteAvoir = string.Empty;
 
+    public PaginationHelper Pagination { get; }
+
     private void RefreshListToolbar()
     {
         BtnNew = _locale.T("Btn_NewAvoir");
@@ -86,33 +88,39 @@ public partial class AvoirListViewModel : BaseViewModel
         MenuDeleteAvoir = _locale.T("Avoir_MenuDelete");
     }
 
-    partial void OnSearchTextChanged(string value) => LoadCommand.Execute(null);
+    partial void OnSearchTextChanged(string value) => _ = LoadPageAsync(CancellationToken.None, true);
 
     public ObservableCollection<AvoirListRow> Items { get; } = [];
     [ObservableProperty] private AvoirListRow? _selected;
 
     [RelayCommand]
-    private async Task LoadAsync(CancellationToken cancellationToken)
+    private Task LoadAsync(CancellationToken cancellationToken) => LoadPageAsync(cancellationToken, true);
+
+    private async Task LoadPageAsync(CancellationToken cancellationToken, bool resetPage = false)
     {
         if (!_session.CanAccessAvoir)
         {
             Items.Clear();
+            Pagination.TotalCount = 0;
             return;
         }
 
         IsBusy = true;
         try
         {
+            if (resetPage)
+                Pagination.CurrentPage = 1;
+
             await using var db = await _dbFactory.CreateDbContextAsync(cancellationToken);
             var cfg = await db.AppSettings.AsNoTracking().FirstAsync(cancellationToken);
             var devise = string.IsNullOrWhiteSpace(cfg.Devise) ? "MAD" : cfg.Devise.Trim();
 
             var joined = from a in db.Avoirs.AsNoTracking().Include(a => a.Lignes)
-                          join t in db.Tiers.AsNoTracking() on a.ClientId equals t.Id into tj
-                          from t in tj.DefaultIfEmpty()
-                          join f in db.Factures.AsNoTracking() on a.FactureId equals f.Id into fj
-                          from f in fj.DefaultIfEmpty()
-                          select new { a, nom = t != null ? t.Nom : string.Empty, factNum = f != null ? f.Numero : string.Empty };
+                         join t in db.Tiers.AsNoTracking() on a.ClientId equals t.Id into tj
+                         from t in tj.DefaultIfEmpty()
+                         join f in db.Factures.AsNoTracking() on a.FactureId equals f.Id into fj
+                         from f in fj.DefaultIfEmpty()
+                         select new { a, nom = t != null ? t.Nom : string.Empty, factNum = f != null ? f.Numero : string.Empty };
 
             var joinedQ = joined.AsQueryable();
             if (_dateFrom.HasValue)
@@ -120,53 +128,29 @@ public partial class AvoirListViewModel : BaseViewModel
             if (_dateTo.HasValue)
                 joinedQ = joinedQ.Where(x => x.a.Date <= _dateTo.Value);
 
-            List<(Avoir a, string nom, string factNum)> raw;
-            if (string.IsNullOrWhiteSpace(SearchText))
+            var search = SearchText?.Trim();
+            if (!string.IsNullOrEmpty(search))
             {
-                var rows = await joinedQ
-                    .OrderByDescending(x => x.a.Date)
-                    .Take(DocumentNumberSearchHelper.ResultCap)
-                    .Select(x => new { x.a, nom = x.nom, factNum = x.factNum })
-                    .ToListAsync(cancellationToken);
-                raw = rows.Select(r => (r.a, r.nom, r.factNum)).ToList();
+                joinedQ = joinedQ.Where(x =>
+                    EF.Functions.Like(x.a.Numero, $"%{search}%")
+                    || EF.Functions.Like(x.nom, $"%{search}%")
+                    || EF.Functions.Like(x.factNum, $"%{search}%")
+                    || EF.Functions.Like(x.a.Motif ?? string.Empty, $"%{search}%"));
             }
-            else
-            {
-                var term = SearchText.Trim();
-                if (DocumentNumberSearchHelper.IsNumericSearchTerm(term))
-                {
-                    var rows = await joinedQ
-                        .OrderByDescending(x => x.a.Date)
-                        .Take(DocumentNumberSearchHelper.NumericScanCap)
-                        .Select(x => new { x.a, nom = x.nom, factNum = x.factNum })
-                        .ToListAsync(cancellationToken);
-                    raw = rows
-                        .Where(r => DocumentNumberSearchHelper.MatchesNumeroAndParty(r.a.Numero, r.nom, term)
-                            || DocumentNumberSearchHelper.MatchesNumeroAndParty(r.factNum, string.Empty, term))
-                        .Take(DocumentNumberSearchHelper.ResultCap)
-                        .Select(r => (r.a, r.nom, r.factNum))
-                        .ToList();
-                }
-                else
-                {
-                    var filtered = joinedQ.Where(x =>
-                        x.a.Numero.Contains(term)
-                        || x.nom.Contains(term)
-                        || x.factNum.Contains(term)
-                        || (x.a.Motif ?? string.Empty).Contains(term));
-                    var textRows = await filtered
-                        .OrderByDescending(x => x.a.Date)
-                        .Take(DocumentNumberSearchHelper.ResultCap)
-                        .Select(x => new { x.a, nom = x.nom, factNum = x.factNum })
-                        .ToListAsync(cancellationToken);
-                    raw = textRows.Select(r => (r.a, r.nom, r.factNum)).ToList();
-                }
-            }
+
+            var total = await joinedQ.CountAsync(cancellationToken);
+            var rows = await joinedQ
+                .OrderByDescending(x => x.a.Date)
+                .Skip(Pagination.Skip)
+                .Take(Pagination.PageSize)
+                .Select(x => new { x.a, x.nom, x.factNum })
+                .ToListAsync(cancellationToken);
 
             var selId = Selected?.Avoir.Id;
             Items.Clear();
-            foreach (var (a, nom, fn) in raw)
-                Items.Add(AvoirListRow.Create(a, nom, fn, devise, _locale));
+            foreach (var r in rows)
+                Items.Add(AvoirListRow.Create(r.a, r.nom, r.factNum, devise, _locale));
+            Pagination.TotalCount = total;
             if (selId is { } id)
                 Selected = Items.FirstOrDefault(i => i.Avoir.Id == id);
         }
@@ -261,7 +245,7 @@ public partial class AvoirListViewModel : BaseViewModel
 
             if (Selected?.Avoir.Id == item.Id)
                 Selected = null;
-            Items.Remove(row);
+            await LoadPageAsync(cancellationToken);
             await _dialog.ShowInfoAsync(_locale.T("Avoir_Title"), _locale.T("Avoir_Deleted"), cancellationToken);
         }
         catch (Exception ex)

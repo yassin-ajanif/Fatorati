@@ -2,6 +2,7 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:vm="using:GestionCommerciale.Modules.AvoirFournisseur.ViewModels"
              xmlns:beh="using:GestionCommerciale.Shared.Behaviors"
+             xmlns:shared="using:GestionCommerciale.Shared.Views"
              x:Class="GestionCommerciale.Modules.AvoirFournisseur.Views.AvoirFournisseurListView"
               x:Name="AvoirFournisseurListRoot"
              x:DataType="vm:AvoirFournisseurListViewModel">
@@ -16,13 +17,13 @@
       <Border Grid.Row="0" Padding="8,6" Background="{DynamicResource CourseraSurfaceMutedBrush}"
               CornerRadius="8,8,0,0" BorderThickness="1,1,1,0"
               BorderBrush="{DynamicResource CourseraBorderBrush}">
-        <Grid ColumnDefinitions="80,2*,1.2*,1*,1*,2*">
-          <TextBlock Grid.Column="0" Text="{Binding ColNumero}" FontWeight="SemiBold"/>
-          <TextBlock Grid.Column="1" Text="{Binding ColFournisseur}" FontWeight="SemiBold"/>
-          <TextBlock Grid.Column="2" Text="{Binding ColDate}" FontWeight="SemiBold"/>
-          <TextBlock Grid.Column="3" Text="{Binding ColHt}" FontWeight="SemiBold" HorizontalAlignment="Right"/>
-          <TextBlock Grid.Column="4" Text="{Binding ColTtc}" FontWeight="SemiBold" HorizontalAlignment="Right"/>
-          <TextBlock Grid.Column="5" Text="{Binding ColMotif}" FontWeight="SemiBold" Margin="8,0,0,0"/>
+        <Grid ColumnDefinitions="200,*,100,100,100,*">
+          <TextBlock Grid.Column="0" Text="{Binding ColNumero}" FontWeight="SemiBold" VerticalAlignment="Center" Margin="0,0,12,0"/>
+          <TextBlock Grid.Column="1" Text="{Binding ColFournisseur}" FontWeight="SemiBold" VerticalAlignment="Center" Margin="0,0,12,0"/>
+          <TextBlock Grid.Column="2" Text="{Binding ColDate}" FontWeight="SemiBold" VerticalAlignment="Center" Margin="0,0,12,0"/>
+          <TextBlock Grid.Column="3" Text="{Binding ColHt}" FontWeight="SemiBold" VerticalAlignment="Center" TextAlignment="End" Margin="0,0,12,0"/>
+          <TextBlock Grid.Column="4" Text="{Binding ColTtc}" FontWeight="SemiBold" VerticalAlignment="Center" TextAlignment="End" Margin="0,0,12,0"/>
+          <TextBlock Grid.Column="5" Text="{Binding ColMotif}" FontWeight="SemiBold" VerticalAlignment="Center"/>
         </Grid>
       </Border>
       <ListBox Grid.Row="1" ItemsSource="{Binding Rows}" SelectedItem="{Binding Selected}"
@@ -31,43 +32,25 @@
                beh:ListBoxOpenOnDoubleClick.OpenCommand="{Binding OpenSelectedCommand}">
         <ListBox.ItemTemplate>
           <DataTemplate DataType="vm:AvoirFournisseurListRow">
-            <Border Padding="8,6" BorderBrush="#18000000" BorderThickness="0,0,0,1">
+            <Border Padding="8,6" Background="Transparent">
               <Border.ContextMenu>
                 <ContextMenu Opening="OnRowContextMenuOpening">
                   <MenuItem Header="Supprimer" Command="{Binding $parent[UserControl].((vm:AvoirFournisseurListViewModel)DataContext).DeleteCommand}"/>
                 </ContextMenu>
               </Border.ContextMenu>
-              <Grid ColumnDefinitions="80,2*,1.2*,1*,1*,2*">
-                <TextBlock Grid.Column="0" Text="{Binding Doc.Numero}" FontWeight="SemiBold"/>
-                <TextBlock Grid.Column="1" Text="{Binding FournisseurNom}"/>
-                <TextBlock Grid.Column="2" Text="{Binding DateShort}"/>
-                <TextBlock Grid.Column="3" Text="{Binding HtLabel}" HorizontalAlignment="Right"/>
-                <TextBlock Grid.Column="4" Text="{Binding TtcLabel}" HorizontalAlignment="Right"/>
-                <TextBlock Grid.Column="5" Text="{Binding NotePreview}" Margin="8,0,0,0" TextTrimming="CharacterEllipsis"/>
+              <Grid ColumnDefinitions="200,*,100,100,100,*">
+                <TextBlock Grid.Column="0" Text="{Binding Doc.Numero}" FontWeight="SemiBold" VerticalAlignment="Center" Margin="0,0,12,0"/>
+                <TextBlock Grid.Column="1" Text="{Binding FournisseurNom}" VerticalAlignment="Center" TextTrimming="CharacterEllipsis" Margin="0,0,12,0"/>
+                <TextBlock Grid.Column="2" Text="{Binding DateShort}" VerticalAlignment="Center" Margin="0,0,12,0"/>
+                <TextBlock Grid.Column="3" Text="{Binding HtLabel}" VerticalAlignment="Center" TextAlignment="End" Margin="0,0,12,0"/>
+                <TextBlock Grid.Column="4" Text="{Binding TtcLabel}" VerticalAlignment="Center" TextAlignment="End" FontWeight="SemiBold" Margin="0,0,12,0"/>
+                <TextBlock Grid.Column="5" Text="{Binding NotePreview}" VerticalAlignment="Center" TextTrimming="CharacterEllipsis" Opacity="0.85"/>
               </Grid>
             </Border>
           </DataTemplate>
         </ListBox.ItemTemplate>
       </ListBox>
     </Grid>
-    <Border Grid.Row="2" Padding="8,6" Margin="0,6,0,0"
-            Background="{DynamicResource CourseraSurfaceBrush}"
-            BorderBrush="{DynamicResource CourseraBorderBrush}" BorderThickness="1" CornerRadius="8">
-      <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" Spacing="10">
-        <Button Content="⏮ First" Command="{Binding Pagination.FirstPageCommand}"
-                IsEnabled="{Binding Pagination.HasPrevious}" FontSize="13"/>
-        <Button Content="‹ Prev" Command="{Binding Pagination.PreviousPageCommand}"
-                IsEnabled="{Binding Pagination.HasPrevious}" FontSize="13"/>
-        <TextBlock Text="{Binding Pagination.CurrentPage}" VerticalAlignment="Center" FontSize="13"/>
-        <TextBlock Text="/" VerticalAlignment="Center" FontSize="13"/>
-        <TextBlock Text="{Binding Pagination.TotalPages}" VerticalAlignment="Center" FontSize="13"/>
-        <TextBlock Text="{Binding Pagination.TotalCount, StringFormat='({0} total)'}" VerticalAlignment="Center"
-                   FontSize="12" Opacity="0.6"/>
-        <Button Content="Next ›" Command="{Binding Pagination.NextPageCommand}"
-                IsEnabled="{Binding Pagination.HasNext}" FontSize="13"/>
-        <Button Content="Last ⏭" Command="{Binding Pagination.LastPageCommand}"
-                IsEnabled="{Binding Pagination.HasNext}" FontSize="13"/>
-      </StackPanel>
-    </Border>
+    <shared:ListPaginationBar Grid.Row="2" DataContext="{Binding Pagination}"/>
   </Grid>
 </UserControl>

@@ -29,15 +29,14 @@
           Background="{DynamicResource CourseraSurfaceMutedBrush}"
           BorderBrush="{DynamicResource CourseraBorderBrush}" BorderThickness="1" CornerRadius="8">
     <Grid ColumnDefinitions="Auto,*,Auto">
-      <TextBlock Grid.Column="0" VerticalAlignment="Center" FontSize="12"
-                 Foreground="{DynamicResource CourseraSubtleTextBrush}"
-                 Text="{Binding TotalCount, StringFormat='{}{0} éléments'}"/>
+      <TextBlock x:Name="TotalCountText" Grid.Column="0" VerticalAlignment="Center" FontSize="12"
+                 Foreground="{DynamicResource CourseraSubtleTextBrush}"/>
 
       <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="4"
                   HorizontalAlignment="Center" VerticalAlignment="Center">
-        <Button Classes="pagination-nav" Content="⏮" ToolTip.Tip="Premier"
+        <Button x:Name="FirstButton" Classes="pagination-nav" Content="⏮"
                 Command="{Binding FirstPageCommand}" IsEnabled="{Binding HasPrevious}"/>
-        <Button Classes="pagination-nav" Content="‹" ToolTip.Tip="Précédent"
+        <Button x:Name="PreviousButton" Classes="pagination-nav" Content="‹"
                 Command="{Binding PreviousPageCommand}" IsEnabled="{Binding HasPrevious}"/>
         <Border Padding="12,5" CornerRadius="6" Margin="4,0"
                 Background="{DynamicResource CourseraSurfaceBrush}"
@@ -48,9 +47,9 @@
             <TextBlock Text="{Binding TotalPages}" FontSize="13" VerticalAlignment="Center"/>
           </StackPanel>
         </Border>
-        <Button Classes="pagination-nav" Content="›" ToolTip.Tip="Suivant"
+        <Button x:Name="NextButton" Classes="pagination-nav" Content="›"
                 Command="{Binding NextPageCommand}" IsEnabled="{Binding HasNext}"/>
-        <Button Classes="pagination-nav" Content="⏭" ToolTip.Tip="Dernier"
+        <Button x:Name="LastButton" Classes="pagination-nav" Content="⏭"
                 Command="{Binding LastPageCommand}" IsEnabled="{Binding HasNext}"/>
       </StackPanel>
     </Grid>

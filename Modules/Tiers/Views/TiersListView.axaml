@@ -3,6 +3,7 @@
              xmlns:vm="using:GestionCommerciale.Modules.Tiers.ViewModels"
              xmlns:m="using:GestionCommerciale.Modules.Tiers.Models"
              xmlns:beh="using:GestionCommerciale.Shared.Behaviors"
+             xmlns:shared="using:GestionCommerciale.Shared.Views"
              xmlns:conv="using:GestionCommerciale.Shared.Converters"
              x:Class="GestionCommerciale.Modules.Tiers.Views.TiersListView"
              x:DataType="vm:TiersListViewModel">
@@ -37,17 +38,6 @@
         </ListBox.ItemTemplate>
       </ListBox>
     </Grid>
-    <Grid Grid.Row="2" Margin="0,4" HorizontalAlignment="Center" VerticalAlignment="Center" ColumnDefinitions="Auto,Auto,Auto,Auto,Auto,Auto">
-      <Button Grid.Column="0" Content="⏮ Premier" Command="{Binding Pagination.FirstPageCommand}" IsEnabled="{Binding Pagination.HasPrevious}" Margin="0,0,4,0" FontSize="12" />
-      <Button Grid.Column="1" Content="◀ Précédent" Command="{Binding Pagination.PreviousPageCommand}" IsEnabled="{Binding Pagination.HasPrevious}" Margin="0,0,4,0" FontSize="12" />
-      <TextBlock Grid.Column="2" VerticalAlignment="Center" Margin="4,0">
-        <Run Text="{Binding Pagination.CurrentPage}" />
-        <Run Text="/" />
-        <Run Text="{Binding Pagination.TotalPages}" />
-      </TextBlock>
-      <Button Grid.Column="3" Content="Suivant ▶" Command="{Binding Pagination.NextPageCommand}" IsEnabled="{Binding Pagination.HasNext}" Margin="4,0,0,0" FontSize="12" />
-      <Button Grid.Column="4" Content="Dernier ⏭" Command="{Binding Pagination.LastPageCommand}" IsEnabled="{Binding Pagination.HasNext}" Margin="4,0,0,0" FontSize="12" />
-      <TextBlock Grid.Column="5" Text="{Binding Pagination.TotalCount, StringFormat='Total: {0}'}" VerticalAlignment="Center" Margin="8,0,0,0" FontSize="12" Foreground="{StaticResource CourseraSurfaceMutedBrush}" />
-    </Grid>
+    <shared:ListPaginationBar Grid.Row="2" DataContext="{Binding Pagination}"/>
   </Grid>
 </UserControl>

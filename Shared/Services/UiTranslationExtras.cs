@@ -70,6 +70,12 @@ internal static class UiTranslationExtras
         ["Btn_BackList"] = ("Retour liste", "العودة للقائمة"),
         ["Btn_FilterDate"] = ("Filtrer par date", "تصفية حسب التاريخ"),
 
+        ["Pag_First"] = ("Premier", "الأول"),
+        ["Pag_Previous"] = ("Précédent", "السابق"),
+        ["Pag_Next"] = ("Suivant", "التالي"),
+        ["Pag_Last"] = ("Dernier", "الأخير"),
+        ["Pag_Items"] = ("{0} éléments", "{0} عناصر"),
+
         ["Lbl_Client"] = ("Client", "العميل"),
         ["Lbl_Supplier"] = ("Fournisseur", "المورد"),
         ["Lbl_Date"] = ("Date", "التاريخ"),
