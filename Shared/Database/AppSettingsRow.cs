@@ -44,4 +44,7 @@ public class AppSettingsRow
 
     /// <summary>UTC date of the last successful automatic backup.</summary>
     public DateTime? LastBackupDate { get; set; }
+
+    /// <summary>Per-prefix, per-year last sequence used outside the app (JSON).</summary>
+    public string DocumentNumberingFloorsJson { get; set; } = "{}";
 }

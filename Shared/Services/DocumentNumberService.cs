@@ -7,86 +7,56 @@ namespace GestionCommerciale.Shared.Services;
 public sealed class DocumentNumberService : IDocumentNumberService
 {
     private readonly IDbContextFactory<AppDbContext> _dbFactory;
+    private readonly IAppSettingsService _settings;
 
-    public DocumentNumberService(IDbContextFactory<AppDbContext> dbFactory) => _dbFactory = dbFactory;
+    public DocumentNumberService(IDbContextFactory<AppDbContext> dbFactory, IAppSettingsService settings)
+    {
+        _dbFactory = dbFactory;
+        _settings = settings;
+    }
 
     public Task<string> NextDevisAsync(CancellationToken cancellationToken = default) =>
-        NextFromDbAsync(async db =>
-        {
-            var list = await db.Devis.AsNoTracking().Select(d => d.Numero).ToListAsync(cancellationToken);
-            return list;
-        }, "DEV", cancellationToken);
+        NextFromDbAsync(db => db.Devis.AsNoTracking().Select(d => d.Numero).ToListAsync(cancellationToken), "DEV", cancellationToken);
 
     public Task<string> NextBLAsync(CancellationToken cancellationToken = default) =>
-        NextFromDbAsync(async db =>
-        {
-            var list = await db.BonsLivraison.AsNoTracking().Select(d => d.Numero).ToListAsync(cancellationToken);
-            return list;
-        }, "BL", cancellationToken);
+        NextFromDbAsync(db => db.BonsLivraison.AsNoTracking().Select(d => d.Numero).ToListAsync(cancellationToken), "BL", cancellationToken);
 
     public Task<string> NextBRAsync(CancellationToken cancellationToken = default) =>
-        NextFromDbAsync(async db =>
-        {
-            var list = await db.BonsReception.AsNoTracking().Select(d => d.Numero).ToListAsync(cancellationToken);
-            return list;
-        }, "BR", cancellationToken);
+        NextFromDbAsync(db => db.BonsReception.AsNoTracking().Select(d => d.Numero).ToListAsync(cancellationToken), "BR", cancellationToken);
 
     public Task<string> NextBCAsync(CancellationToken cancellationToken = default) =>
-        NextFromDbAsync(async db =>
-        {
-            var list = await db.BonsCommande.AsNoTracking().Select(d => d.Numero).ToListAsync(cancellationToken);
-            return list;
-        }, "BC", cancellationToken);
+        NextFromDbAsync(db => db.BonsCommande.AsNoTracking().Select(d => d.Numero).ToListAsync(cancellationToken), "BC", cancellationToken);
 
     public Task<string> NextBCClientAsync(CancellationToken cancellationToken = default) =>
-        NextFromDbAsync(async db =>
-        {
-            var list = await db.BonsCommandeClient.AsNoTracking().Select(d => d.Numero).ToListAsync(cancellationToken);
-            return list;
-        }, "BCC", cancellationToken);
+        NextFromDbAsync(db => db.BonsCommandeClient.AsNoTracking().Select(d => d.Numero).ToListAsync(cancellationToken), "BCC", cancellationToken);
 
     public Task<string> NextFactureAsync(CancellationToken cancellationToken = default) =>
-        NextFromDbAsync(async db =>
-        {
-            var list = await db.Factures.AsNoTracking().Select(d => d.Numero).ToListAsync(cancellationToken);
-            return list;
-        }, "FAC", cancellationToken);
+        NextFromDbAsync(db => db.Factures.AsNoTracking().Select(d => d.Numero).ToListAsync(cancellationToken), "FAC", cancellationToken);
 
     public Task<string> NextFactureFournisseurAsync(CancellationToken cancellationToken = default) =>
-        NextFromDbAsync(async db =>
-        {
-            var list = await db.FacturesFournisseurs.AsNoTracking().Select(d => d.Numero).ToListAsync(cancellationToken);
-            return list;
-        }, "FAF", cancellationToken);
+        NextFromDbAsync(db => db.FacturesFournisseurs.AsNoTracking().Select(d => d.Numero).ToListAsync(cancellationToken), "FAF", cancellationToken);
 
     public Task<string> NextAvoirAsync(CancellationToken cancellationToken = default) =>
-        NextFromDbAsync(async db =>
-        {
-            var list = await db.Avoirs.AsNoTracking().Select(d => d.Numero).ToListAsync(cancellationToken);
-            return list;
-        }, "AVO", cancellationToken);
+        NextFromDbAsync(db => db.Avoirs.AsNoTracking().Select(d => d.Numero).ToListAsync(cancellationToken), "AVO", cancellationToken);
 
     public Task<string> NextAvoirFournisseurAsync(CancellationToken cancellationToken = default) =>
-        NextFromDbAsync(async db =>
-        {
-            var list = await db.AvoirsFournisseurs.AsNoTracking().Select(d => d.Numero).ToListAsync(cancellationToken);
-            return list;
-        }, "AVF", cancellationToken);
+        NextFromDbAsync(db => db.AvoirsFournisseurs.AsNoTracking().Select(d => d.Numero).ToListAsync(cancellationToken), "AVF", cancellationToken);
 
-    private async Task<string> NextFromDbAsync(Func<AppDbContext, Task<List<string>>> loadNumeros, string prefix, CancellationToken cancellationToken)
+    private async Task<string> NextFromDbAsync(
+        Func<AppDbContext, Task<List<string>>> loadNumeros,
+        string prefix,
+        CancellationToken cancellationToken)
     {
         var year = DateTime.Now.Year;
         await using var db = await _dbFactory.CreateDbContextAsync(cancellationToken);
         var numeros = await loadNumeros(db);
-        var last = 0;
-        var prefixYear = $"{prefix}-{year}-";
-        foreach (var n in numeros)
-        {
-            if (string.IsNullOrEmpty(n) || !n.StartsWith(prefixYear, StringComparison.Ordinal)) continue;
-            var tail = n[prefixYear.Length..];
-            if (int.TryParse(tail, out var num) && num > last) last = num;
-        }
+        var dbMax = DocumentNumberingHelper.GetMaxSequenceFromNumeros(numeros, prefix, year);
 
-        return NumberingHelper.Generate(prefix, last, year);
+        var settings = await _settings.GetAsync(cancellationToken);
+        var floors = DocumentNumberingFloorsStorage.Parse(settings.DocumentNumberingFloorsJson);
+        var lastUsedOutside = DocumentNumberingFloorsStorage.GetLastUsedOutside(floors, prefix, year);
+
+        var next = DocumentNumberingHelper.ResolveNextSequence(dbMax, lastUsedOutside);
+        return NumberingHelper.Generate(prefix, next - 1, year);
     }
 }

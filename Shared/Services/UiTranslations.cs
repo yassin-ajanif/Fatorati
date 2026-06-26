@@ -55,6 +55,13 @@ public static class UiTranslations
         ["Settings_Saved"] = ("Enregistré.", "تم الحفظ."),
         ["Settings_ErrAdmin"] = ("Accès réservé à l'administrateur.", "هذا القسم للمسؤول فقط."),
         ["Settings_ErrTva"] = ("Taux TVA invalides (ex: 20,10,7).", "نسب الضريبة غير صالحة (مثال: 20 أو 20,10,7)."),
+        ["Settings_Numbering"] = ("Numérotation des documents", "ترقيم المستندات"),
+        ["Settings_NumberingHelp"] = ("Indiquez le dernier numéro déjà utilisé en dehors de l'application pour l'année en cours. Le prochain document prendra le numéro suivant (sans revenir en arrière si des numéros plus élevés existent déjà).", "أدخل آخر رقم مستخدم خارج التطبيق للسنة الحالية. المستند التالي سيأخذ الرقم التالي (دون الرجوع للخلف إذا وُجدت أرقام أعلى بالفعل)."),
+        ["Settings_NumberingYear"] = ("Année", "السنة"),
+        ["Settings_NumberingDocument"] = ("Document", "المستند"),
+        ["Settings_NumberingLastOutside"] = ("Dernier n° utilisé (hors app)", "آخر رقم مستخدم (خارج التطبيق)"),
+        ["Settings_NumberingNext"] = ("Prochain n°", "الرقم التالي"),
+        ["Settings_NumberingInDb"] = ("Max. dans l'app", "الأقصى في التطبيق"),
     };
 
     private static readonly IReadOnlyDictionary<string, (string Fr, string Ar)> Vm = new Dictionary<string, (string, string)>

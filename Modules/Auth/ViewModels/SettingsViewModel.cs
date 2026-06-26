@@ -1,9 +1,11 @@
+using System.Collections.ObjectModel;
 using System.Globalization;
 using System.Text.Json;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using GestionCommerciale.Modules.Auth.Services;
 using GestionCommerciale.Shared.Database;
+using GestionCommerciale.Shared.Helpers;
 using GestionCommerciale.Shared.Services;
 using GestionCommerciale.Shared.ViewModels;
 using Microsoft.Data.Sqlite;
@@ -100,6 +102,19 @@ public partial class SettingsViewModel : BaseViewModel
     [ObservableProperty] private string _wmTva = string.Empty;
     [ObservableProperty] private string _wmDevise = string.Empty;
 
+    [ObservableProperty] private int _numberingYear;
+    [ObservableProperty] private string _lblNumbering = string.Empty;
+    [ObservableProperty] private string _lblNumberingHelp = string.Empty;
+    [ObservableProperty] private string _lblNumberingYear = string.Empty;
+    [ObservableProperty] private string _lblNumberingDocument = string.Empty;
+    [ObservableProperty] private string _lblNumberingLastOutside = string.Empty;
+    [ObservableProperty] private string _lblNumberingNext = string.Empty;
+    [ObservableProperty] private string _lblNumberingInDb = string.Empty;
+
+    public ObservableCollection<DocumentNumberingSettingRow> NumberingRows { get; } = [];
+
+    private Dictionary<string, Dictionary<int, int>> _numberingFloors = new(StringComparer.OrdinalIgnoreCase);
+
     private void RefreshSettingsLabels()
     {
         Title = _locale.T("Settings_Title");
@@ -136,6 +151,49 @@ public partial class SettingsViewModel : BaseViewModel
         WmLogoPath = _locale.T("Settings_WmLogoPath");
         WmTva = _locale.T("Settings_WmTva");
         WmDevise = _locale.T("Settings_WmDevise");
+        LblNumbering = _locale.T("Settings_Numbering");
+        LblNumberingHelp = _locale.T("Settings_NumberingHelp");
+        LblNumberingYear = _locale.T("Settings_NumberingYear");
+        LblNumberingDocument = _locale.T("Settings_NumberingDocument");
+        LblNumberingLastOutside = _locale.T("Settings_NumberingLastOutside");
+        LblNumberingNext = _locale.T("Settings_NumberingNext");
+        LblNumberingInDb = _locale.T("Settings_NumberingInDb");
+        foreach (var row in NumberingRows)
+        {
+            var kind = DocumentNumberKind.All.FirstOrDefault(k => string.Equals(k.Prefix, row.Prefix, StringComparison.OrdinalIgnoreCase));
+            if (kind is not null)
+                row.DocumentLabel = _locale.T(kind.LabelKey);
+        }
+    }
+
+    private async Task LoadNumberingRowsAsync(AppDbContext db, AppSettingsRow row, CancellationToken cancellationToken)
+    {
+        var year = DateTime.Now.Year;
+        NumberingYear = year;
+        _numberingFloors = DocumentNumberingFloorsStorage.Parse(row.DocumentNumberingFloorsJson);
+        NumberingRows.Clear();
+
+        foreach (var kind in DocumentNumberKind.All)
+        {
+            var numeros = await DocumentNumberingQuery.LoadNumerosAsync(db, kind.Prefix, cancellationToken);
+            var dbMax = DocumentNumberingHelper.GetMaxSequenceFromNumeros(numeros, kind.Prefix, year);
+            var lastOutside = DocumentNumberingFloorsStorage.GetLastUsedOutside(_numberingFloors, kind.Prefix, year);
+            NumberingRows.Add(new DocumentNumberingSettingRow
+            {
+                Prefix = kind.Prefix,
+                DocumentLabel = _locale.T(kind.LabelKey),
+                NumberingYear = year,
+                DbMaxSequence = dbMax,
+                LastUsedOutside = lastOutside
+            });
+        }
+    }
+
+    private string BuildNumberingFloorsJson()
+    {
+        foreach (var row in NumberingRows)
+            DocumentNumberingFloorsStorage.SetLastUsedOutside(_numberingFloors, row.Prefix, row.NumberingYear, row.LastUsedOutside);
+        return DocumentNumberingFloorsStorage.Serialize(_numberingFloors);
     }
 
     [RelayCommand]
@@ -180,6 +238,9 @@ public partial class SettingsViewModel : BaseViewModel
             ? row.LastBackupDate.Value.ToLocalTime().ToString("g")
             : string.Empty;
 
+        await using (var db = await _dbFactory.CreateDbContextAsync(cancellationToken))
+            await LoadNumberingRowsAsync(db, row, cancellationToken);
+
         RefreshSettingsLabels();
     }
 
@@ -201,6 +262,7 @@ public partial class SettingsViewModel : BaseViewModel
         }
 
         var lang = SelectedLanguageOption?.Code ?? "fr";
+        var existing = await _settings.GetAsync(cancellationToken);
         var row = new AppSettingsRow
         {
             Id = 1,
@@ -219,11 +281,17 @@ public partial class SettingsViewModel : BaseViewModel
             BackupIntervalHours = BackupIntervalHours,
             BackupIntervalUnit = BackupIntervalUnit,
             BackupRetentionDays = BackupRetentionDays,
-            BackupDirectory = BackupDirectory
+            BackupDirectory = BackupDirectory,
+            TrialStartedAt = existing.TrialStartedAt,
+            LicenseKey = existing.LicenseKey,
+            LastBackupDate = existing.LastBackupDate,
+            DocumentNumberingFloorsJson = BuildNumberingFloorsJson()
         };
         await _settings.SaveAsync(row, cancellationToken);
         _locale.ApplyLanguage(lang);
         RefreshSettingsLabels();
+        await using (var db = await _dbFactory.CreateDbContextAsync(cancellationToken))
+            await LoadNumberingRowsAsync(db, row, cancellationToken);
         await _dialog.ShowInfoAsync(_locale.T("Settings_Title"), _locale.T("Settings_Saved"), cancellationToken);
     }
 
