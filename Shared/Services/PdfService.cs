@@ -5,6 +5,7 @@ using GestionCommerciale.Modules.Devis.Models;
 using GestionCommerciale.Modules.Facturation.Models;
 using GestionCommerciale.Modules.Facturation.Services;
 using GestionCommerciale.Modules.FactureFournisseur.Models;
+using GestionCommerciale.Modules.Livraison;
 using GestionCommerciale.Modules.Livraison.Models;
 using GestionCommerciale.Modules.Reception.Models;
 using GestionCommerciale.Modules.Tiers.Models;
@@ -113,6 +114,10 @@ public sealed class PdfService : IPdfService
             new("N°", bl.Numero),
             new("Date", bl.Date.ToString("dd/MM/yyyy"))
         };
+
+        var bccRef = await ResolveBonCommandeReferenceForBlPdfAsync(bl, cancellationToken);
+        if (!string.IsNullOrWhiteSpace(bccRef))
+            docLines.Add(new("BC", bccRef));
 
         var model = BaseModel(cfg, "BON DE LIVRAISON", docLines, PartyLines(party, "Client"), cols, rows, totals, bl.Note, blVis.ShowMontantTtc);
         return CommercialDocumentPdfRenderer.Render(model, TryLoadLogoBytes(cfg.SocieteLogoPath));
@@ -363,6 +368,22 @@ public sealed class PdfService : IPdfService
             .ToListAsync(cancellationToken);
 
         return linkedNums.Count == 0 ? null : string.Join(", ", linkedNums);
+    }
+
+    private async Task<string?> ResolveBonCommandeReferenceForBlPdfAsync(BonLivraison bl, CancellationToken cancellationToken)
+    {
+        var fromNote = BonCommandeReferenceStorage.ResolveForPdf(bl.Note);
+        if (!string.IsNullOrWhiteSpace(fromNote))
+            return fromNote;
+
+        if (bl.BonCommandeClientId is not int bccId)
+            return null;
+
+        await using var db = await _dbFactory.CreateDbContextAsync(cancellationToken);
+        return await db.BonsCommandeClient.AsNoTracking()
+            .Where(b => b.Id == bccId)
+            .Select(b => b.Numero)
+            .FirstOrDefaultAsync(cancellationToken);
     }
 
     public async Task<byte[]> BuildAvoirPdfAsync(Avoir avoir, DocumentPartyPdfInfo party, CancellationToken cancellationToken = default)

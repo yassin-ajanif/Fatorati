@@ -23,6 +23,8 @@ using Microsoft.Extensions.DependencyInjection;
 
 namespace GestionCommerciale.Modules.Livraison.ViewModels;
 
+using BonCommandeReferenceStorage = GestionCommerciale.Modules.Livraison.BonCommandeReferenceStorage;
+
 public partial class BLEditViewModel : BaseViewModel
 {
     private readonly IDbContextFactory<AppDbContext> _dbFactory;
@@ -39,7 +41,7 @@ public partial class BLEditViewModel : BaseViewModel
     private readonly IPdfPrintService _pdfPrint;
     private readonly IAppSettingsService _settings;
     private readonly IFactureBlLinkService _blLinkService;
-    private int? _sourceBonCommandeClientId;
+    private readonly IFactureBccLinkService _bccLinkService;
 
     public BLEditViewModel(
         IDbContextFactory<AppDbContext> dbFactory,
@@ -55,7 +57,8 @@ public partial class BLEditViewModel : BaseViewModel
         IPdfService pdf,
         IPdfPrintService pdfPrint,
         IAppSettingsService settings,
-        IFactureBlLinkService blLinkService)
+        IFactureBlLinkService blLinkService,
+        IFactureBccLinkService bccLinkService)
     {
         _dbFactory = dbFactory;
         _numbers = numbers;
@@ -71,6 +74,7 @@ public partial class BLEditViewModel : BaseViewModel
         _pdfPrint = pdfPrint;
         _settings = settings;
         _blLinkService = blLinkService;
+        _bccLinkService = bccLinkService;
         _locale.CultureApplied += (_, _) => RefreshBlUi();
         LineGridColumns.PropertyChanged += OnLineGridColumnsPropertyChanged;
         _uiPreferences.LoadDocumentLineColumns("bon_livraison", LineGridColumns);
@@ -106,9 +110,20 @@ public partial class BLEditViewModel : BaseViewModel
     [ObservableProperty] private string _lblDocColMontantTtc = string.Empty;
     [ObservableProperty] private string _lblTotals = string.Empty;
     [ObservableProperty] private string _invoicedLabel = string.Empty;
+    [ObservableProperty] private string _bccLabel = string.Empty;
+    [ObservableProperty] private string _lblLinkedBcc = string.Empty;
+    [ObservableProperty] private string _btnAddBcc = string.Empty;
+    [ObservableProperty] private string _wmBonCommandeReference = string.Empty;
+    [ObservableProperty] private string _bonCommandeReference = string.Empty;
     public bool HasInvoicedLabel => !string.IsNullOrEmpty(InvoicedLabel);
+    public bool HasBccLabel => !string.IsNullOrWhiteSpace(BonCommandeReference);
 
     partial void OnInvoicedLabelChanged(string value) => OnPropertyChanged(nameof(HasInvoicedLabel));
+    partial void OnBonCommandeReferenceChanged(string value)
+    {
+        UpdateBccLabel();
+        OnPropertyChanged(nameof(HasBccLabel));
+    }
 
     [ObservableProperty] private decimal _totalHt;
     [ObservableProperty] private decimal _totalTva;
@@ -184,7 +199,18 @@ public partial class BLEditViewModel : BaseViewModel
         LblDocColMontantHt = _locale.T("DocLine_ColMontantHt");
         LblDocColMontantTtc = _locale.T("DocLine_ColMontantTtc");
         LblTotals = _locale.T("Lbl_Totals");
+        LblLinkedBcc = _locale.T("Fact_LinkedBccs");
+        BtnAddBcc = _locale.T("Fact_AddBcc");
+        WmBonCommandeReference = _locale.T("Fact_WmBonCommandeReference");
+        UpdateBccLabel();
         UpdateTotalLabels(TotalHt, TotalTva, TotalTtc);
+    }
+
+    private void UpdateBccLabel()
+    {
+        BccLabel = string.IsNullOrWhiteSpace(BonCommandeReference)
+            ? string.Empty
+            : _locale.Tf("BL_LinkedBcc", BonCommandeReference);
     }
 
     public ObservableCollection<GestionCommerciale.Modules.Tiers.Models.Tiers> Clients { get; } = [];
@@ -287,7 +313,8 @@ public partial class BLEditViewModel : BaseViewModel
     public async Task LoadAsync(int? id, CancellationToken cancellationToken = default)
     {
         BlId = id;
-        _sourceBonCommandeClientId = null;
+        BonCommandeReference = string.Empty;
+        BccLabel = string.Empty;
         DevisId = null;
         Lignes.Clear();
         await using var db = await _dbFactory.CreateDbContextAsync(cancellationToken);
@@ -322,10 +349,20 @@ public partial class BLEditViewModel : BaseViewModel
 
         var b = await db.BonsLivraison.Include(x => x.Lignes).FirstAsync(x => x.Id == id, cancellationToken);
         DevisId = b.DevisId;
+        var (storedBccRef, userNote) = BonCommandeReferenceStorage.Parse(b.Note);
+        BonCommandeReference = storedBccRef;
+        if (string.IsNullOrWhiteSpace(BonCommandeReference) && b.BonCommandeClientId is int linkedBccId)
+        {
+            BonCommandeReference = await db.BonsCommandeClient.AsNoTracking()
+                .Where(x => x.Id == linkedBccId)
+                .Select(x => x.Numero)
+                .FirstAsync(cancellationToken);
+        }
+        UpdateBccLabel();
         Numero = b.Numero;
         ClientId = b.ClientId;
         Date = new DateTimeOffset(b.Date);
-        Note = b.Note;
+        Note = userNote;
         foreach (var l in b.Lignes)
         {
             var prod = Produits.FirstOrDefault(p => p.Id == l.ProduitId);
@@ -353,7 +390,8 @@ public partial class BLEditViewModel : BaseViewModel
     public async Task LoadNewFromBonCommandeClientAsync(int bonCommandeClientId, CancellationToken cancellationToken = default)
     {
         BlId = null;
-        _sourceBonCommandeClientId = bonCommandeClientId;
+        BonCommandeReference = string.Empty;
+        BccLabel = string.Empty;
         Lignes.Clear();
         await using var db = await _dbFactory.CreateDbContextAsync(cancellationToken);
 
@@ -392,6 +430,7 @@ public partial class BLEditViewModel : BaseViewModel
         }
 
         IsReadOnly = false;
+        AppendBonCommandeNumero(bcc.Numero);
         Title = _locale.Tf("BL_NewFromBcc", bcc.Numero);
         RefreshTotals();
     }
@@ -549,9 +588,8 @@ public partial class BLEditViewModel : BaseViewModel
                     Numero = num,
                     ClientId = ClientId,
                     DevisId = DevisId,
-                    BonCommandeClientId = _sourceBonCommandeClientId,
                     Date = Date.DateTime,
-                    Note = Note,
+                    Note = BonCommandeReferenceStorage.Format(BonCommandeReference, Note),
                     CreatedByUserId = _session.UserId
                 };
                 foreach (var l in Lignes)
@@ -571,7 +609,6 @@ public partial class BLEditViewModel : BaseViewModel
                 db.BonsLivraison.Add(entity);
                 await db.SaveChangesAsync(cancellationToken);
                 BlId = entity.Id;
-                _sourceBonCommandeClientId = null;
             }
             else
             {
@@ -579,7 +616,8 @@ public partial class BLEditViewModel : BaseViewModel
                 entity.ClientId = ClientId;
                 entity.DevisId = DevisId;
                 entity.Date = Date.DateTime;
-                entity.Note = Note;
+                entity.Note = BonCommandeReferenceStorage.Format(BonCommandeReference, Note);
+                entity.BonCommandeClientId = null;
                 db.BonLivraisonLignes.RemoveRange(entity.Lignes);
                 foreach (var l in Lignes)
                 {
@@ -617,6 +655,56 @@ public partial class BLEditViewModel : BaseViewModel
         {
             IsBusy = false;
         }
+    }
+
+    [RelayCommand]
+    private async Task ShowBccPickerAsync(CancellationToken cancellationToken)
+    {
+        if (!CanEdit || ClientId == 0) return;
+
+        var existingNumeros = ParseBonCommandeNumeros(BonCommandeReference);
+        var available = await _bccLinkService.GetAvailableBccsForClientAsync(ClientId, null, cancellationToken);
+        var filtered = available.Where(b => !existingNumeros.Contains(b.Numero, StringComparer.OrdinalIgnoreCase)).ToList();
+        if (filtered.Count == 0)
+        {
+            await _dialog.ShowInfoAsync(_locale.T("BL_DlgShort"), _locale.T("Fact_NoAvailableBccs"), cancellationToken);
+            return;
+        }
+
+        var pickerItems = filtered.Select(b =>
+        {
+            var (_, _, ttc) = DocumentTotalsHelper.BonCommandeClientTotals(b.Lignes ?? []);
+            var montantLabel = _locale.Tf("Doc_FmtTtc", ttc, Devise).TrimEnd();
+            return (b.Id, b.Numero, b.Date, montantLabel);
+        }).ToList();
+
+        var selectedIds = await _dialog.ShowBlPickerAsync(_locale.T("Fact_AddBcc"), pickerItems, cancellationToken);
+        if (selectedIds == null || selectedIds.Count == 0) return;
+
+        await using var db = await _dbFactory.CreateDbContextAsync(cancellationToken);
+        var selectedNumeros = await db.BonsCommandeClient.AsNoTracking()
+            .Where(b => selectedIds.Contains(b.Id))
+            .OrderBy(b => b.Date).ThenBy(b => b.Numero)
+            .Select(b => b.Numero)
+            .ToListAsync(cancellationToken);
+
+        foreach (var numero in selectedNumeros)
+            AppendBonCommandeNumero(numero);
+    }
+
+    private static HashSet<string> ParseBonCommandeNumeros(string reference) =>
+        reference.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
+            .ToHashSet(StringComparer.OrdinalIgnoreCase);
+
+    private void AppendBonCommandeNumero(string numero)
+    {
+        if (string.IsNullOrWhiteSpace(numero)) return;
+        var existing = ParseBonCommandeNumeros(BonCommandeReference);
+        if (existing.Contains(numero)) return;
+        BonCommandeReference = string.IsNullOrWhiteSpace(BonCommandeReference)
+            ? numero
+            : $"{BonCommandeReference}, {numero}";
+        UpdateBccLabel();
     }
 
     [RelayCommand]
