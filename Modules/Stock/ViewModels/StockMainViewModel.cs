@@ -152,7 +152,8 @@ public partial class StockMainViewModel : BaseViewModel
         var total = await q.CountAsync(cancellationToken);
         var list = await q
             .OrderByDescending(m => m.CreatedAt)
-            .Skip(MouvementPagination.Skip).Take(MouvementPagination.PageSize)
+            .Skip(MouvementPagination.Skip)
+            .Take(MouvementPagination.PageSize)
             .ToListAsync(cancellationToken);
         await EnrichMovementDetailsAsync(db, list, _locale.T("Lbl_PrixHt"), cancellationToken);
         Mouvements.Clear();

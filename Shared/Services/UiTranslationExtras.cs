@@ -202,6 +202,7 @@ internal static class UiTranslationExtras
         ["BL_ErrNoSelection"] = ("Sélectionnez au moins un BL non facturé.", "اختر أمر تسليم غير مفوتر واحد على الأقل."),
         ["BL_ErrDifferentClients"] = ("Tous les BL doivent appartenir au même client.", "يجب أن تكون جميع أوامر التسليم لنفس العميل."),
         ["BL_FacturedOn"] = ("Facturé : {0}", "مفوتر: {0}"),
+        ["BL_LinkedBcc"] = ("Commandé : {0}", "مطلوب: {0}"),
         ["BL_ErrAlreadyInvoiced"] = ("Ce BL est déjà facturé sur {0}.", "أمر التسليم هذا مفوتر بالفعل على {0}."),
         ["BL_ErrDeleteAlreadyInvoiced"] = ("Impossible de supprimer le bon de livraison {0} : il est déjà facturé sur {1}.", "لا يمكن حذف أمر التسليم {0} : إنه مفوتر بالفعل على {1}."),
         ["ClientLedger_Title"] = ("État factures et règlements", "كشف الفواتير والمدفوعات"),
