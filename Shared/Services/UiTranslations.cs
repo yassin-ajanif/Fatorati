@@ -198,6 +198,7 @@ public static class UiTranslations
         ["Pay_ErrCancelled"] = ("Facture annulée, modification impossible.", "الفاتورة ملغاة."),
         ["Pay_ErrAmount"] = ("Saisissez un montant supérieur à 0.", "أدخل مبلغاً أكبر من 0."),
         ["Pay_ErrSaveFirst"] = ("Enregistrez la facture avant d'ajouter un paiement.", "احفظ الفاتورة قبل إضافة دفعة."),
+        ["Pay_ErrPaymentsExceedTtc"] = ("La somme des paiements ({0:N2}) ne peut pas dépasser le total TTC ({1:N2}).", "مجموع المدفوعات ({0:N2}) لا يمكن أن يتجاوز الإجمالي ({1:N2})."),
         ["Pay_ConfirmDelete"] = ("Supprimer ce paiement ?", "حذف هذه الدفعة؟"),
         ["Pay_EditTooltip"] = ("Modifier le paiement", "تعديل الدفعة"),
         ["Avoir_Title"] = ("Avoir", "إشعار دائن"),

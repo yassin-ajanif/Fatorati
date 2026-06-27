@@ -426,7 +426,31 @@ public partial class FactureEditViewModel : BaseViewModel
     private void RefreshSuggestedPaiementMontant()
     {
         if (!FactureId.HasValue) return;
-        PaiementMontant = Math.Round(Math.Max(0, TotalTtc - MontantPaye), 2);
+        var fullTtc = ComputeFullPaymentTtc();
+        PaiementMontant = Math.Round(Math.Max(0, fullTtc - MontantPaye), 2);
+    }
+
+    private decimal ComputeFullPaymentTtc() =>
+        DocumentTotalsHelper.FactureTtc(
+            Lignes.Select(l => new FactureLigne
+            {
+                Quantite = l.Quantite,
+                PrixUnitaireHT = l.PrixUnitaireHt,
+                Remise = l.Remise,
+                TauxTVA = l.TauxTva
+            }),
+            RemiseGlobale);
+
+    private async Task<bool> ValidatePaymentsAgainstTtcAsync(decimal ttc, decimal totalPayments, CancellationToken cancellationToken)
+    {
+        if (!DocumentTotalsHelper.PaymentsExceedTtc(ttc, totalPayments))
+            return true;
+
+        await _dialog.ShowErrorAsync(
+            _locale.T("Pay_Title"),
+            _locale.Tf("Pay_ErrPaymentsExceedTtc", totalPayments, ttc),
+            cancellationToken);
+        return false;
     }
 
     partial void OnRemiseGlobaleChanged(decimal value) => RefreshTotals();
@@ -517,7 +541,10 @@ public partial class FactureEditViewModel : BaseViewModel
         HookLines();
         MontantPaye = f.Paiements.Sum(p => p.Montant);
         ReloadPaiementsList(f.Paiements);
-            CanEditDraft = true;
+        DocumentTotalsHelper.SyncFactureTotalTtc(f);
+        if (db.Entry(f).Property(x => x.TotalTtc).IsModified)
+            await db.SaveChangesAsync(cancellationToken);
+        CanEditDraft = true;
         Title = _locale.Tf("Fact_TitleNum", Numero);
         RefreshTotals();
     }
@@ -777,10 +804,20 @@ public partial class FactureEditViewModel : BaseViewModel
             return;
         }
 
-        if (DocumentTotalsHelper.IsEffectivelyZeroTotal(TotalTtc))
+        if (DocumentTotalsHelper.IsEffectivelyZeroTotal(ComputeFullPaymentTtc()))
         {
             await _dialog.ShowErrorAsync(_locale.T("Fact_Title"), _locale.T("Doc_ErrZeroTtc"), cancellationToken);
             return;
+        }
+
+        if (FactureId != null)
+        {
+            await using var checkDb = await _dbFactory.CreateDbContextAsync(cancellationToken);
+            var paid = await checkDb.Paiements.AsNoTracking()
+                .Where(p => p.FactureId == FactureId)
+                .SumAsync(p => p.Montant, cancellationToken);
+            if (!await ValidatePaymentsAgainstTtcAsync(ComputeFullPaymentTtc(), paid, cancellationToken))
+                return;
         }
 
         IsBusy = true;
@@ -912,6 +949,10 @@ public partial class FactureEditViewModel : BaseViewModel
             await _dialog.ShowErrorAsync(_locale.T("Pay_Title"), _locale.T("Pay_ErrAmount"), cancellationToken);
             return;
         }
+
+        var fullTtc = ComputeFullPaymentTtc();
+        if (!await ValidatePaymentsAgainstTtcAsync(fullTtc, MontantPaye + PaiementMontant, cancellationToken))
+            return;
 
         try
         {

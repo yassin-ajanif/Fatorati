@@ -1,37 +1,29 @@
 using GestionCommerciale.Modules.Facturation.Models;
 using GestionCommerciale.Modules.FactureFournisseur.Models;
 using GestionCommerciale.Shared.Database;
+using GestionCommerciale.Shared.Helpers;
 using Microsoft.EntityFrameworkCore;
 
 namespace GestionCommerciale.Modules.FactureFournisseur.Services;
 
 public sealed class FactureFournisseurWorkflowService : IFactureFournisseurWorkflowService
 {
-    private const decimal PaiementTtcTolerance = 0.02m;
-
     private readonly IDbContextFactory<AppDbContext> _dbFactory;
 
     public FactureFournisseurWorkflowService(IDbContextFactory<AppDbContext> dbFactory) => _dbFactory = dbFactory;
-
-    private static void EnsureTotalPaiementsNotOverTtc(decimal ttc, decimal totalPaiements)
-    {
-        if (totalPaiements > ttc + PaiementTtcTolerance)
-        {
-            throw new InvalidOperationException(
-                $"La somme des paiements ({totalPaiements:N2} TTC) ne peut pas dépasser le total de la facture ({ttc:N2} TTC).");
-        }
-    }
 
     public async Task AddPaiementAsync(int factureFournisseurId, PaiementFournisseur paiement, CancellationToken cancellationToken = default)
     {
         await using var db = await _dbFactory.CreateDbContextAsync(cancellationToken);
         var f = await db.FacturesFournisseurs
             .Include(x => x.Paiements)
+            .Include(x => x.Lignes)
             .FirstAsync(x => x.Id == factureFournisseurId, cancellationToken);
 
+        DocumentTotalsHelper.SyncFactureFournisseurTotalTtc(f);
         var ttc = f.TotalTtc;
         var totalApres = f.Paiements.Sum(p => p.Montant) + paiement.Montant;
-        EnsureTotalPaiementsNotOverTtc(ttc, totalApres);
+        DocumentTotalsHelper.EnsurePaymentsNotOverTtc(ttc, totalApres);
 
         paiement.FactureFournisseurId = factureFournisseurId;
         db.PaiementsFournisseurs.Add(paiement);
@@ -46,11 +38,13 @@ public sealed class FactureFournisseurWorkflowService : IFactureFournisseurWorkf
         await using var db = await _dbFactory.CreateDbContextAsync(cancellationToken);
         var f = await db.FacturesFournisseurs
             .Include(x => x.Paiements)
+            .Include(x => x.Lignes)
             .FirstAsync(x => x.Id == factureFournisseurId, cancellationToken);
 
+        DocumentTotalsHelper.SyncFactureFournisseurTotalTtc(f);
         var ttc = f.TotalTtc;
         var totalApres = f.Paiements.Where(x => x.Id != paiementId).Sum(x => x.Montant) + montant;
-        EnsureTotalPaiementsNotOverTtc(ttc, totalApres);
+        DocumentTotalsHelper.EnsurePaymentsNotOverTtc(ttc, totalApres);
 
         var p = await db.PaiementsFournisseurs.FirstAsync(x => x.Id == paiementId && x.FactureFournisseurId == factureFournisseurId, cancellationToken);
         p.Montant = montant;

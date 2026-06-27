@@ -12,9 +12,22 @@ namespace GestionCommerciale.Shared.Helpers;
 public static class DocumentTotalsHelper
 {
     public const decimal ZeroTotalTolerance = 0.005m;
+    public const decimal PaiementTtcTolerance = 0.02m;
 
     public static bool IsEffectivelyZeroTotal(decimal amount) =>
         Math.Abs(amount) <= ZeroTotalTolerance;
+
+    public static bool PaymentsExceedTtc(decimal ttc, decimal totalPayments) =>
+        totalPayments > ttc + PaiementTtcTolerance;
+
+    public static void EnsurePaymentsNotOverTtc(decimal ttc, decimal totalPayments)
+    {
+        if (PaymentsExceedTtc(ttc, totalPayments))
+        {
+            throw new InvalidOperationException(
+                $"La somme des paiements ({totalPayments:N2} TTC) ne peut pas dépasser le total de la facture ({ttc:N2} TTC).");
+        }
+    }
 
     public static decimal LigneHT(decimal qte, decimal puHt, decimal remisePct) =>
         qte * puHt * (1 - remisePct / 100m);
