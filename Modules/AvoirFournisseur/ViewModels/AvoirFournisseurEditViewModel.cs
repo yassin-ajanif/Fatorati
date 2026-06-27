@@ -372,44 +372,73 @@ public partial class AvoirFournisseurEditViewModel : BaseViewModel
         IsBusy = true;
         try
         {
-            var num = await _numbers.NextAvoirFournisseurAsync(cancellationToken);
-            var doc = new Models.AvoirFournisseur
+            await using var db = await _dbFactory.CreateDbContextAsync(cancellationToken);
+            Models.AvoirFournisseur entity;
+            if (AvoirFournisseurId == null)
             {
-                Numero = num,
-                FournisseurId = FournisseurId,
-                Date = Date.DateTime,
-                Motif = Motif,
-                RetourMarchandise = RetourMarchandise,
-                CreatedByUserId = _session.UserId
-            };
-            foreach (var l in Lignes)
-            {
-                doc.Lignes.Add(new Models.AvoirFournisseurLigne
+                var num = await _numbers.NextAvoirFournisseurAsync(cancellationToken);
+                entity = new Models.AvoirFournisseur
                 {
-                    ProduitId = l.ProduitId,
-                    Designation = l.Designation,
-                    Conditionnement = l.Conditionnement,
-                    Quantite = l.Quantite,
-                    PrixUnitaireHT = l.PrixUnitaireHt,
-                    Remise = l.Remise,
-                    TauxTVA = l.TauxTva
-                });
+                    Numero = num,
+                    FournisseurId = FournisseurId,
+                    Date = Date.DateTime,
+                    Motif = Motif,
+                    RetourMarchandise = RetourMarchandise,
+                    CreatedByUserId = _session.UserId
+                };
+                foreach (var l in Lignes)
+                {
+                    entity.Lignes.Add(new Models.AvoirFournisseurLigne
+                    {
+                        ProduitId = l.ProduitId,
+                        Designation = l.Designation,
+                        Conditionnement = l.Conditionnement,
+                        Quantite = l.Quantite,
+                        PrixUnitaireHT = l.PrixUnitaireHt,
+                        Remise = l.Remise,
+                        TauxTVA = l.TauxTva
+                    });
+                }
+
+                db.AvoirsFournisseurs.Add(entity);
+                await db.SaveChangesAsync(cancellationToken);
+                AvoirFournisseurId = entity.Id;
+                Numero = entity.Numero;
+                Title = _locale.Tf("Avf_TitleNum", Numero);
+            }
+            else
+            {
+                entity = await db.AvoirsFournisseurs.Include(x => x.Lignes)
+                    .FirstAsync(x => x.Id == AvoirFournisseurId, cancellationToken);
+                entity.FournisseurId = FournisseurId;
+                entity.Date = Date.DateTime;
+                entity.Motif = Motif;
+                entity.RetourMarchandise = RetourMarchandise;
+                db.AvoirFournisseurLignes.RemoveRange(entity.Lignes);
+                foreach (var l in Lignes)
+                {
+                    entity.Lignes.Add(new Models.AvoirFournisseurLigne
+                    {
+                        ProduitId = l.ProduitId,
+                        Designation = l.Designation,
+                        Conditionnement = l.Conditionnement,
+                        Quantite = l.Quantite,
+                        PrixUnitaireHT = l.PrixUnitaireHt,
+                        Remise = l.Remise,
+                        TauxTVA = l.TauxTva
+                    });
+                }
             }
 
-            await using var db = await _dbFactory.CreateDbContextAsync(cancellationToken);
-            db.Add(doc);
-            await db.SaveChangesAsync(cancellationToken);
             await _stock.SyncAvoirFournisseurStockAsync(
                 db,
-                doc.Id,
-                doc.Numero,
-                doc.RetourMarchandise,
-                doc.Lignes.Select(l => (l.ProduitId, l.Quantite)),
+                entity.Id,
+                entity.Numero,
+                RetourMarchandise,
+                Lignes.Select(l => (l.ProduitId, l.Quantite)),
                 _session.UserId,
                 cancellationToken);
             await db.SaveChangesAsync(cancellationToken);
-            AvoirFournisseurId = doc.Id;
-            Numero = doc.Numero;
             await _dialog.ShowInfoAsync(_locale.T("Avf_Title"), _locale.T("Avf_Saved"), cancellationToken);
         }
         finally
