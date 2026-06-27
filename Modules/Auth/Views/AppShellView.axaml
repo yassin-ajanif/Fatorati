@@ -115,11 +115,11 @@
 
            <Border Height="8"/>
           
-         <!-- <Button Content="Test perf"
+         <Button Content="Test perf"
            Command="{Binding RunPerfTestCommand}" 
            HorizontalAlignment="Stretch"/>
           <TextBlock Text="{Binding TestProgress}" TextWrapping="Wrap" FontSize="11" Classes="subtle" IsVisible="{Binding IsTestRunning}"/>
-         --></StackPanel>
+         </StackPanel>
        
       </ScrollViewer>
     </Border>

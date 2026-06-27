@@ -2,6 +2,7 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:vm="using:GestionCommerciale.Modules.Reporting.ViewModels"
              xmlns:conv="using:GestionCommerciale.Shared.Converters"
+             xmlns:shared="using:GestionCommerciale.Shared.Views"
              x:Class="GestionCommerciale.Modules.Reporting.Views.ReportsListView"
              x:Name="ThisControl"
              x:DataType="vm:ReportsListViewModel"
@@ -472,6 +473,9 @@
             </StackPanel>
           </Border>
         </StackPanel>
+
+        <shared:ListPaginationBar IsVisible="{Binding ShowPagination}"
+                                    DataContext="{Binding Pagination}"/>
 
       </StackPanel>
     </ScrollViewer>

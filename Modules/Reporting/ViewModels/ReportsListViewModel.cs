@@ -3,6 +3,7 @@ using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using GestionCommerciale.Modules.Reporting.Services;
 using GestionCommerciale.Modules.Auth.Services;
+using GestionCommerciale.Shared.Helpers;
 using GestionCommerciale.Shared.Services;
 using GestionCommerciale.Shared.ViewModels;
 
@@ -26,9 +27,12 @@ public partial class ReportsListViewModel : BaseViewModel
         _session = session;
         _locale = locale;
         _locale.CultureApplied += (_, _) => RefreshLabels();
+        Pagination = new PaginationHelper(ApplyCurrentPage);
         RefreshLabels();
         Title = _locale.T("Reports_Title");
     }
+
+    public PaginationHelper Pagination { get; }
 
     [ObservableProperty] private string _lblTitle = string.Empty;
     [ObservableProperty] private string _lblDateFrom = string.Empty;
@@ -69,6 +73,14 @@ public partial class ReportsListViewModel : BaseViewModel
     [ObservableProperty] private string _lblStockValTtcLabel = string.Empty;
     [ObservableProperty] private string _lblStockValHt = string.Empty;
     [ObservableProperty] private string _lblStockValTtc = string.Empty;
+    [ObservableProperty] private bool _showPagination;
+
+    private List<ReportSaleByProductRow> _allSalesByProduct = [];
+    private List<ReportSaleByCustomerRow> _allSalesByCustomer = [];
+    private List<ReportRefundRow> _allRefunds = [];
+    private List<ReportDailySaleRow> _allDailySales = [];
+    private List<ReportUnpaidRow> _allUnpaidSales = [];
+    private List<ReportStockMovementRow> _allStockMovements = [];
 
     public ObservableCollection<ReportSaleByProductRow> SalesByProduct { get; } = [];
     public ObservableCollection<ReportSaleByCustomerRow> SalesByCustomer { get; } = [];
@@ -184,58 +196,87 @@ public partial class ReportsListViewModel : BaseViewModel
 
     private async Task LoadSalesByProductAsync(DateTime from, DateTime to, CancellationToken ct)
     {
-        var data = await Task.Run(() => _reportService.GetSalesByProductAsync(from, to, ct), ct);
-        SalesByProduct.Clear();
-        foreach (var r in data) SalesByProduct.Add(r);
-        ShowEmpty = SalesByProduct.Count == 0;
+        _allSalesByProduct = await Task.Run(() => _reportService.GetSalesByProductAsync(from, to, ct), ct);
+        FinishPagedLoad(_allSalesByProduct.Count);
     }
 
     private async Task LoadSalesByCustomerAsync(DateTime from, DateTime to, CancellationToken ct)
     {
-        var data = await Task.Run(() => _reportService.GetSalesByCustomerAsync(from, to, ct), ct);
-        SalesByCustomer.Clear();
-        foreach (var r in data) SalesByCustomer.Add(r);
-        ShowEmpty = SalesByCustomer.Count == 0;
-        var dev = data.Count > 0 ? data[0].Devise : "MAD";
-        LblSaleByCustomerTotalHt = $"{data.Sum(r => r.TotalHt):N2} {dev}";
-        LblSaleByCustomerTotalTtc = $"{data.Sum(r => r.TotalTtc):N2} {dev}";
-        LblSaleByCustomerTotalProfit = $"{data.Sum(r => r.Profit):N2} {dev}";
+        _allSalesByCustomer = await Task.Run(() => _reportService.GetSalesByCustomerAsync(from, to, ct), ct);
+        var dev = _allSalesByCustomer.Count > 0 ? _allSalesByCustomer[0].Devise : "MAD";
+        LblSaleByCustomerTotalHt = $"{_allSalesByCustomer.Sum(r => r.TotalHt):N2} {dev}";
+        LblSaleByCustomerTotalTtc = $"{_allSalesByCustomer.Sum(r => r.TotalTtc):N2} {dev}";
+        LblSaleByCustomerTotalProfit = $"{_allSalesByCustomer.Sum(r => r.Profit):N2} {dev}";
+        FinishPagedLoad(_allSalesByCustomer.Count);
     }
 
     private async Task LoadRefundsAsync(DateTime from, DateTime to, CancellationToken ct)
     {
-        var data = await Task.Run(() => _reportService.GetRefundsAsync(from, to, ct), ct);
-        Refunds.Clear();
-        foreach (var r in data) Refunds.Add(r);
-        ShowEmpty = Refunds.Count == 0;
+        _allRefunds = await Task.Run(() => _reportService.GetRefundsAsync(from, to, ct), ct);
+        FinishPagedLoad(_allRefunds.Count);
     }
 
     private async Task LoadDailySalesAsync(DateTime from, DateTime to, CancellationToken ct)
     {
-        var data = await Task.Run(() => _reportService.GetDailySalesAsync(from, to, ct), ct);
-        DailySales.Clear();
-        foreach (var r in data) DailySales.Add(r);
-        ShowEmpty = DailySales.Count == 0;
-        var dev = data.Count > 0 ? data[0].Devise : "MAD";
-        LblDailySalesTotalProfit = $"{data.Sum(r => r.Profit):N2} {dev}";
+        _allDailySales = await Task.Run(() => _reportService.GetDailySalesAsync(from, to, ct), ct);
+        var dev = _allDailySales.Count > 0 ? _allDailySales[0].Devise : "MAD";
+        LblDailySalesTotalProfit = $"{_allDailySales.Sum(r => r.Profit):N2} {dev}";
+        FinishPagedLoad(_allDailySales.Count);
     }
 
     private async Task LoadUnpaidAsync(CancellationToken ct)
     {
-        var data = await Task.Run(() => _reportService.GetUnpaidSalesAsync(ct), ct);
-        UnpaidSales.Clear();
-        foreach (var r in data) UnpaidSales.Add(r);
-        ShowEmpty = UnpaidSales.Count == 0;
+        _allUnpaidSales = await Task.Run(() => _reportService.GetUnpaidSalesAsync(ct), ct);
+        FinishPagedLoad(_allUnpaidSales.Count);
     }
 
     private async Task LoadStockMovementsAsync(DateTime from, DateTime to, CancellationToken ct)
     {
-        var data = await Task.Run(() => _reportService.GetStockMovementsAsync(from, to, ct), ct);
-        StockMovements.Clear();
-        foreach (var r in data) StockMovements.Add(r);
-        ShowEmpty = StockMovements.Count == 0;
+        _allStockMovements = await Task.Run(() => _reportService.GetStockMovementsAsync(from, to, ct), ct);
         var valuation = await Task.Run(() => _reportService.GetStockValuationAsync(ct), ct);
         LblStockValHt = $"{valuation.ht:N2} {valuation.devise}";
         LblStockValTtc = $"{valuation.ttc:N2} {valuation.devise}";
+        FinishPagedLoad(_allStockMovements.Count);
+    }
+
+    private void FinishPagedLoad(int totalCount)
+    {
+        Pagination.CurrentPage = 1;
+        Pagination.TotalCount = totalCount;
+        ShowEmpty = totalCount == 0;
+        ShowPagination = totalCount > 0;
+        ApplyCurrentPage();
+    }
+
+    private void ApplyCurrentPage()
+    {
+        switch (SelectedReportIndex)
+        {
+            case 0:
+                ApplyPage(SalesByProduct, _allSalesByProduct);
+                break;
+            case 1:
+                ApplyPage(SalesByCustomer, _allSalesByCustomer);
+                break;
+            case 2:
+                ApplyPage(Refunds, _allRefunds);
+                break;
+            case 3:
+                ApplyPage(DailySales, _allDailySales);
+                break;
+            case 4:
+                ApplyPage(UnpaidSales, _allUnpaidSales);
+                break;
+            case 5:
+                ApplyPage(StockMovements, _allStockMovements);
+                break;
+        }
+    }
+
+    private void ApplyPage<T>(ObservableCollection<T> target, IReadOnlyList<T> source)
+    {
+        target.Clear();
+        foreach (var item in source.Skip(Pagination.Skip).Take(Pagination.PageSize))
+            target.Add(item);
     }
 }
