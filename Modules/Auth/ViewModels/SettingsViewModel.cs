@@ -93,6 +93,14 @@ public partial class SettingsViewModel : BaseViewModel
     [ObservableProperty] private string _lblPickBackupDir = string.Empty;
     [ObservableProperty] private string _lblBackupNow = string.Empty;
     [ObservableProperty] private string _lblLastBackup = string.Empty;
+    [ObservableProperty] private bool _backupExpanded;
+
+    public string BackupArrow => BackupExpanded ? "\u25BC" : "\u25B6";
+
+    partial void OnBackupExpandedChanged(bool value) => OnPropertyChanged(nameof(BackupArrow));
+
+    [RelayCommand]
+    private void ToggleBackup() => BackupExpanded = !BackupExpanded;
 
     [ObservableProperty] private string _wmSociete = string.Empty;
     [ObservableProperty] private string _wmAdresse = string.Empty;
@@ -110,6 +118,14 @@ public partial class SettingsViewModel : BaseViewModel
     [ObservableProperty] private string _lblNumberingLastOutside = string.Empty;
     [ObservableProperty] private string _lblNumberingNext = string.Empty;
     [ObservableProperty] private string _lblNumberingInDb = string.Empty;
+    [ObservableProperty] private bool _numberingExpanded;
+
+    public string NumberingArrow => NumberingExpanded ? "\u25BC" : "\u25B6";
+
+    partial void OnNumberingExpandedChanged(bool value) => OnPropertyChanged(nameof(NumberingArrow));
+
+    [RelayCommand]
+    private void ToggleNumbering() => NumberingExpanded = !NumberingExpanded;
 
     public ObservableCollection<DocumentNumberingSettingRow> NumberingRows { get; } = [];
 
