@@ -279,7 +279,7 @@
                 </StackPanel>
                 <StackPanel Margin="0,0,14,6" Spacing="1">
                   <TextBlock Text="{Binding #ThisView.((vm:FactureFournisseurEditViewModel)DataContext).LblReference}" Opacity="0.65" FontSize="10"/>
-                  <TextBlock Text="{Binding Reference}" VerticalAlignment="Center" MinHeight="24" TextTrimming="CharacterEllipsis" MaxWidth="160"/>
+                  <TextBlock Text="{Binding Reference}" VerticalAlignment="Center" MinHeight="24" TextTrimming="CharacterEllipsis" MaxWidth="320"/>
                 </StackPanel>
                 <StackPanel Margin="0,0,0,6" Orientation="Horizontal" Spacing="6" VerticalAlignment="Bottom">
                   <Button Padding="8,6" MinWidth="36" MinHeight="32"
@@ -320,7 +320,7 @@
                 </StackPanel>
                 <StackPanel Margin="0,0,10,6" Spacing="1">
                   <TextBlock Text="{Binding #ThisView.((vm:FactureFournisseurEditViewModel)DataContext).LblReference}" Opacity="0.65" FontSize="10"/>
-                  <TextBox Width="108" MinHeight="32" Padding="8,5" Watermark="{Binding #ThisView.((vm:FactureFournisseurEditViewModel)DataContext).WmRefShort}" Text="{Binding Reference, Mode=TwoWay}"
+                  <TextBox Width="320" MinHeight="32" Padding="8,5" Watermark="{Binding #ThisView.((vm:FactureFournisseurEditViewModel)DataContext).WmRefShort}" Text="{Binding Reference, Mode=TwoWay}"
                            IsEnabled="{Binding FactureFournisseurModifiable}"/>
                 </StackPanel>
                 <StackPanel Margin="0,0,0,6" Orientation="Horizontal" Spacing="6" VerticalAlignment="Bottom">
@@ -360,7 +360,7 @@
         </StackPanel>
         <StackPanel Margin="0,0,10,6" Spacing="1">
           <TextBlock Text="{Binding LblReference}" Opacity="0.65" FontSize="10"/>
-          <TextBox Watermark="{Binding WmRefShort}" Text="{Binding PaiementReference}" Width="108" MinHeight="32" Padding="8,5"/>
+          <TextBox Watermark="{Binding WmRefShort}" Text="{Binding PaiementReference}" Width="320" MinHeight="32" Padding="8,5"/>
         </StackPanel>
         <Button Margin="0,0,0,6" Content="{Binding BtnAddPayment}" Padding="10,6" MinHeight="32" VerticalAlignment="Bottom"
                 Command="{Binding AddPaiementCommand}"/>

@@ -404,6 +404,13 @@ public partial class FactureFournisseurEditViewModel : BaseViewModel
         TotalTva = tva;
         TotalTtc = ttc;
         UpdateFactureFournisseurTotalLines();
+        RefreshSuggestedPaiementMontant();
+    }
+
+    private void RefreshSuggestedPaiementMontant()
+    {
+        if (!FactureFournisseurId.HasValue) return;
+        PaiementMontant = Math.Round(Math.Max(0, TotalTtc - MontantPaye), 2);
     }
 
     partial void OnRemiseGlobaleChanged(decimal value) => RefreshTotals();

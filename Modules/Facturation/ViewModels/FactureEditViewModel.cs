@@ -420,6 +420,13 @@ public partial class FactureEditViewModel : BaseViewModel
         TotalTva = tva;
         TotalTtc = ttc;
         UpdateFactureTotalLines();
+        RefreshSuggestedPaiementMontant();
+    }
+
+    private void RefreshSuggestedPaiementMontant()
+    {
+        if (!FactureId.HasValue) return;
+        PaiementMontant = Math.Round(Math.Max(0, TotalTtc - MontantPaye), 2);
     }
 
     partial void OnRemiseGlobaleChanged(decimal value) => RefreshTotals();
